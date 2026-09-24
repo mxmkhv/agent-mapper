@@ -310,7 +310,7 @@ Unknown hook events and plugin schemas must produce visible entries or source-le
 | Planned UI additions         | shadcn/ui, cmdk, TanStack Query when their features are built             |
 | Parsing                      | Platform JSON; YAML and TOML dependencies reviewed when readers are built |
 
-Dependencies are pinned exactly in manifests and `bun.lock`. No ESLint or second TypeScript compiler. Tooling requires Node 22.22.1 or newer; the final published CLI minimum must also match the filesystem APIs selected during implementation.
+Registry dependencies are pinned exactly in manifests; internal workspace packages use `workspace:*`, and `bun.lock` records transitive resolutions. No ESLint or second TypeScript compiler. Tooling requires Node 22.22.1 or newer; the final published CLI minimum must also match the filesystem APIs selected during implementation.
 
 ## Quality gates
 

@@ -17,7 +17,7 @@ No ESLint, compatibility bridge, second compiler, or Husky. Git uses its native 
 
 Registry review on 2026-09-24: TypeScript, Oxlint, @oxlint/plugins, Knip, Prettier, Vitest, and lint-staged each exceed 100,000 weekly downloads and have releases within six months. Oxlint, @oxlint/plugins, and Knip each list one npm publisher/maintainer; they were explicitly selected for this project. Other listed tools have multiple registry maintainers. Runtime and React type packages are maintained through DefinitelyTyped despite its single publishing account. No new auth, cryptography, or networking package was introduced.
 
-UI bootstrap versions are React/React DOM 19.3.0, Vite 8.3.1, React plugin 6.1.1, and Tailwind/Vite plugin 4.3.3. These have multiple registry maintainers, recent releases, and more than 100,000 weekly downloads. All direct dependency pins are exact; the lockfile records transitive resolutions.
+UI bootstrap versions are React/React DOM 19.3.0, Vite 8.3.1, React plugin 6.1.1, and Tailwind/Vite plugin 4.3.3. These have multiple registry maintainers, recent releases, and more than 100,000 weekly downloads. Registry dependency pins are exact; internal workspace packages use `workspace:*`, and the lockfile records transitive resolutions.
 
 ## Rules carried over
 
