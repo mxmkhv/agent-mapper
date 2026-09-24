@@ -1,0 +1,49 @@
+{
+  "name": "agent-mapper-workspace",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.0",
+  "engines": {
+    "node": ">=22.22.1",
+    "bun": ">=1.4.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run --cwd packages/web dev",
+    "lint": "oxlint -c oxlint.config.ts --deny-warnings .",
+    "lint:fix": "bun run lint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:ts": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p packages/core/tsconfig.json && tsc --noEmit -p packages/cli/tsconfig.json && tsc --noEmit -p packages/web/tsconfig.json",
+    "test": "vitest",
+    "test:hooks": "vitest run tests/hooks",
+    "knip": "knip --no-progress",
+    "build": "bun run --cwd packages/core build && bun run --cwd packages/web build && bun run --cwd packages/cli build",
+    "test:smoke": "node packages/cli/dist/index.js --help",
+    "validate": "bun run format:check && bun run lint && bun run test:ts && bun run knip && bun run test --run && bun run build && bun run test:smoke",
+    "prepare": "bun scripts/install-hooks.ts",
+    "lint:staged": "lint-staged"
+  },
+  "devDependencies": {
+    "@oxlint/plugins": "1.85.0",
+    "@types/node": "22.20.4",
+    "knip": "6.38.0",
+    "lint-staged": "17.5.1",
+    "oxlint": "1.85.0",
+    "prettier": "3.9.9",
+    "typescript": "7.0.2",
+    "vite": "8.3.1",
+    "vitest": "5.0.1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "prettier --write",
+      "oxlint -c oxlint.config.ts --deny-warnings --no-error-on-unmatched-pattern"
+    ],
+    "!(AGENTS).{json,jsonc,md,css,html,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}

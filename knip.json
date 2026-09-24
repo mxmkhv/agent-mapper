@@ -1,0 +1,24 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        ".agent-hooks/{guard,lint-edited,stop-gate}.ts",
+        "scripts/{install-hooks,copy-web}.ts",
+        "tests/**/*.test.ts"
+      ],
+      "project": [".agent-hooks/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"]
+    },
+    "packages/core": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/cli": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/web": {
+      "project": ["src/**/*.{ts,tsx,css}"]
+    }
+  },
+  "includeEntryExports": true
+}
