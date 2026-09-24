@@ -1,0 +1,54 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)\"/.agent-hooks/guard.sh",
+            "timeout": 60,
+            "statusMessage": "Checking project quality gates"
+          }
+        ],
+        "matcher": "Edit|Write|MultiEdit|Bash|apply_patch"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)\"/.agent-hooks/lint-edited.sh",
+            "timeout": 60,
+            "statusMessage": "Checking project quality gates"
+          }
+        ],
+        "matcher": "Edit|Write|MultiEdit|Bash|apply_patch"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)\"/.agent-hooks/stop-gate.sh",
+            "timeout": 120,
+            "statusMessage": "Checking project quality gates"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)\"/.agent-hooks/stop-gate.sh",
+            "timeout": 120,
+            "statusMessage": "Checking project quality gates"
+          }
+        ]
+      }
+    ]
+  }
+}
