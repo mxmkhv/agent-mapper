@@ -105,7 +105,7 @@ The walk:
 
 Worktrees are not found by walking. For each repo found, agent-mapper reads `.git/worktrees/*/gitdir`, which points to every worktree wherever it lives. A worktree whose folder no longer exists is shown as **Stale** (git calls it "prunable").
 
-Prototype results on Max's machine (`/tmp/agentmap-walk.mjs`, `/tmp/walk-v2.mjs`):
+Prototype results on Max's machine (second version kept in `prototypes/discovery-walk.mjs`):
 
 | Version | Folders visited | Time | Worktrees found |
 | --- | --- | --- | --- |
