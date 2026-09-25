@@ -1,12 +1,23 @@
 # agent-mapper
 
-A local, read-only view of Claude Code and Codex configuration. The workspace and quality gates are bootstrapped; discovery and configuration inventory are not implemented yet.
+A local, read-only view of Claude Code and Codex configuration. The current milestone inventories instruction files and skills, explains expected loading, and serves a local web UI.
 
 ## Start
 
 1. Select Node **26.7.0** using your version manager. Tooling requires Node **22.22.1 or newer**. On this Mac, the Homebrew Node is available with `export PATH="/opt/homebrew/bin:$PATH"`.
 2. Install Bun **1.4.0**, then run `bun install`. This installs exact locked dependencies and sets the repository's Git hooks path to `.githooks`.
-3. Run `bun run dev` for the UI scaffold.
+3. Run `bun run build`, then `node packages/cli/dist/index.js` to open the local inventory UI.
+
+## Inventory
+
+| Command                                         | Result                                                                |
+| ----------------------------------------------- | --------------------------------------------------------------------- |
+| `node packages/cli/dist/index.js`               | Open the local UI with global sources and suggested projects          |
+| `node packages/cli/dist/index.js --tools codex` | Open the UI filtered to Codex                                         |
+| `node packages/cli/dist/index.js why .`         | Explain expected instruction and skill loading for the current folder |
+| `node packages/cli/dist/index.js --json .`      | Export the same resolved inventory as JSON                            |
+
+The UI accepts an explicit folder path, including folders outside home. Select an instruction or skill to inspect its source and expected state, then Open or Reveal it in macOS. Free-form file content stays out of the browser and JSON response; use Open for the full text. The model describes a fresh local CLI session and lists coverage gaps beside the inventory. Other MVP v2 areas, including hooks, plugins, MCP, agents, memory, and worktree comparison, are later milestones.
 
 The `prepare` script changes only this repository's `core.hooksPath`. CI skips installation. Set `AGENT_MAPPER_SKIP_HOOK_INSTALL=1` only when an external system already manages Git hooks; it does not disable CI checks.
 
@@ -24,7 +35,7 @@ The `prepare` script changes only this repository's `core.hooksPath`. CI skips i
 | `bun run format`     | Format project-owned files                            |
 | `bun run validate`   | All gates, production builds, and Node CLI smoke test |
 
-After `bun run build`, run `node packages/cli/dist/index.js --help`. The CLI distribution includes the built web assets. It does not serve them yet.
+After `bun run build`, run `node packages/cli/dist/index.js --help` to see CLI usage. The published CLI is designed to run under Node.
 
 ## Agent setup
 

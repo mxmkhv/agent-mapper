@@ -1,0 +1,141 @@
+import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import type { InventoryEntry } from "@agent-mapper/core";
+import { SourceCollector } from "./source-reader";
+import { findGitRoot } from "./discovery";
+export { discoverProjects, type DiscoveryResult } from "./discovery";
+
+export interface ScanOptions {
+  workingDirectory: string;
+  home?: string;
+  codexHome?: string;
+}
+export interface ScanResult {
+  entries: InventoryEntry[];
+  errors: string[];
+  roots: { claude: string; codex: string };
+}
+
+function ancestors(path: string): string[] {
+  const result: string[] = [];
+  let current = resolve(path);
+  for (;;) {
+    result.unshift(current);
+    const parent = dirname(current);
+    if (parent === current) {
+      return result;
+    }
+    current = parent;
+  }
+}
+
+async function scanDirectory(
+  collector: SourceCollector,
+  options: { directory: string; includeCodex: boolean }
+): Promise<void> {
+  const { directory, includeCodex } = options;
+  const instructionPaths = [
+    ["claude", "CLAUDE.md"],
+    ["claude", "CLAUDE.local.md"],
+    ["claude", ".claude/CLAUDE.md"],
+    ["claude", "AGENTS.md"],
+    ["claude", ".claude/AGENTS.md"],
+    ["codex", "AGENTS.md"],
+    ["codex", "AGENTS.override.md"]
+  ] as const;
+  for (const [tool, name] of instructionPaths) {
+    if (tool === "codex" && !includeCodex) {
+      continue;
+    }
+    await collector.add({
+      tool,
+      kind: "instruction",
+      path: join(directory, name),
+      scope: "project"
+    });
+  }
+  const skillPaths = [
+    ["claude", ".claude/skills"],
+    ["codex", ".agents/skills"],
+    ["codex", ".codex/skills"]
+  ] as const;
+  for (const [tool, name] of skillPaths) {
+    if (tool === "codex" && !includeCodex) {
+      continue;
+    }
+    await collector.addSkills({
+      tool,
+      directory: join(directory, name),
+      scope: "project",
+      projectPath: directory
+    });
+  }
+}
+
+interface GlobalRoots {
+  home: string;
+  claude: string;
+  codex: string;
+}
+
+async function scanGlobal(
+  collector: SourceCollector,
+  roots: GlobalRoots
+): Promise<void> {
+  await collector.add({
+    tool: "claude",
+    kind: "instruction",
+    path: join(roots.claude, "CLAUDE.md"),
+    scope: "global"
+  });
+  await collector.add({
+    tool: "codex",
+    kind: "instruction",
+    path: join(roots.codex, "AGENTS.md"),
+    scope: "global"
+  });
+  await collector.add({
+    tool: "codex",
+    kind: "instruction",
+    path: join(roots.codex, "AGENTS.override.md"),
+    scope: "global"
+  });
+  await collector.addSkills({
+    tool: "claude",
+    directory: join(roots.claude, "skills"),
+    scope: "global"
+  });
+  await collector.addSkills({
+    tool: "codex",
+    directory: join(roots.codex, "skills"),
+    scope: "global"
+  });
+  await collector.addSkills({
+    tool: "codex",
+    directory: join(roots.home, ".agents", "skills"),
+    scope: "global"
+  });
+}
+
+export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
+  const home = resolve(options.home ?? homedir());
+  const roots = {
+    claude: join(home, ".claude"),
+    codex: resolve(
+      options.codexHome ?? process.env.CODEX_HOME ?? join(home, ".codex")
+    )
+  };
+  const collector = new SourceCollector();
+  await scanGlobal(collector, { home, ...roots });
+  const workingDirectory = resolve(options.workingDirectory);
+  const gitRoot = await findGitRoot(workingDirectory, "/");
+  for (const directory of ancestors(workingDirectory)) {
+    await scanDirectory(collector, {
+      directory,
+      includeCodex: gitRoot
+        ? directory === gitRoot || directory.startsWith(`${gitRoot}/`)
+        : directory === workingDirectory
+    });
+  }
+  return { entries: collector.entries, errors: collector.errors, roots };
+}
