@@ -4,6 +4,7 @@ import type {
   HookRecord,
   InventoryEntry,
   McpRecord,
+  MemoryRecord,
   PluginRecord
 } from "@agent-mapper/core";
 import { SourceCollector } from "./source-reader";
@@ -11,6 +12,7 @@ import { findGitRoot } from "./discovery";
 import { scanPlugins } from "./plugin-reader";
 import { scanHooks } from "./hook-reader";
 import { scanMcp } from "./mcp-reader";
+import { scanMemory } from "./memory-reader";
 export { discoverProjects, type DiscoveryResult } from "./discovery";
 
 export interface ScanOptions {
@@ -23,8 +25,13 @@ export interface ScanResult {
   plugins: PluginRecord[];
   hooks: HookRecord[];
   mcpServers: McpRecord[];
+  memories: MemoryRecord[];
   errors: string[];
   roots: { claude: string; codex: string };
+}
+
+function scanErrors(groups: readonly { errors: string[] }[]): string[] {
+  return [...new Set(groups.flatMap((group) => group.errors))];
 }
 
 async function scanRelated(options: {
@@ -171,19 +178,18 @@ export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
     codexHome: roots.codex,
     plugins: plugins.plugins
   });
+  const memory = await scanMemory({
+    workingDirectory,
+    home,
+    codexHome: roots.codex
+  });
   return {
     entries: collector.entries,
     plugins: plugins.plugins,
     hooks: hooks.hooks,
     mcpServers: mcp.mcpServers,
-    errors: [
-      ...new Set([
-        ...collector.errors,
-        ...plugins.errors,
-        ...hooks.errors,
-        ...mcp.errors
-      ])
-    ],
+    memories: memory.memories,
+    errors: scanErrors([collector, plugins, hooks, mcp, memory]),
     roots
   };
 }

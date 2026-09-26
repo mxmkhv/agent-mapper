@@ -82,6 +82,8 @@ export interface HookRecord {
 
 import type { McpRecord } from "./mcp";
 export type { McpRecord } from "./mcp";
+import type { MemoryRecord } from "./memory";
+export type { MemoryRecord } from "./memory";
 
 export interface ResolutionContext {
   workingDirectory: string;
@@ -108,6 +110,7 @@ export interface InventorySnapshot {
   plugins: PluginRecord[];
   hooks: HookRecord[];
   mcpServers: McpRecord[];
+  memories: MemoryRecord[];
   coverage: string[];
 }
 

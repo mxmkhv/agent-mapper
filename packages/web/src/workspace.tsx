@@ -4,8 +4,9 @@ import { SourceList, Detail } from "./source-panel";
 import { PluginList, PluginDetail } from "./plugin-panel";
 import { HookList, HookDetail } from "./hook-panel";
 import { McpList, McpDetail } from "./mcp-panel";
+import { MemoryList, MemoryDetail } from "./memory-panel";
+import { WorkspaceTabs, type Tab } from "./workspace-tabs";
 
-type Tab = "instruction" | "skill" | "hook" | "plugin" | "mcp";
 type ToolFilter = "all" | ToolId;
 
 import { Header } from "./workspace-header";
@@ -29,6 +30,7 @@ export function Workspace({
   const [selectedPluginId, setSelectedPluginId] = useState<string>();
   const [selectedHookId, setSelectedHookId] = useState<string>();
   const [selectedMcpId, setSelectedMcpId] = useState<string>();
+  const [selectedMemoryId, setSelectedMemoryId] = useState<string>();
   const items = snapshot.items.filter(
     ({ entry }) => entry.kind === tab && (tool === "all" || entry.tool === tool)
   );
@@ -41,6 +43,9 @@ export function Workspace({
   const mcpServers = snapshot.mcpServers.filter(
     (server) => tool === "all" || server.tool === tool
   );
+  const memories = snapshot.memories.filter(
+    (memory) => tool === "all" || memory.tool === tool
+  );
   const selected =
     items.find(({ entry }) => entry.id === selectedId) ?? items[0];
   const selectedPlugin =
@@ -49,6 +54,8 @@ export function Workspace({
     hooks.find((hook) => hook.id === selectedHookId) ?? hooks[0];
   const selectedMcp =
     mcpServers.find((server) => server.id === selectedMcpId) ?? mcpServers[0];
+  const selectedMemory =
+    memories.find((memory) => memory.id === selectedMemoryId) ?? memories[0];
   function openEntry(id: string) {
     const server = snapshot.mcpServers.find((item) => item.id === id);
     if (server) {
@@ -77,6 +84,15 @@ export function Workspace({
     setTab("plugin");
   }
   function listContent() {
+    if (tab === "memory") {
+      return (
+        <MemoryList
+          memories={memories}
+          selectedId={selectedMemory?.id}
+          onSelect={setSelectedMemoryId}
+        />
+      );
+    }
     if (tab === "mcp") {
       return (
         <McpList
@@ -113,6 +129,14 @@ export function Workspace({
     );
   }
   function detailContent() {
+    if (tab === "memory") {
+      return (
+        <MemoryDetail
+          memory={selectedMemory}
+          workingDirectory={snapshot.workingDirectory}
+        />
+      );
+    }
     if (tab === "mcp") {
       return (
         <McpDetail
@@ -160,53 +184,11 @@ export function Workspace({
       <div className="coverage-note">
         Fresh local CLI model · {snapshot.items.length} sources ·{" "}
         {snapshot.hooks.length} hooks · {snapshot.plugins.length} plugins ·{" "}
-        {snapshot.mcpServers.length} MCP servers · Scanned{" "}
+        {snapshot.mcpServers.length} MCP servers · {snapshot.memories.length}{" "}
+        memory files · Scanned{" "}
         {new Date(snapshot.scannedAt).toLocaleTimeString()}
       </div>
-      <nav className="tabs" aria-label="Inventory views">
-        <button
-          className={tab === "instruction" ? "active" : ""}
-          onClick={() => setTab("instruction")}
-        >
-          Instructions{" "}
-          <span>
-            {
-              snapshot.items.filter(({ entry }) => entry.kind === "instruction")
-                .length
-            }
-          </span>
-        </button>
-        <button
-          className={tab === "skill" ? "active" : ""}
-          onClick={() => setTab("skill")}
-        >
-          Skills{" "}
-          <span>
-            {
-              snapshot.items.filter(({ entry }) => entry.kind === "skill")
-                .length
-            }
-          </span>
-        </button>
-        <button
-          className={tab === "hook" ? "active" : ""}
-          onClick={() => setTab("hook")}
-        >
-          Hooks <span>{snapshot.hooks.length}</span>
-        </button>
-        <button
-          className={tab === "plugin" ? "active" : ""}
-          onClick={() => setTab("plugin")}
-        >
-          Plugins <span>{snapshot.plugins.length}</span>
-        </button>
-        <button
-          className={tab === "mcp" ? "active" : ""}
-          onClick={() => setTab("mcp")}
-        >
-          MCP <span>{snapshot.mcpServers.length}</span>
-        </button>
-      </nav>
+      <WorkspaceTabs tab={tab} snapshot={snapshot} onSelect={setTab} />
       <div className="inventory-grid">
         <section className="inventory-list">
           <div className="list-heading">

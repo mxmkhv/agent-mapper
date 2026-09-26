@@ -423,6 +423,9 @@ summary:focus-visible {
 .tool-dot.codex {
   background: #5fa67b;
 }
+.tool-dot.unknown {
+  background: var(--muted);
+}
 .state-badge {
   border-radius: 6px;
   padding: 4px 7px;

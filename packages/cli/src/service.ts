@@ -32,6 +32,7 @@ export async function buildSnapshot(
     plugins: scan.plugins,
     hooks: scan.hooks,
     mcpServers: scan.mcpServers,
+    memories: scan.memories,
     items: [
       ...resolveInventory(scan.entries, {
         workingDirectory: path,
@@ -46,6 +47,7 @@ export async function buildSnapshot(
       ...scan.errors,
       "Hook coverage excludes managed sources, skill and agent frontmatter, and unsupported TOML forms.",
       "MCP coverage excludes account and session connections, managed sources, approval state, and unsupported TOML forms. Servers are not contacted.",
+      "Memory coverage includes local Markdown files only. Claude encoded folder names are candidates, not verified project matches; custom memory locations and live use are not resolved.",
       "This view models a fresh local CLI session. Runtime flags, account-managed settings, and live session state are not inspected."
     ]
   };
@@ -62,6 +64,7 @@ export async function buildGlobalSnapshot(
     hooks: snapshot.hooks.filter((hook) => hook.scope !== "project"),
     mcpServers: snapshot.mcpServers.filter(
       (server) => server.scope !== "project"
-    )
+    ),
+    memories: snapshot.memories.filter((memory) => memory.scope !== "project")
   };
 }

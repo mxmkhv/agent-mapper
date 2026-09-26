@@ -44,6 +44,19 @@ function launchOpen(args: string[]): Promise<void> {
   });
 }
 
+function sourcePath(
+  snapshot: Awaited<ReturnType<typeof buildSnapshot>>,
+  id: string
+): string | undefined {
+  return (
+    snapshot.items.find((item) => item.entry.id === id)?.entry.path ??
+    snapshot.plugins.find((plugin) => plugin.id === id)?.sourcePath ??
+    snapshot.hooks.find((hook) => hook.id === id)?.sourcePath ??
+    snapshot.mcpServers.find((server) => server.id === id)?.sourcePath ??
+    snapshot.memories.find((memory) => memory.id === id)?.sourcePath
+  );
+}
+
 export async function performSourceAction(
   context: ActionContext
 ): Promise<void> {
@@ -58,11 +71,7 @@ export async function performSourceAction(
     home: context.options.home,
     codexHome: context.options.codexHome
   });
-  const source =
-    snapshot.items.find((item) => item.entry.id === body.id)?.entry.path ??
-    snapshot.plugins.find((plugin) => plugin.id === body.id)?.sourcePath ??
-    snapshot.hooks.find((hook) => hook.id === body.id)?.sourcePath ??
-    snapshot.mcpServers.find((server) => server.id === body.id)?.sourcePath;
+  const source = sourcePath(snapshot, body.id);
   if (!source) {
     throw new Error("Source is no longer in this scan. Rescan and try again.");
   }

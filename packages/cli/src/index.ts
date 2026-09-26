@@ -46,6 +46,37 @@ function printMcp(
   }
 }
 
+function printMemory(
+  memories: Awaited<ReturnType<typeof buildSnapshot>>["memories"]
+): void {
+  for (const memory of memories) {
+    console.log(
+      `${memory.tool} memory ${memory.name}: ${memory.readState}, ${memory.projectMatch}`
+    );
+    console.log(`  ${memory.sourcePath}`);
+  }
+}
+
+function printHooks(
+  hooks: Awaited<ReturnType<typeof buildSnapshot>>["hooks"]
+): void {
+  for (const hook of hooks) {
+    console.log(`${hook.tool} hook ${hook.event}: ${hook.availability}`);
+    console.log(`  ${hook.sourcePath}#${hook.locator}`);
+    console.log(`  ${hook.reason}`);
+  }
+}
+
+function printPlugins(
+  plugins: Awaited<ReturnType<typeof buildSnapshot>>["plugins"]
+): void {
+  for (const plugin of plugins) {
+    console.log(`${plugin.tool} plugin ${plugin.key}: ${plugin.state}`);
+    console.log(`  ${plugin.sourcePath}`);
+    console.log(`  ${plugin.reason}`);
+  }
+}
+
 async function explain(options: ExplanationOptions): Promise<void> {
   const snapshot = await buildSnapshot(options.folder);
   const items = snapshot.items.filter(({ entry }) =>
@@ -60,10 +91,15 @@ async function explain(options: ExplanationOptions): Promise<void> {
   const mcpServers = snapshot.mcpServers.filter((server) =>
     options.tools.includes(server.tool)
   );
+  const memories = snapshot.memories.filter((memory) =>
+    memory.tool === "unknown"
+      ? options.tools.length > 1
+      : options.tools.includes(memory.tool)
+  );
   if (options.json) {
     console.log(
       JSON.stringify(
-        { ...snapshot, items, plugins, hooks, mcpServers },
+        { ...snapshot, items, plugins, hooks, mcpServers, memories },
         null,
         2
       )
@@ -81,17 +117,10 @@ async function explain(options: ExplanationOptions): Promise<void> {
     console.log(`  ${entry.path}`);
     console.log(`  ${resolution.reason}`);
   }
-  for (const plugin of plugins) {
-    console.log(`${plugin.tool} plugin ${plugin.key}: ${plugin.state}`);
-    console.log(`  ${plugin.sourcePath}`);
-    console.log(`  ${plugin.reason}`);
-  }
-  for (const hook of hooks) {
-    console.log(`${hook.tool} hook ${hook.event}: ${hook.availability}`);
-    console.log(`  ${hook.sourcePath}#${hook.locator}`);
-    console.log(`  ${hook.reason}`);
-  }
+  printPlugins(plugins);
+  printHooks(hooks);
   printMcp(mcpServers);
+  printMemory(memories);
   for (const note of snapshot.coverage) {
     console.log(`Coverage: ${note}`);
   }
