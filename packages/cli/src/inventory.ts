@@ -2,6 +2,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import type {
   HookRecord,
+  AgentRecord,
   InventoryEntry,
   McpRecord,
   MemoryRecord,
@@ -13,6 +14,7 @@ import { scanPlugins } from "./plugin-reader";
 import { scanHooks } from "./hook-reader";
 import { scanMcp } from "./mcp-reader";
 import { scanMemory } from "./memory-reader";
+import { scanAgents } from "./agent-reader";
 export { discoverProjects, type DiscoveryResult } from "./discovery";
 
 export interface ScanOptions {
@@ -26,6 +28,7 @@ export interface ScanResult {
   hooks: HookRecord[];
   mcpServers: McpRecord[];
   memories: MemoryRecord[];
+  agents: AgentRecord[];
   errors: string[];
   roots: { claude: string; codex: string };
 }
@@ -146,6 +149,21 @@ async function scanGlobal(
   });
 }
 
+async function scanProjectSources(
+  collector: SourceCollector,
+  workingDirectory: string
+): Promise<void> {
+  const gitRoot = await findGitRoot(workingDirectory, "/");
+  for (const directory of ancestors(workingDirectory)) {
+    await scanDirectory(collector, {
+      directory,
+      includeCodex: gitRoot
+        ? directory === gitRoot || directory.startsWith(`${gitRoot}/`)
+        : directory === workingDirectory
+    });
+  }
+}
+
 export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
   const home = resolve(options.home ?? homedir());
   const roots = {
@@ -157,15 +175,7 @@ export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
   const collector = new SourceCollector();
   await scanGlobal(collector, { home, ...roots });
   const workingDirectory = resolve(options.workingDirectory);
-  const gitRoot = await findGitRoot(workingDirectory, "/");
-  for (const directory of ancestors(workingDirectory)) {
-    await scanDirectory(collector, {
-      directory,
-      includeCodex: gitRoot
-        ? directory === gitRoot || directory.startsWith(`${gitRoot}/`)
-        : directory === workingDirectory
-    });
-  }
+  await scanProjectSources(collector, workingDirectory);
   const plugins = await scanPlugins({
     workingDirectory,
     home,
@@ -183,13 +193,20 @@ export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
     home,
     codexHome: roots.codex
   });
+  const agents = await scanAgents({
+    workingDirectory,
+    home,
+    codexHome: roots.codex,
+    plugins: plugins.plugins
+  });
   return {
     entries: collector.entries,
     plugins: plugins.plugins,
     hooks: hooks.hooks,
     mcpServers: mcp.mcpServers,
     memories: memory.memories,
-    errors: scanErrors([collector, plugins, hooks, mcp, memory]),
+    agents: agents.agents,
+    errors: scanErrors([collector, plugins, hooks, mcp, memory, agents]),
     roots
   };
 }

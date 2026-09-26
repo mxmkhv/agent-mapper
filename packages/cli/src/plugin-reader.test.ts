@@ -70,7 +70,7 @@ function selectedClaudeFixture(options: ReturnType<typeof fixture>): void {
   );
   writeFileSync(
     join(pluginPath, "agents", "teams", "reviewer.md"),
-    "private-value"
+    "---\nname: reviewer\ndescription: Review code\n---\nprivate-value"
   );
   writeFileSync(
     join(pluginPath, ".claude-plugin", "plugin.json"),
@@ -101,6 +101,11 @@ it("links a selected Claude plugin to its skill without exposing file content", 
     (item) => item.entry.pluginId === plugin?.id
   );
   expect(skill?.entry.id).toBe(plugin?.contributions[0]?.entryId);
+  const agent = snapshot.agents.find((item) => item.pluginId === plugin?.id);
+  expect(agent?.id).toBe(
+    plugin?.contributions.find((item) => item.kind === "agent")?.entryId
+  );
+  expect(agent).toMatchObject({ availability: "configured" });
   const mcp = snapshot.mcpServers.find(
     (server) => server.pluginId === plugin?.id
   );

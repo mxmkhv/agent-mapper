@@ -5,6 +5,7 @@ import { PluginList, PluginDetail } from "./plugin-panel";
 import { HookList, HookDetail } from "./hook-panel";
 import { McpList, McpDetail } from "./mcp-panel";
 import { MemoryList, MemoryDetail } from "./memory-panel";
+import { AgentList, AgentDetail } from "./agent-panel";
 import { WorkspaceTabs, type Tab } from "./workspace-tabs";
 
 type ToolFilter = "all" | ToolId;
@@ -31,6 +32,7 @@ export function Workspace({
   const [selectedHookId, setSelectedHookId] = useState<string>();
   const [selectedMcpId, setSelectedMcpId] = useState<string>();
   const [selectedMemoryId, setSelectedMemoryId] = useState<string>();
+  const [selectedAgentId, setSelectedAgentId] = useState<string>();
   const items = snapshot.items.filter(
     ({ entry }) => entry.kind === tab && (tool === "all" || entry.tool === tool)
   );
@@ -46,6 +48,9 @@ export function Workspace({
   const memories = snapshot.memories.filter(
     (memory) => tool === "all" || memory.tool === tool
   );
+  const agents = snapshot.agents.filter(
+    (agent) => tool === "all" || agent.tool === tool
+  );
   const selected =
     items.find(({ entry }) => entry.id === selectedId) ?? items[0];
   const selectedPlugin =
@@ -56,7 +61,16 @@ export function Workspace({
     mcpServers.find((server) => server.id === selectedMcpId) ?? mcpServers[0];
   const selectedMemory =
     memories.find((memory) => memory.id === selectedMemoryId) ?? memories[0];
+  const selectedAgent =
+    agents.find((agent) => agent.id === selectedAgentId) ?? agents[0];
   function openEntry(id: string) {
+    const agent = snapshot.agents.find((item) => item.id === id);
+    if (agent) {
+      setTool(agent.tool);
+      setTab("agent");
+      setSelectedAgentId(id);
+      return;
+    }
     const server = snapshot.mcpServers.find((item) => item.id === id);
     if (server) {
       setTool(server.tool);
@@ -84,6 +98,15 @@ export function Workspace({
     setTab("plugin");
   }
   function listContent() {
+    if (tab === "agent") {
+      return (
+        <AgentList
+          agents={agents}
+          selectedId={selectedAgent?.id}
+          onSelect={setSelectedAgentId}
+        />
+      );
+    }
     if (tab === "memory") {
       return (
         <MemoryList
@@ -129,6 +152,15 @@ export function Workspace({
     );
   }
   function detailContent() {
+    if (tab === "agent") {
+      return (
+        <AgentDetail
+          agent={selectedAgent}
+          workingDirectory={snapshot.workingDirectory}
+          onSelectPlugin={selectPlugin}
+        />
+      );
+    }
     if (tab === "memory") {
       return (
         <MemoryDetail
@@ -184,8 +216,8 @@ export function Workspace({
       <div className="coverage-note">
         Fresh local CLI model · {snapshot.items.length} sources ·{" "}
         {snapshot.hooks.length} hooks · {snapshot.plugins.length} plugins ·{" "}
-        {snapshot.mcpServers.length} MCP servers · {snapshot.memories.length}{" "}
-        memory files · Scanned{" "}
+        {snapshot.mcpServers.length} MCP servers · {snapshot.agents.length}{" "}
+        agents · {snapshot.memories.length} memory files · Scanned{" "}
         {new Date(snapshot.scannedAt).toLocaleTimeString()}
       </div>
       <WorkspaceTabs tab={tab} snapshot={snapshot} onSelect={setTab} />

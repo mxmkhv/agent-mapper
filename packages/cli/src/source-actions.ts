@@ -53,7 +53,8 @@ function sourcePath(
     snapshot.plugins.find((plugin) => plugin.id === id)?.sourcePath ??
     snapshot.hooks.find((hook) => hook.id === id)?.sourcePath ??
     snapshot.mcpServers.find((server) => server.id === id)?.sourcePath ??
-    snapshot.memories.find((memory) => memory.id === id)?.sourcePath
+    snapshot.memories.find((memory) => memory.id === id)?.sourcePath ??
+    snapshot.agents.find((agent) => agent.id === id)?.sourcePath
   );
 }
 

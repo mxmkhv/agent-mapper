@@ -1,7 +1,7 @@
 import type { InventorySnapshot } from "@agent-mapper/core";
 
 export type Tab =
-  "instruction" | "skill" | "hook" | "plugin" | "mcp" | "memory";
+  "instruction" | "skill" | "agent" | "hook" | "plugin" | "mcp" | "memory";
 
 interface TabsProps {
   tab: Tab;
@@ -32,6 +32,12 @@ export function WorkspaceTabs({ tab, snapshot, onSelect }: TabsProps) {
         <span>
           {snapshot.items.filter(({ entry }) => entry.kind === "skill").length}
         </span>
+      </button>
+      <button
+        className={tab === "agent" ? "active" : ""}
+        onClick={() => onSelect("agent")}
+      >
+        Agents <span>{snapshot.agents.length}</span>
       </button>
       <button
         className={tab === "hook" ? "active" : ""}

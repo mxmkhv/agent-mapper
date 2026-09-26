@@ -57,6 +57,16 @@ function printMemory(
   }
 }
 
+function printAgents(
+  agents: Awaited<ReturnType<typeof buildSnapshot>>["agents"]
+): void {
+  for (const agent of agents) {
+    console.log(`${agent.tool} agent ${agent.name}: ${agent.availability}`);
+    console.log(`  ${agent.sourcePath}#${agent.locator}`);
+    console.log(`  ${agent.reason}`);
+  }
+}
+
 function printHooks(
   hooks: Awaited<ReturnType<typeof buildSnapshot>>["hooks"]
 ): void {
@@ -77,6 +87,18 @@ function printPlugins(
   }
 }
 
+function printEntries(
+  items: Awaited<ReturnType<typeof buildSnapshot>>["items"]
+): void {
+  for (const { entry, resolution } of items) {
+    console.log(
+      `${entry.tool} ${entry.kind} ${entry.name}: ${resolution.availability}, ${resolution.loading}`
+    );
+    console.log(`  ${entry.path}`);
+    console.log(`  ${resolution.reason}`);
+  }
+}
+
 async function explain(options: ExplanationOptions): Promise<void> {
   const snapshot = await buildSnapshot(options.folder);
   const items = snapshot.items.filter(({ entry }) =>
@@ -91,6 +113,9 @@ async function explain(options: ExplanationOptions): Promise<void> {
   const mcpServers = snapshot.mcpServers.filter((server) =>
     options.tools.includes(server.tool)
   );
+  const agents = snapshot.agents.filter((agent) =>
+    options.tools.includes(agent.tool)
+  );
   const memories = snapshot.memories.filter((memory) =>
     memory.tool === "unknown"
       ? options.tools.length > 1
@@ -99,7 +124,7 @@ async function explain(options: ExplanationOptions): Promise<void> {
   if (options.json) {
     console.log(
       JSON.stringify(
-        { ...snapshot, items, plugins, hooks, mcpServers, memories },
+        { ...snapshot, items, plugins, hooks, mcpServers, memories, agents },
         null,
         2
       )
@@ -110,17 +135,12 @@ async function explain(options: ExplanationOptions): Promise<void> {
   console.log(
     `Configuration roots: Claude ${snapshot.roots.claude}; Codex ${snapshot.roots.codex}`
   );
-  for (const { entry, resolution } of items) {
-    console.log(
-      `${entry.tool} ${entry.kind} ${entry.name}: ${resolution.availability}, ${resolution.loading}`
-    );
-    console.log(`  ${entry.path}`);
-    console.log(`  ${resolution.reason}`);
-  }
+  printEntries(items);
   printPlugins(plugins);
   printHooks(hooks);
   printMcp(mcpServers);
   printMemory(memories);
+  printAgents(agents);
   for (const note of snapshot.coverage) {
     console.log(`Coverage: ${note}`);
   }

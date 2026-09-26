@@ -306,12 +306,14 @@ summary:focus-visible {
 }
 .tabs {
   display: flex;
-  gap: 25px;
+  gap: 16px;
   margin-top: 33px;
+  overflow-x: auto;
   border-bottom: 1px solid var(--border);
 }
 .tabs button {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 8px;
   margin-bottom: -1px;
@@ -508,7 +510,8 @@ summary:focus-visible {
 .detail-section .state-line.missing {
   color: var(--muted);
 }
-.detail-section .state-line.disabled {
+.detail-section .state-line.disabled,
+.detail-section .state-line.shadowed {
   color: #956a39;
 }
 .contribution-list {

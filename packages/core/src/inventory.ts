@@ -84,6 +84,8 @@ import type { McpRecord } from "./mcp";
 export type { McpRecord } from "./mcp";
 import type { MemoryRecord } from "./memory";
 export type { MemoryRecord } from "./memory";
+import type { AgentRecord } from "./agent";
+export type { AgentRecord } from "./agent";
 
 export interface ResolutionContext {
   workingDirectory: string;
@@ -111,6 +113,7 @@ export interface InventorySnapshot {
   hooks: HookRecord[];
   mcpServers: McpRecord[];
   memories: MemoryRecord[];
+  agents: AgentRecord[];
   coverage: string[];
 }
 
