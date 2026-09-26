@@ -6,6 +6,8 @@ import { HookList, HookDetail } from "./hook-panel";
 import { McpList, McpDetail } from "./mcp-panel";
 import { MemoryList, MemoryDetail } from "./memory-panel";
 import { AgentList, AgentDetail } from "./agent-panel";
+import { WorktreePanel } from "./worktree-panel";
+import { CoverageNotes, WorkspaceSummary } from "./workspace-summary";
 import { WorkspaceTabs, type Tab } from "./workspace-tabs";
 
 type ToolFilter = "all" | ToolId;
@@ -16,16 +18,20 @@ interface WorkspaceProps {
   snapshot: InventorySnapshot;
   globalView: boolean;
   initialTool: ToolFilter;
+  initialTab: Tab;
   onRescan(): void;
+  onSelectPath(path: string): void;
 }
 
 export function Workspace({
   snapshot,
   globalView,
   initialTool,
-  onRescan
+  initialTab,
+  onRescan,
+  onSelectPath
 }: WorkspaceProps) {
-  const [tab, setTab] = useState<Tab>("instruction");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [tool, setTool] = useState<ToolFilter>(initialTool);
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedPluginId, setSelectedPluginId] = useState<string>();
@@ -213,36 +219,31 @@ export function Workspace({
         onToolChange={setTool}
         onRescan={onRescan}
       />
-      <div className="coverage-note">
-        Fresh local CLI model · {snapshot.items.length} sources ·{" "}
-        {snapshot.hooks.length} hooks · {snapshot.plugins.length} plugins ·{" "}
-        {snapshot.mcpServers.length} MCP servers · {snapshot.agents.length}{" "}
-        agents · {snapshot.memories.length} memory files · Scanned{" "}
-        {new Date(snapshot.scannedAt).toLocaleTimeString()}
-      </div>
+      <WorkspaceSummary snapshot={snapshot} />
       <WorkspaceTabs tab={tab} snapshot={snapshot} onSelect={setTab} />
       <div className="inventory-grid">
-        <section className="inventory-list">
-          <div className="list-heading">
-            <span>NAME</span>
-            <span>EXPECTED STATE</span>
-          </div>
-          {listContent()}
-        </section>
-        {detailContent()}
+        {tab === "worktree" ? (
+          <WorktreePanel
+            worktrees={snapshot.worktrees}
+            comparison={snapshot.comparison}
+            tool={tool}
+            workingDirectory={snapshot.workingDirectory}
+            onSelectPath={onSelectPath}
+          />
+        ) : (
+          <>
+            <section className="inventory-list">
+              <div className="list-heading">
+                <span>NAME</span>
+                <span>EXPECTED STATE</span>
+              </div>
+              {listContent()}
+            </section>
+            {detailContent()}
+          </>
+        )}
       </div>
-      {snapshot.coverage.length > 0 ? (
-        <details className="coverage">
-          <summary>
-            Coverage and scan notes · {snapshot.coverage.length}
-          </summary>
-          <ul>
-            {snapshot.coverage.map((note) => (
-              <li key={note}>{note}</li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
+      <CoverageNotes notes={snapshot.coverage} />
     </div>
   );
 }

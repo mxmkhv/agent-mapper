@@ -3,7 +3,11 @@ import { spawn } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
-import { supportedTools, type ToolId } from "@agent-mapper/core";
+import {
+  supportedTools,
+  type InventorySnapshot,
+  type ToolId
+} from "@agent-mapper/core";
 import { buildSnapshot, createAppServer } from "./service";
 
 const usage = `agent-mapper
@@ -99,32 +103,40 @@ function printEntries(
   }
 }
 
-async function explain(options: ExplanationOptions): Promise<void> {
-  const snapshot = await buildSnapshot(options.folder);
+function filterSnapshot(snapshot: InventorySnapshot, tools: ToolId[]) {
   const items = snapshot.items.filter(({ entry }) =>
-    options.tools.includes(entry.tool)
+    tools.includes(entry.tool)
   );
   const plugins = snapshot.plugins.filter((plugin) =>
-    options.tools.includes(plugin.tool)
+    tools.includes(plugin.tool)
   );
-  const hooks = snapshot.hooks.filter((hook) =>
-    options.tools.includes(hook.tool)
-  );
+  const hooks = snapshot.hooks.filter((hook) => tools.includes(hook.tool));
   const mcpServers = snapshot.mcpServers.filter((server) =>
-    options.tools.includes(server.tool)
+    tools.includes(server.tool)
   );
-  const agents = snapshot.agents.filter((agent) =>
-    options.tools.includes(agent.tool)
-  );
+  const agents = snapshot.agents.filter((agent) => tools.includes(agent.tool));
+  const comparison = snapshot.comparison && {
+    ...snapshot.comparison,
+    differences: snapshot.comparison.differences.filter(
+      (row) => row.tool === "shared" || tools.includes(row.tool)
+    )
+  };
   const memories = snapshot.memories.filter((memory) =>
-    memory.tool === "unknown"
-      ? options.tools.length > 1
-      : options.tools.includes(memory.tool)
+    memory.tool === "unknown" ? tools.length > 1 : tools.includes(memory.tool)
   );
+  return { items, plugins, hooks, mcpServers, agents, comparison, memories };
+}
+
+async function explain(options: ExplanationOptions): Promise<void> {
+  const snapshot = await buildSnapshot(options.folder);
+  const filtered = filterSnapshot(snapshot, options.tools);
   if (options.json) {
     console.log(
       JSON.stringify(
-        { ...snapshot, items, plugins, hooks, mcpServers, memories, agents },
+        {
+          ...snapshot,
+          ...filtered
+        },
         null,
         2
       )
@@ -135,12 +147,12 @@ async function explain(options: ExplanationOptions): Promise<void> {
   console.log(
     `Configuration roots: Claude ${snapshot.roots.claude}; Codex ${snapshot.roots.codex}`
   );
-  printEntries(items);
-  printPlugins(plugins);
-  printHooks(hooks);
-  printMcp(mcpServers);
-  printMemory(memories);
-  printAgents(agents);
+  printEntries(filtered.items);
+  printPlugins(filtered.plugins);
+  printHooks(filtered.hooks);
+  printMcp(filtered.mcpServers);
+  printMemory(filtered.memories);
+  printAgents(filtered.agents);
   for (const note of snapshot.coverage) {
     console.log(`Coverage: ${note}`);
   }

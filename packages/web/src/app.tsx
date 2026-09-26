@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useInventory, useProjects } from "./data";
 import { Sidebar } from "./sidebar";
 import { Workspace } from "./workspace";
+import type { Tab } from "./workspace-tabs";
 
 function initialTool() {
   const selected = new URLSearchParams(window.location.search).get("tools");
@@ -13,10 +14,12 @@ export function App() {
     () => window.localStorage.getItem("agent-mapper:selected-folder") ?? ""
   );
   const [refresh, setRefresh] = useState(0);
+  const [initialTab, setInitialTab] = useState<Tab>("instruction");
   const projects = useProjects();
   const inventory = useInventory(selectedPath, refresh);
-  function selectPath(path: string) {
+  function selectPath(path: string, tab: Tab = "instruction") {
     setSelectedPath(path);
+    setInitialTab(tab);
     window.localStorage.setItem("agent-mapper:selected-folder", path);
   }
   return (
@@ -49,7 +52,9 @@ export function App() {
             snapshot={inventory.value}
             globalView={!selectedPath}
             initialTool={initialTool()}
+            initialTab={initialTab}
             onRescan={() => setRefresh((value) => value + 1)}
+            onSelectPath={(path) => selectPath(path, "worktree")}
           />
         ) : null}
       </main>

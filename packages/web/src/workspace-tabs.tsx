@@ -1,7 +1,14 @@
 import type { InventorySnapshot } from "@agent-mapper/core";
 
 export type Tab =
-  "instruction" | "skill" | "agent" | "hook" | "plugin" | "mcp" | "memory";
+  | "instruction"
+  | "skill"
+  | "agent"
+  | "hook"
+  | "plugin"
+  | "mcp"
+  | "memory"
+  | "worktree";
 
 interface TabsProps {
   tab: Tab;
@@ -62,6 +69,22 @@ export function WorkspaceTabs({ tab, snapshot, onSelect }: TabsProps) {
         onClick={() => onSelect("memory")}
       >
         Memory <span>{snapshot.memories.length}</span>
+      </button>
+      <button
+        className={tab === "worktree" ? "active" : ""}
+        onClick={() => onSelect("worktree")}
+        ref={
+          tab === "worktree"
+            ? (node) =>
+                node?.scrollIntoView({ block: "nearest", inline: "nearest" })
+            : undefined
+        }
+      >
+        Worktrees{" "}
+        <span>
+          {snapshot.comparison?.differences.length ??
+            snapshot.worktrees.filter((item) => !item.isMain).length}
+        </span>
       </button>
     </nav>
   );

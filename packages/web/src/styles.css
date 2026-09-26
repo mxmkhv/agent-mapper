@@ -124,6 +124,26 @@ summary:focus-visible {
   box-shadow: 0 1px 3px #0000000b;
   color: var(--accent-strong);
 }
+.worktree-group {
+  margin: 1px 0 5px 10px;
+}
+.worktree-group summary {
+  padding: 6px 12px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+.worktree-group summary span {
+  margin-left: 3px;
+}
+.worktree-button {
+  padding-left: 23px;
+  font-size: 12px;
+}
+.worktree-button:disabled {
+  cursor: default;
+  color: var(--muted);
+}
 .sidebar-note,
 .sidebar-error {
   margin: 4px 10px 8px;
@@ -443,6 +463,13 @@ summary:focus-visible {
 .state-badge.shadowed {
   color: #956a39;
 }
+.state-badge.only-main,
+.state-badge.only-here,
+.state-badge.different-content,
+.state-badge.prunable,
+.state-badge.missing {
+  color: var(--muted);
+}
 .empty-list {
   padding: 70px 20px;
   text-align: center;
@@ -513,6 +540,19 @@ summary:focus-visible {
 .detail-section .state-line.disabled,
 .detail-section .state-line.shadowed {
   color: #956a39;
+}
+.detail-section .state-line.worktree-neutral {
+  color: var(--muted);
+  text-transform: none;
+}
+.worktree-side + .worktree-side {
+  margin-top: 23px;
+  padding-top: 19px;
+  border-top: 1px solid var(--border);
+}
+.worktree-side h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
 }
 .contribution-list {
   display: flex;

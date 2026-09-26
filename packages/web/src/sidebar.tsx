@@ -47,14 +47,44 @@ export function Sidebar({
       ) : null}
       <div className="project-list">
         {projects.map((project) => (
-          <button
-            key={project.path}
-            className={`project-button ${selectedPath === project.path ? "active" : ""}`}
-            onClick={() => onSelect(project.path)}
-            title={project.path}
-          >
-            {project.path.split("/").at(-1)}
-          </button>
+          <div key={project.path}>
+            <button
+              className={`project-button ${selectedPath === project.path ? "active" : ""}`}
+              onClick={() => onSelect(project.path)}
+              title={project.path}
+            >
+              {project.path.split("/").at(-1)}
+            </button>
+            {project.worktrees?.some((item) => !item.isMain) ? (
+              <details
+                className="worktree-group"
+                open={project.worktrees.some(
+                  (item) => item.path === selectedPath && !item.isMain
+                )}
+              >
+                <summary>
+                  Worktrees{" "}
+                  <span>
+                    {project.worktrees.filter((item) => !item.isMain).length}
+                  </span>
+                </summary>
+                {project.worktrees
+                  .filter((item) => !item.isMain)
+                  .map((item) => (
+                    <button
+                      key={item.path}
+                      className={`project-button worktree-button ${selectedPath === item.path ? "active" : ""}`}
+                      onClick={() => onSelect(item.path)}
+                      disabled={item.state !== "available"}
+                      title={`${item.path} · ${item.state}`}
+                    >
+                      {item.path.split("/").at(-1)}
+                      {item.state === "available" ? "" : ` · ${item.state}`}
+                    </button>
+                  ))}
+              </details>
+            ) : null}
+          </div>
         ))}
       </div>
       <form className="add-folder" onSubmit={addFolder}>

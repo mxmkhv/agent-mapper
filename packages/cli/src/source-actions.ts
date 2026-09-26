@@ -44,7 +44,17 @@ function launchOpen(args: string[]): Promise<void> {
   });
 }
 
-function sourcePath(
+function comparisonSourcePath(
+  snapshot: Awaited<ReturnType<typeof buildSnapshot>>,
+  id: string
+): string | undefined {
+  const row = snapshot.comparison?.differences.find(
+    (item) => item.main?.id === id || item.here?.id === id
+  );
+  return row?.main?.id === id ? row.main.path : row?.here?.path;
+}
+
+export function sourcePath(
   snapshot: Awaited<ReturnType<typeof buildSnapshot>>,
   id: string
 ): string | undefined {
@@ -54,7 +64,8 @@ function sourcePath(
     snapshot.hooks.find((hook) => hook.id === id)?.sourcePath ??
     snapshot.mcpServers.find((server) => server.id === id)?.sourcePath ??
     snapshot.memories.find((memory) => memory.id === id)?.sourcePath ??
-    snapshot.agents.find((agent) => agent.id === id)?.sourcePath
+    snapshot.agents.find((agent) => agent.id === id)?.sourcePath ??
+    comparisonSourcePath(snapshot, id)
   );
 }
 

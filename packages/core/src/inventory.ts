@@ -114,6 +114,8 @@ export interface InventorySnapshot {
   mcpServers: McpRecord[];
   memories: MemoryRecord[];
   agents: AgentRecord[];
+  worktrees: import("./worktree").WorktreeRecord[];
+  comparison?: import("./worktree").WorktreeComparison;
   coverage: string[];
 }
 

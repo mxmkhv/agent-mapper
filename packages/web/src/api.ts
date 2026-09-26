@@ -1,8 +1,9 @@
-import type { InventorySnapshot } from "@agent-mapper/core";
+import type { InventorySnapshot, WorktreeRecord } from "@agent-mapper/core";
 
 export interface ProjectSuggestion {
   path: string;
   hits: string[];
+  worktrees?: WorktreeRecord[];
 }
 export interface ProjectList {
   projects: ProjectSuggestion[];

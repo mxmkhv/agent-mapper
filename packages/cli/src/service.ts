@@ -3,7 +3,20 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { resolveInventory, type InventorySnapshot } from "@agent-mapper/core";
 import { scanInventory, type ScanOptions } from "./inventory";
+import { scanWorktrees } from "./worktree-compare";
 export { createAppServer } from "./server";
+
+function coverage(errors: string[]): string[] {
+  return [
+    ...errors,
+    "Hook coverage excludes managed sources, skill and agent frontmatter, and unsupported TOML forms.",
+    "MCP coverage excludes account and session connections, managed sources, approval state, and unsupported TOML forms. Servers are not contacted.",
+    "Memory coverage includes local Markdown files only. Claude encoded folder names are candidates, not verified project matches; custom memory locations and live use are not resolved.",
+    "Agent coverage includes local Claude Markdown and Codex TOML files, plus Claude plugin agent files. Managed and session agents, unsupported declarations, project trust, and live use are not verified. Agent prompts stay in source files.",
+    "Worktree comparison checks common local configuration files by relative path and content. Generated folders and inherited global files are excluded. A changed settings file does not identify which declaration changed inside it.",
+    "This view models a fresh local CLI session. Runtime flags, account-managed settings, and live session state are not inspected."
+  ];
+}
 
 export async function buildSnapshot(
   workingDirectory: string,
@@ -25,6 +38,7 @@ export async function buildSnapshot(
     throw new Error(`${path} is not a folder. Choose an existing folder.`);
   }
   const scan = await scanInventory({ ...options, workingDirectory: path });
+  const worktree = await scanWorktrees(path);
   return {
     workingDirectory: path,
     scannedAt: new Date().toISOString(),
@@ -34,6 +48,8 @@ export async function buildSnapshot(
     mcpServers: scan.mcpServers,
     memories: scan.memories,
     agents: scan.agents,
+    worktrees: worktree.worktrees,
+    comparison: worktree.comparison,
     items: [
       ...resolveInventory(scan.entries, {
         workingDirectory: path,
@@ -44,14 +60,7 @@ export async function buildSnapshot(
         tool: "codex"
       })
     ],
-    coverage: [
-      ...scan.errors,
-      "Hook coverage excludes managed sources, skill and agent frontmatter, and unsupported TOML forms.",
-      "MCP coverage excludes account and session connections, managed sources, approval state, and unsupported TOML forms. Servers are not contacted.",
-      "Memory coverage includes local Markdown files only. Claude encoded folder names are candidates, not verified project matches; custom memory locations and live use are not resolved.",
-      "Agent coverage includes local Claude Markdown and Codex TOML files, plus Claude plugin agent files. Managed and session agents, unsupported declarations, project trust, and live use are not verified. Agent prompts stay in source files.",
-      "This view models a fresh local CLI session. Runtime flags, account-managed settings, and live session state are not inspected."
-    ]
+    coverage: coverage([...scan.errors, ...worktree.errors])
   };
 }
 
@@ -68,6 +77,8 @@ export async function buildGlobalSnapshot(
       (server) => server.scope !== "project"
     ),
     memories: snapshot.memories.filter((memory) => memory.scope !== "project"),
-    agents: snapshot.agents.filter((agent) => agent.scope !== "project")
+    agents: snapshot.agents.filter((agent) => agent.scope !== "project"),
+    worktrees: [],
+    comparison: undefined
   };
 }

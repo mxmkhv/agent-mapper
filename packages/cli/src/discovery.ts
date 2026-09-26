@@ -1,6 +1,8 @@
 import { lstat, readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import type { WorktreeRecord } from "@agent-mapper/core";
+import { readWorktrees } from "./worktree-git";
 
 const discoveryNames = new Set([
   ".claude",
@@ -33,6 +35,37 @@ interface VisitCandidate {
 interface DiscoveredProject {
   path: string;
   hits: string[];
+  worktrees?: WorktreeRecord[];
+}
+
+async function groupWorktrees(projects: DiscoveredProject[]): Promise<{
+  projects: DiscoveredProject[];
+  errors: string[];
+}> {
+  const scanned = await Promise.all(
+    projects.map((project) => readWorktrees(project.path))
+  );
+  const grouped = new Map<string, DiscoveredProject>();
+  const errors: string[] = [];
+  for (const [index, project] of projects.entries()) {
+    const result = scanned[index];
+    errors.push(...(result?.errors ?? []));
+    const worktrees = result?.worktrees ?? [];
+    const main = worktrees.find((item) => item.isMain);
+    const key = main?.path ?? project.path;
+    const previous = grouped.get(key);
+    grouped.set(key, {
+      path: key,
+      hits: [...(previous?.hits ?? []), ...project.hits],
+      worktrees: main ? worktrees : undefined
+    });
+  }
+  return {
+    projects: [...grouped.values()].sort((a, b) =>
+      a.path.localeCompare(b.path)
+    ),
+    errors
+  };
 }
 export interface DiscoveryResult {
   projects: DiscoveredProject[];
@@ -99,11 +132,12 @@ export async function discoverProjects(
 ): Promise<DiscoveryResult> {
   const walk = new DiscoveryWalk(resolve(home), maxDepth);
   await walk.visit(walk.root, 0);
+  const grouped = await groupWorktrees(
+    [...walk.projects].map(([path, hits]) => ({ path, hits }))
+  );
   return {
-    projects: [...walk.projects]
-      .map(([path, hits]) => ({ path, hits }))
-      .sort((a, b) => a.path.localeCompare(b.path)),
-    errors: walk.errors,
+    projects: grouped.projects,
+    errors: [...walk.errors, ...grouped.errors],
     exclusions: excludedDirectories,
     maxDepth
   };
