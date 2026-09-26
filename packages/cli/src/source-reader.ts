@@ -15,6 +15,7 @@ interface Candidate {
   path: string;
   scope: InventoryEntry["scope"];
   projectPath?: string;
+  pluginId?: string;
 }
 
 interface SourceRead {
@@ -115,6 +116,9 @@ export class SourceCollector {
     }
     if (candidate.projectPath) {
       item.projectPath = candidate.projectPath;
+    }
+    if (candidate.pluginId) {
+      item.pluginId = candidate.pluginId;
     }
     if (source.state === "readable") {
       item.characters = source.content.length;

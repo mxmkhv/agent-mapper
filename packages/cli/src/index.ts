@@ -41,8 +41,11 @@ async function explain(options: ExplanationOptions): Promise<void> {
   const items = snapshot.items.filter(({ entry }) =>
     options.tools.includes(entry.tool)
   );
+  const plugins = snapshot.plugins.filter((plugin) =>
+    options.tools.includes(plugin.tool)
+  );
   if (options.json) {
-    console.log(JSON.stringify({ ...snapshot, items }, null, 2));
+    console.log(JSON.stringify({ ...snapshot, items, plugins }, null, 2));
     return;
   }
   console.log(`Fresh local CLI model for ${snapshot.workingDirectory}`);
@@ -55,6 +58,11 @@ async function explain(options: ExplanationOptions): Promise<void> {
     );
     console.log(`  ${entry.path}`);
     console.log(`  ${resolution.reason}`);
+  }
+  for (const plugin of plugins) {
+    console.log(`${plugin.tool} plugin ${plugin.key}: ${plugin.state}`);
+    console.log(`  ${plugin.sourcePath}`);
+    console.log(`  ${plugin.reason}`);
   }
   for (const note of snapshot.coverage) {
     console.log(`Coverage: ${note}`);

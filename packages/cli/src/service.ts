@@ -29,6 +29,7 @@ export async function buildSnapshot(
     workingDirectory: path,
     scannedAt: new Date().toISOString(),
     roots: scan.roots,
+    plugins: scan.plugins,
     items: [
       ...resolveInventory(scan.entries, {
         workingDirectory: path,
@@ -52,6 +53,7 @@ export async function buildGlobalSnapshot(
   const snapshot = await buildSnapshot(options.home ?? homedir(), options);
   return {
     ...snapshot,
-    items: snapshot.items.filter(({ entry }) => entry.scope === "global")
+    items: snapshot.items.filter(({ entry }) => entry.scope === "global"),
+    plugins: snapshot.plugins.filter((plugin) => plugin.scope !== "project")
   };
 }

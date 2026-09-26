@@ -58,13 +58,11 @@ export async function performSourceAction(
     home: context.options.home,
     codexHome: context.options.codexHome
   });
-  const source = snapshot.items.find(
-    (item) => item.entry.id === body.id
-  )?.entry;
+  const source =
+    snapshot.items.find((item) => item.entry.id === body.id)?.entry.path ??
+    snapshot.plugins.find((plugin) => plugin.id === body.id)?.sourcePath;
   if (!source) {
     throw new Error("Source is no longer in this scan. Rescan and try again.");
   }
-  await launchOpen(
-    body.action === "reveal" ? ["-R", source.path] : [source.path]
-  );
+  await launchOpen(body.action === "reveal" ? ["-R", source] : [source]);
 }

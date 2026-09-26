@@ -44,9 +44,14 @@ export function SourceList({ items, selectedId, onSelect }: SourceListProps) {
 interface DetailProps {
   item?: ResolvedEntry;
   workingDirectory: string;
+  onSelectPlugin(id: string): void;
 }
 
-export function Detail({ item, workingDirectory }: DetailProps) {
+export function Detail({
+  item,
+  workingDirectory,
+  onSelectPlugin
+}: DetailProps) {
   const [actionError, setActionError] = useState("");
   if (!item) {
     return (
@@ -90,6 +95,14 @@ export function Detail({ item, workingDirectory }: DetailProps) {
       <section className="detail-section">
         <h3>Source</h3>
         <p className="source-path">{entry.path}</p>
+        {entry.pluginId ? (
+          <button
+            className="source-link"
+            onClick={() => onSelectPlugin(entry.pluginId!)}
+          >
+            View parent plugin ↗
+          </button>
+        ) : null}
         {entry.isSymlink ? (
           <p>Linked target: {entry.realPath ?? "unavailable"}</p>
         ) : null}

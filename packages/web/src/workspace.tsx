@@ -1,8 +1,9 @@
 import { useState } from "react";
 import type { InventorySnapshot, ToolId } from "@agent-mapper/core";
 import { SourceList, Detail } from "./source-panel";
+import { PluginList, PluginDetail } from "./plugin-panel";
 
-type Tab = "instruction" | "skill";
+type Tab = "instruction" | "skill" | "plugin";
 type ToolFilter = "all" | ToolId;
 
 interface HeaderProps {
@@ -74,11 +75,26 @@ export function Workspace({
   const [tab, setTab] = useState<Tab>("instruction");
   const [tool, setTool] = useState<ToolFilter>(initialTool);
   const [selectedId, setSelectedId] = useState<string>();
+  const [selectedPluginId, setSelectedPluginId] = useState<string>();
   const items = snapshot.items.filter(
     ({ entry }) => entry.kind === tab && (tool === "all" || entry.tool === tool)
   );
+  const plugins = snapshot.plugins.filter(
+    (plugin) => tool === "all" || plugin.tool === tool
+  );
   const selected =
     items.find(({ entry }) => entry.id === selectedId) ?? items[0];
+  const selectedPlugin =
+    plugins.find((plugin) => plugin.id === selectedPluginId) ?? plugins[0];
+  function openEntry(id: string) {
+    const entry = snapshot.items.find((item) => item.entry.id === id);
+    if (!entry) {
+      return;
+    }
+    setTool(entry.entry.tool);
+    setTab(entry.entry.kind);
+    setSelectedId(id);
+  }
   return (
     <div className="workspace">
       <Header
@@ -89,7 +105,8 @@ export function Workspace({
         onRescan={onRescan}
       />
       <div className="coverage-note">
-        Fresh local CLI model · {snapshot.items.length} sources · Scanned{" "}
+        Fresh local CLI model · {snapshot.items.length} sources ·{" "}
+        {snapshot.plugins.length} plugins · Scanned{" "}
         {new Date(snapshot.scannedAt).toLocaleTimeString()}
       </div>
       <nav className="tabs" aria-label="Inventory views">
@@ -117,6 +134,12 @@ export function Workspace({
             }
           </span>
         </button>
+        <button
+          className={tab === "plugin" ? "active" : ""}
+          onClick={() => setTab("plugin")}
+        >
+          Plugins <span>{snapshot.plugins.length}</span>
+        </button>
       </nav>
       <div className="inventory-grid">
         <section className="inventory-list">
@@ -124,13 +147,36 @@ export function Workspace({
             <span>NAME</span>
             <span>EXPECTED STATE</span>
           </div>
-          <SourceList
-            items={items}
-            selectedId={selected?.entry.id}
-            onSelect={setSelectedId}
-          />
+          {tab === "plugin" ? (
+            <PluginList
+              plugins={plugins}
+              selectedId={selectedPlugin?.id}
+              onSelect={setSelectedPluginId}
+            />
+          ) : (
+            <SourceList
+              items={items}
+              selectedId={selected?.entry.id}
+              onSelect={setSelectedId}
+            />
+          )}
         </section>
-        <Detail item={selected} workingDirectory={snapshot.workingDirectory} />
+        {tab === "plugin" ? (
+          <PluginDetail
+            plugin={selectedPlugin}
+            workingDirectory={snapshot.workingDirectory}
+            onOpenEntry={openEntry}
+          />
+        ) : (
+          <Detail
+            item={selected}
+            workingDirectory={snapshot.workingDirectory}
+            onSelectPlugin={(id) => {
+              setSelectedPluginId(id);
+              setTab("plugin");
+            }}
+          />
+        )}
       </div>
       {snapshot.coverage.length > 0 ? (
         <details className="coverage">

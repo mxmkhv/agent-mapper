@@ -486,8 +486,33 @@ summary:focus-visible {
   text-transform: capitalize;
 }
 .detail-section .state-line.unknown,
-.detail-section .state-line.not-applicable {
+.detail-section .state-line.not-applicable,
+.detail-section .state-line.cached,
+.detail-section .state-line.missing {
   color: var(--muted);
+}
+.detail-section .state-line.disabled {
+  color: #956a39;
+}
+.contribution-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.contribution-list button,
+.contribution-list span,
+.source-link {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--soft);
+  color: var(--foreground);
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 11px;
+}
+.contribution-list button,
+.source-link {
+  cursor: pointer;
 }
 .detail-section .source-path {
   overflow-wrap: anywhere;

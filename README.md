@@ -1,6 +1,6 @@
 # agent-mapper
 
-A local, read-only view of Claude Code and Codex configuration. The current milestone inventories instruction files and skills, explains expected loading, and serves a local web UI.
+A local, read-only view of Claude Code and Codex configuration. The current build inventories instruction files, skills, and plugin copies in a local web UI.
 
 ## Start
 
@@ -17,7 +17,9 @@ A local, read-only view of Claude Code and Codex configuration. The current mile
 | `node packages/cli/dist/index.js why .`         | Explain expected instruction and skill loading for the current folder |
 | `node packages/cli/dist/index.js --json .`      | Export the same resolved inventory as JSON                            |
 
-The UI accepts an explicit folder path, including folders outside home. Select an instruction or skill to inspect its source and expected state, then Open or Reveal it in macOS. Free-form file content stays out of the browser and JSON response; use Open for the full text. The model describes a fresh local CLI session and lists coverage gaps beside the inventory. Other MVP v2 areas, including hooks, plugins, MCP, agents, memory, and worktree comparison, are later milestones.
+The UI accepts an explicit folder path, including folders outside home. Select an instruction, skill, or plugin to inspect its source and expected state, then Open or Reveal it in macOS. Plugin detail lists discovered skills, commands, agents, hooks, and MCP declarations. Selected plugin skills link to the Skills view and back. Installation, enablement, cached copies, and unknown version selection have separate states. Counts describe discovered declarations, not runtime capabilities.
+
+Free-form file content stays out of the browser and JSON response; use Open for the full text. The model describes a fresh local CLI session and lists coverage gaps beside the inventory. Plugin marketplace entry overrides, managed settings, and live session state are not resolved yet. Dedicated Hooks and MCP views, agents, memory, and worktree comparison are later milestones.
 
 The `prepare` script changes only this repository's `core.hooksPath`. CI skips installation. Set `AGENT_MAPPER_SKIP_HOOK_INSTALL=1` only when an external system already manages Git hooks; it does not disable CI checks.
 

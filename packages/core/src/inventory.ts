@@ -18,6 +18,37 @@ export interface InventoryEntry {
   characters?: number;
   error?: string;
   preview?: string;
+  pluginId?: string;
+}
+
+export type PluginState =
+  "selected" | "disabled" | "cached" | "missing" | "unknown";
+type PluginContributionKind = "skill" | "command" | "agent" | "hook" | "mcp";
+
+export interface PluginContribution {
+  kind: PluginContributionKind;
+  name: string;
+  sourcePath: string;
+  entryId?: string;
+}
+
+export interface PluginRecord {
+  id: string;
+  tool: ToolId;
+  key: string;
+  name: string;
+  marketplace?: string;
+  version?: string;
+  scope: Scope;
+  state: PluginState;
+  reason: string;
+  installPath?: string;
+  projectPath?: string;
+  sourcePath: string;
+  installationEvidence?: string;
+  settingsEvidence?: string;
+  issues?: string[];
+  contributions: PluginContribution[];
 }
 
 export interface ResolutionContext {
@@ -42,6 +73,7 @@ export interface InventorySnapshot {
   scannedAt: string;
   roots: { claude: string; codex: string };
   items: ResolvedEntry[];
+  plugins: PluginRecord[];
   coverage: string[];
 }
 
