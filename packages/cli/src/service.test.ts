@@ -37,6 +37,26 @@ it("uses the same resolved source data for CLI and web snapshots", async () => {
   expect(JSON.stringify(snapshot)).not.toContain("Read these instructions");
 });
 
+it("adds approximate context figures to the shared snapshot without exposing text", async () => {
+  const home = mkdtempSync(join(tmpdir(), "agent-mapper-context-"));
+  roots.push(home);
+  const project = join(home, "app");
+  const skill = join(project, ".agents", "skills", "review", "SKILL.md");
+  mkdirSync(join(project, ".agents", "skills", "review"), { recursive: true });
+  writeFileSync(join(project, "AGENTS.md"), "Read the private instructions");
+  writeFileSync(skill, "---\nname: review\n---\nPrivate skill body");
+  const snapshot = await buildSnapshot(project, {
+    home,
+    codexHome: join(home, ".codex")
+  });
+  expect(snapshot.context.codex).toMatchObject({
+    startup: Math.round("Read the private instructions".length / 4),
+    onDemand: Math.round("Private skill body".length / 4)
+  });
+  expect(snapshot.context.codex.skillMetadata).toBeGreaterThan(0);
+  expect(JSON.stringify(snapshot)).not.toContain("Private skill body");
+});
+
 it("requires the session token for local inventory access", async () => {
   const home = mkdtempSync(join(tmpdir(), "agent-mapper-server-"));
   roots.push(home);

@@ -1,7 +1,12 @@
 import { realpath, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { resolveInventory, type InventorySnapshot } from "@agent-mapper/core";
+import {
+  resolveInventory,
+  summarizeContext,
+  type InventoryEntry,
+  type InventorySnapshot
+} from "@agent-mapper/core";
 import { scanInventory, type ScanOptions } from "./inventory";
 import { scanWorktrees } from "./worktree-compare";
 export { createAppServer } from "./server";
@@ -14,7 +19,15 @@ function coverage(errors: string[]): string[] {
     "Memory coverage includes local Markdown files only. Claude encoded folder names are candidates, not verified project matches; custom memory locations and live use are not resolved.",
     "Agent coverage includes local Claude Markdown and Codex TOML files, plus Claude plugin agent files. Managed and session agents, unsupported declarations, project trust, and live use are not verified. Agent prompts stay in source files.",
     "Worktree comparison checks common local configuration files by relative path and content. Generated folders and inherited global files are excluded. A changed settings file does not identify which declaration changed inside it.",
+    "Context figures approximate known file text at four characters per token. Skill listing budgets, memory loading, settings effects, and other runtime content are not estimated.",
     "This view models a fresh local CLI session. Runtime flags, account-managed settings, and live session state are not inspected."
+  ];
+}
+
+function resolveItems(entries: InventoryEntry[], path: string) {
+  return [
+    ...resolveInventory(entries, { workingDirectory: path, tool: "claude" }),
+    ...resolveInventory(entries, { workingDirectory: path, tool: "codex" })
   ];
 }
 
@@ -39,6 +52,7 @@ export async function buildSnapshot(
   }
   const scan = await scanInventory({ ...options, workingDirectory: path });
   const worktree = await scanWorktrees(path);
+  const items = resolveItems(scan.entries, path);
   return {
     workingDirectory: path,
     scannedAt: new Date().toISOString(),
@@ -48,18 +62,14 @@ export async function buildSnapshot(
     mcpServers: scan.mcpServers,
     memories: scan.memories,
     agents: scan.agents,
+    context: summarizeContext({
+      items,
+      agents: scan.agents,
+      memories: scan.memories
+    }),
     worktrees: worktree.worktrees,
     comparison: worktree.comparison,
-    items: [
-      ...resolveInventory(scan.entries, {
-        workingDirectory: path,
-        tool: "claude"
-      }),
-      ...resolveInventory(scan.entries, {
-        workingDirectory: path,
-        tool: "codex"
-      })
-    ],
+    items,
     coverage: coverage([...scan.errors, ...worktree.errors])
   };
 }
@@ -68,16 +78,22 @@ export async function buildGlobalSnapshot(
   options: Omit<ScanOptions, "workingDirectory"> = {}
 ): Promise<InventorySnapshot> {
   const snapshot = await buildSnapshot(options.home ?? homedir(), options);
+  const items = snapshot.items.filter(({ entry }) => entry.scope === "global");
+  const agents = snapshot.agents.filter((agent) => agent.scope !== "project");
+  const memories = snapshot.memories.filter(
+    (memory) => memory.scope !== "project"
+  );
   return {
     ...snapshot,
-    items: snapshot.items.filter(({ entry }) => entry.scope === "global"),
+    items,
     plugins: snapshot.plugins.filter((plugin) => plugin.scope !== "project"),
     hooks: snapshot.hooks.filter((hook) => hook.scope !== "project"),
     mcpServers: snapshot.mcpServers.filter(
       (server) => server.scope !== "project"
     ),
-    memories: snapshot.memories.filter((memory) => memory.scope !== "project"),
-    agents: snapshot.agents.filter((agent) => agent.scope !== "project"),
+    memories,
+    agents,
+    context: summarizeContext({ items, agents, memories }),
     worktrees: [],
     comparison: undefined
   };

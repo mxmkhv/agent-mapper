@@ -80,6 +80,9 @@ it("reads ancestor instructions and project skills for both tools", async () => 
   expect(
     result.entries.find((item) => item.name === "review")?.description
   ).toBeUndefined();
+  const review = result.entries.find((item) => item.name === "review");
+  expect(review?.metadataCharacters).toBeGreaterThan(0);
+  expect(review?.characters).toBeGreaterThan(review?.metadataCharacters ?? 0);
 });
 
 it("shows a broken symlink instead of dropping it", async () => {

@@ -1,3 +1,5 @@
+import { expectedEntry } from "./entry-estimate";
+
 export type ToolId = "claude" | "codex";
 type EntryKind = "instruction" | "skill";
 type Scope = "global" | "project" | "unknown";
@@ -16,6 +18,7 @@ export interface InventoryEntry {
   readState: ReadState;
   isSymlink: boolean;
   characters?: number;
+  metadataCharacters?: number;
   error?: string;
   preview?: string;
   pluginId?: string;
@@ -114,12 +117,11 @@ export interface InventorySnapshot {
   mcpServers: McpRecord[];
   memories: MemoryRecord[];
   agents: AgentRecord[];
+  context: import("./context").ContextSummary;
   worktrees: import("./worktree").WorktreeRecord[];
   comparison?: import("./worktree").WorktreeComparison;
   coverage: string[];
 }
-
-const charactersPerToken = 4;
 
 function containsPath(parent: string, child: string): boolean {
   return child === parent || child.startsWith(`${parent.replace(/\/$/, "")}/`);
@@ -189,25 +191,6 @@ interface ResolveInput {
   entry: InventoryEntry;
   entries: readonly InventoryEntry[];
   context: ResolutionContext;
-}
-
-function expectedEntry(entry: InventoryEntry): ResolvedEntry {
-  const skill = entry.kind === "skill";
-  const estimate = Math.round((entry.characters ?? 0) / charactersPerToken);
-  return {
-    entry,
-    resolution: {
-      availability: "expected",
-      loading: skill ? "agent-selected" : "startup",
-      reason: skill
-        ? "Skill is discoverable for this folder; its body loads when selected."
-        : "Instruction is in the selected folder's expected startup path.",
-      estimatedTokens: {
-        startup: skill ? 0 : estimate,
-        onDemand: skill ? estimate : 0
-      }
-    }
-  };
 }
 
 function resolveEntry({

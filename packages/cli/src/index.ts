@@ -124,7 +124,19 @@ function filterSnapshot(snapshot: InventorySnapshot, tools: ToolId[]) {
   const memories = snapshot.memories.filter((memory) =>
     memory.tool === "unknown" ? tools.length > 1 : tools.includes(memory.tool)
   );
-  return { items, plugins, hooks, mcpServers, agents, comparison, memories };
+  const context = Object.fromEntries(
+    tools.map((tool) => [tool, snapshot.context[tool]])
+  );
+  return {
+    items,
+    plugins,
+    hooks,
+    mcpServers,
+    agents,
+    comparison,
+    memories,
+    context
+  };
 }
 
 async function explain(options: ExplanationOptions): Promise<void> {

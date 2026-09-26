@@ -7,6 +7,7 @@ interface HeaderProps {
   globalView: boolean;
   tool: ToolFilter;
   onToolChange(tool: ToolFilter): void;
+  onSearch(): void;
   onRescan(): void;
 }
 
@@ -15,6 +16,7 @@ export function Header({
   globalView,
   tool,
   onToolChange,
+  onSearch,
   onRescan
 }: HeaderProps) {
   const toolNames: Record<ToolFilter, string> = {
@@ -36,6 +38,9 @@ export function Header({
         <p className="header-path">{snapshot.workingDirectory}</p>
       </div>
       <div className="header-actions">
+        <button className="search-button" onClick={onSearch}>
+          Search <kbd>⌘K</kbd>
+        </button>
         <div className="segmented" aria-label="Tool filter">
           {(["all", "claude", "codex"] as const).map((value) => (
             <button

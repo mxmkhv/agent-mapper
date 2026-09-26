@@ -9,15 +9,18 @@ import { AgentList, AgentDetail } from "./agent-panel";
 import { WorktreePanel } from "./worktree-panel";
 import { CoverageNotes, WorkspaceSummary } from "./workspace-summary";
 import { WorkspaceTabs, type Tab } from "./workspace-tabs";
-
-type ToolFilter = "all" | ToolId;
+import { SearchPalette } from "./search-palette";
+import { findSearchItem, type SearchItem } from "./search";
+import { ContextSummaryPanel } from "./context-summary";
+import { useSearchShortcut } from "./use-search-shortcut";
+import { selectSearchItem } from "./search-navigation";
 
 import { Header } from "./workspace-header";
 
 interface WorkspaceProps {
   snapshot: InventorySnapshot;
   globalView: boolean;
-  initialTool: ToolFilter;
+  initialTool: "all" | ToolId;
   initialTab: Tab;
   onRescan(): void;
   onSelectPath(path: string): void;
@@ -32,13 +35,15 @@ export function Workspace({
   onSelectPath
 }: WorkspaceProps) {
   const [tab, setTab] = useState<Tab>(initialTab);
-  const [tool, setTool] = useState<ToolFilter>(initialTool);
+  const [tool, setTool] = useState<"all" | ToolId>(initialTool);
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedPluginId, setSelectedPluginId] = useState<string>();
   const [selectedHookId, setSelectedHookId] = useState<string>();
   const [selectedMcpId, setSelectedMcpId] = useState<string>();
   const [selectedMemoryId, setSelectedMemoryId] = useState<string>();
   const [selectedAgentId, setSelectedAgentId] = useState<string>();
+  const [searchOpen, setSearchOpen] = useState(false);
+  useSearchShortcut(setSearchOpen);
   const items = snapshot.items.filter(
     ({ entry }) => entry.kind === tab && (tool === "all" || entry.tool === tool)
   );
@@ -70,38 +75,27 @@ export function Workspace({
   const selectedAgent =
     agents.find((agent) => agent.id === selectedAgentId) ?? agents[0];
   function openEntry(id: string) {
-    const agent = snapshot.agents.find((item) => item.id === id);
-    if (agent) {
-      setTool(agent.tool);
-      setTab("agent");
-      setSelectedAgentId(id);
-      return;
+    const target = findSearchItem(snapshot, id);
+    if (target) {
+      openSearchItem(target);
     }
-    const server = snapshot.mcpServers.find((item) => item.id === id);
-    if (server) {
-      setTool(server.tool);
-      setTab("mcp");
-      setSelectedMcpId(id);
-      return;
-    }
-    const hook = snapshot.hooks.find((item) => item.id === id);
-    if (hook) {
-      setTool(hook.tool);
-      setTab("hook");
-      setSelectedHookId(id);
-      return;
-    }
-    const entry = snapshot.items.find((item) => item.entry.id === id);
-    if (!entry) {
-      return;
-    }
-    setTool(entry.entry.tool);
-    setTab(entry.entry.kind);
-    setSelectedId(id);
   }
   function selectPlugin(id: string) {
     setSelectedPluginId(id);
     setTab("plugin");
+  }
+  function openSearchItem(item: SearchItem) {
+    selectSearchItem(item, {
+      setTool,
+      setTab,
+      setSelectedId,
+      setSelectedPluginId,
+      setSelectedHookId,
+      setSelectedMcpId,
+      setSelectedMemoryId,
+      setSelectedAgentId
+    });
+    setSearchOpen(false);
   }
   function listContent() {
     if (tab === "agent") {
@@ -217,9 +211,11 @@ export function Workspace({
         globalView={globalView}
         tool={tool}
         onToolChange={setTool}
+        onSearch={() => setSearchOpen(true)}
         onRescan={onRescan}
       />
       <WorkspaceSummary snapshot={snapshot} />
+      <ContextSummaryPanel context={snapshot.context} tool={tool} />
       <WorkspaceTabs tab={tab} snapshot={snapshot} onSelect={setTab} />
       <div className="inventory-grid">
         {tab === "worktree" ? (
@@ -244,6 +240,14 @@ export function Workspace({
         )}
       </div>
       <CoverageNotes notes={snapshot.coverage} />
+      {searchOpen ? (
+        <SearchPalette
+          snapshot={snapshot}
+          tool={tool}
+          onOpen={openSearchItem}
+          onClose={() => setSearchOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

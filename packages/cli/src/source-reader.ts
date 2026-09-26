@@ -4,9 +4,11 @@ import { basename, dirname, join } from "node:path";
 import type { InventoryEntry, ToolId } from "@agent-mapper/core";
 
 const frontmatterStart = 4;
+const frontmatterEndLength = 4;
 const idLength = 20;
 interface SkillMetadata {
   name?: string;
+  characters?: number;
 }
 
 interface Candidate {
@@ -39,6 +41,7 @@ function skillMetadata(content: string): SkillMetadata {
   if (name) {
     result.name = name;
   }
+  result.characters = end + frontmatterEndLength;
   return result;
 }
 
@@ -122,6 +125,9 @@ export class SourceCollector {
     }
     if (source.state === "readable") {
       item.characters = source.content.length;
+      if (details.characters !== undefined) {
+        item.metadataCharacters = details.characters;
+      }
     }
     if (source.error) {
       item.error = source.error;

@@ -319,15 +319,89 @@ summary:focus-visible {
   font-size: 12px;
   font-weight: 600;
 }
+.search-button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 9px 10px;
+  background: var(--panel);
+  color: var(--foreground);
+  font-size: 12px;
+}
+.search-button kbd {
+  color: var(--muted);
+  font: inherit;
+}
 .coverage-note {
   margin-top: 18px;
   color: var(--muted);
   font-size: 12px;
 }
+.context-summary {
+  margin-top: 23px;
+}
+.context-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--foreground);
+  font-size: 13px;
+}
+.context-heading span,
+.context-caption {
+  color: var(--muted);
+  font-size: 11px;
+}
+.context-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.context-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 14px 16px;
+  background: var(--panel);
+  font-size: 12px;
+}
+.context-card > strong {
+  font-size: 12px;
+}
+.context-card dl {
+  display: grid;
+  gap: 6px;
+  margin: 11px 0;
+}
+.context-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.context-card dt,
+.context-card p {
+  color: var(--muted);
+}
+.context-card dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+.context-card p {
+  margin: 0;
+  font-size: 11px;
+}
+.context-caption {
+  margin: 9px 0 0;
+  line-height: 1.5;
+}
 .tabs {
   display: flex;
   gap: 16px;
-  margin-top: 33px;
+  margin-top: 27px;
   overflow-x: auto;
   border-bottom: 1px solid var(--border);
 }
@@ -615,6 +689,103 @@ summary:focus-visible {
   margin-top: 7px;
   overflow-wrap: anywhere;
 }
+.search-backdrop {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: min(14svh, 110px) 16px 20px;
+  background: #09150dc0;
+}
+.search-backdrop-dismiss {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+}
+.search-palette {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  width: min(100%, 620px);
+  max-height: min(70svh, 650px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  padding: 17px;
+  background: var(--panel);
+  box-shadow: 0 24px 70px #0005;
+}
+.search-palette label {
+  font-size: 12px;
+  font-weight: 700;
+}
+.search-palette input {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 12px;
+  background: var(--background);
+  color: var(--foreground);
+}
+.search-hint {
+  margin: 10px 2px 13px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.search-results {
+  min-height: 0;
+  overflow: auto;
+}
+.search-results button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-radius: 9px;
+  padding: 11px;
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+}
+.search-results button:hover,
+.search-results button.selected {
+  background: var(--soft);
+}
+.search-result-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+.search-result-main strong,
+.search-result-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-result-main strong {
+  font-size: 13px;
+}
+.search-result-main small,
+.search-result-kind,
+.search-empty {
+  color: var(--muted);
+  font-size: 11px;
+}
+.search-result-kind {
+  text-transform: capitalize;
+}
+.search-empty {
+  padding: 25px 11px;
+}
 
 @media (max-width: 900px) {
   .sidebar {
@@ -626,6 +797,10 @@ summary:focus-visible {
   .workspace-header {
     align-items: start;
     flex-direction: column;
+  }
+  .workspace-header > div:first-child {
+    width: 100%;
+    min-width: 0;
   }
   .inventory-grid {
     grid-template-columns: minmax(260px, 1fr);
@@ -673,6 +848,12 @@ summary:focus-visible {
   }
   .inventory-grid {
     min-height: 0;
+  }
+  .context-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .context-heading {
+    flex-direction: column;
   }
   .detail {
     padding: 22px;

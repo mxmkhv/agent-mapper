@@ -9,6 +9,7 @@ export interface AgentRecord {
   sourcePath: string;
   locator: string;
   descriptionPresent: boolean;
+  characters?: number;
   readState: "readable" | "unreadable";
   availability: "configured" | "shadowed" | "unknown";
   reason: string;

@@ -191,6 +191,7 @@ export async function inspectAgent(
       ...base,
       name: source.pluginName ?? metadata.name ?? fallback,
       descriptionPresent: metadata.descriptionPresent,
+      characters: content.length,
       readState: "readable",
       ...availability(source, metadata)
     };
