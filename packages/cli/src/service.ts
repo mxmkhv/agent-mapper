@@ -30,6 +30,7 @@ export async function buildSnapshot(
     scannedAt: new Date().toISOString(),
     roots: scan.roots,
     plugins: scan.plugins,
+    hooks: scan.hooks,
     items: [
       ...resolveInventory(scan.entries, {
         workingDirectory: path,
@@ -42,6 +43,7 @@ export async function buildSnapshot(
     ],
     coverage: [
       ...scan.errors,
+      "Hook coverage excludes managed sources, skill and agent frontmatter, and unsupported TOML forms.",
       "This view models a fresh local CLI session. Runtime flags, account-managed settings, and live session state are not inspected."
     ]
   };
@@ -54,6 +56,7 @@ export async function buildGlobalSnapshot(
   return {
     ...snapshot,
     items: snapshot.items.filter(({ entry }) => entry.scope === "global"),
-    plugins: snapshot.plugins.filter((plugin) => plugin.scope !== "project")
+    plugins: snapshot.plugins.filter((plugin) => plugin.scope !== "project"),
+    hooks: snapshot.hooks.filter((hook) => hook.scope !== "project")
   };
 }

@@ -360,6 +360,20 @@ summary:focus-visible {
 .source-list {
   padding: 0 8px 10px;
 }
+.hook-lane {
+  padding: 16px 11px 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.hook-locator {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
 .source-row {
   display: flex;
   width: 100%;

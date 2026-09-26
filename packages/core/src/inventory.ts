@@ -51,6 +51,35 @@ export interface PluginRecord {
   contributions: PluginContribution[];
 }
 
+export type HookLane =
+  | "Session start"
+  | "Prompt submit"
+  | "Before tool"
+  | "Permission"
+  | "After tool"
+  | "Subagent"
+  | "Compact"
+  | "Stop"
+  | "Session end"
+  | "Other";
+
+export interface HookRecord {
+  id: string;
+  tool: ToolId;
+  event: string;
+  lane: HookLane;
+  matcher?: string;
+  handlerType: string;
+  locator: string;
+  sourcePath: string;
+  scope: Scope;
+  pluginId?: string;
+  condition?: string;
+  flags: string[];
+  availability: "configured" | "disabled" | "conditional" | "unknown";
+  reason: string;
+}
+
 export interface ResolutionContext {
   workingDirectory: string;
   tool: ToolId;
@@ -74,6 +103,7 @@ export interface InventorySnapshot {
   roots: { claude: string; codex: string };
   items: ResolvedEntry[];
   plugins: PluginRecord[];
+  hooks: HookRecord[];
   coverage: string[];
 }
 

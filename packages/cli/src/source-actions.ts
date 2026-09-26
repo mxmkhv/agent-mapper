@@ -60,7 +60,8 @@ export async function performSourceAction(
   });
   const source =
     snapshot.items.find((item) => item.entry.id === body.id)?.entry.path ??
-    snapshot.plugins.find((plugin) => plugin.id === body.id)?.sourcePath;
+    snapshot.plugins.find((plugin) => plugin.id === body.id)?.sourcePath ??
+    snapshot.hooks.find((hook) => hook.id === body.id)?.sourcePath;
   if (!source) {
     throw new Error("Source is no longer in this scan. Rescan and try again.");
   }

@@ -1,9 +1,14 @@
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import type { InventoryEntry, PluginRecord } from "@agent-mapper/core";
+import type {
+  HookRecord,
+  InventoryEntry,
+  PluginRecord
+} from "@agent-mapper/core";
 import { SourceCollector } from "./source-reader";
 import { findGitRoot } from "./discovery";
 import { scanPlugins } from "./plugin-reader";
+import { scanHooks } from "./hook-reader";
 export { discoverProjects, type DiscoveryResult } from "./discovery";
 
 export interface ScanOptions {
@@ -14,6 +19,7 @@ export interface ScanOptions {
 export interface ScanResult {
   entries: InventoryEntry[];
   plugins: PluginRecord[];
+  hooks: HookRecord[];
   errors: string[];
   roots: { claude: string; codex: string };
 }
@@ -145,10 +151,19 @@ export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
     codexHome: roots.codex,
     collector
   });
+  const hooks = await scanHooks({
+    workingDirectory,
+    home,
+    codexHome: roots.codex,
+    plugins: plugins.plugins
+  });
   return {
     entries: collector.entries,
     plugins: plugins.plugins,
-    errors: [...collector.errors, ...plugins.errors],
+    hooks: hooks.hooks,
+    errors: [
+      ...new Set([...collector.errors, ...plugins.errors, ...hooks.errors])
+    ],
     roots
   };
 }

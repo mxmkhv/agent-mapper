@@ -2,8 +2,9 @@ import { useState } from "react";
 import type { InventorySnapshot, ToolId } from "@agent-mapper/core";
 import { SourceList, Detail } from "./source-panel";
 import { PluginList, PluginDetail } from "./plugin-panel";
+import { HookList, HookDetail } from "./hook-panel";
 
-type Tab = "instruction" | "skill" | "plugin";
+type Tab = "instruction" | "skill" | "hook" | "plugin";
 type ToolFilter = "all" | ToolId;
 
 interface HeaderProps {
@@ -76,17 +77,30 @@ export function Workspace({
   const [tool, setTool] = useState<ToolFilter>(initialTool);
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedPluginId, setSelectedPluginId] = useState<string>();
+  const [selectedHookId, setSelectedHookId] = useState<string>();
   const items = snapshot.items.filter(
     ({ entry }) => entry.kind === tab && (tool === "all" || entry.tool === tool)
   );
   const plugins = snapshot.plugins.filter(
     (plugin) => tool === "all" || plugin.tool === tool
   );
+  const hooks = snapshot.hooks.filter(
+    (hook) => tool === "all" || hook.tool === tool
+  );
   const selected =
     items.find(({ entry }) => entry.id === selectedId) ?? items[0];
   const selectedPlugin =
     plugins.find((plugin) => plugin.id === selectedPluginId) ?? plugins[0];
+  const selectedHook =
+    hooks.find((hook) => hook.id === selectedHookId) ?? hooks[0];
   function openEntry(id: string) {
+    const hook = snapshot.hooks.find((item) => item.id === id);
+    if (hook) {
+      setTool(hook.tool);
+      setTab("hook");
+      setSelectedHookId(id);
+      return;
+    }
     const entry = snapshot.items.find((item) => item.entry.id === id);
     if (!entry) {
       return;
@@ -94,6 +108,64 @@ export function Workspace({
     setTool(entry.entry.tool);
     setTab(entry.entry.kind);
     setSelectedId(id);
+  }
+  function selectPlugin(id: string) {
+    setSelectedPluginId(id);
+    setTab("plugin");
+  }
+  function listContent() {
+    if (tab === "hook") {
+      return (
+        <HookList
+          hooks={hooks}
+          selectedId={selectedHook?.id}
+          onSelect={setSelectedHookId}
+        />
+      );
+    }
+    if (tab === "plugin") {
+      return (
+        <PluginList
+          plugins={plugins}
+          selectedId={selectedPlugin?.id}
+          onSelect={setSelectedPluginId}
+        />
+      );
+    }
+    return (
+      <SourceList
+        items={items}
+        selectedId={selected?.entry.id}
+        onSelect={setSelectedId}
+      />
+    );
+  }
+  function detailContent() {
+    if (tab === "hook") {
+      return (
+        <HookDetail
+          hook={selectedHook}
+          workingDirectory={snapshot.workingDirectory}
+          onSelectPlugin={selectPlugin}
+        />
+      );
+    }
+    if (tab === "plugin") {
+      return (
+        <PluginDetail
+          plugin={selectedPlugin}
+          workingDirectory={snapshot.workingDirectory}
+          onOpenEntry={openEntry}
+        />
+      );
+    }
+    return (
+      <Detail
+        item={selected}
+        workingDirectory={snapshot.workingDirectory}
+        onSelectPlugin={selectPlugin}
+      />
+    );
   }
   return (
     <div className="workspace">
@@ -106,8 +178,8 @@ export function Workspace({
       />
       <div className="coverage-note">
         Fresh local CLI model · {snapshot.items.length} sources ·{" "}
-        {snapshot.plugins.length} plugins · Scanned{" "}
-        {new Date(snapshot.scannedAt).toLocaleTimeString()}
+        {snapshot.hooks.length} hooks · {snapshot.plugins.length} plugins ·
+        Scanned {new Date(snapshot.scannedAt).toLocaleTimeString()}
       </div>
       <nav className="tabs" aria-label="Inventory views">
         <button
@@ -135,6 +207,12 @@ export function Workspace({
           </span>
         </button>
         <button
+          className={tab === "hook" ? "active" : ""}
+          onClick={() => setTab("hook")}
+        >
+          Hooks <span>{snapshot.hooks.length}</span>
+        </button>
+        <button
           className={tab === "plugin" ? "active" : ""}
           onClick={() => setTab("plugin")}
         >
@@ -147,36 +225,9 @@ export function Workspace({
             <span>NAME</span>
             <span>EXPECTED STATE</span>
           </div>
-          {tab === "plugin" ? (
-            <PluginList
-              plugins={plugins}
-              selectedId={selectedPlugin?.id}
-              onSelect={setSelectedPluginId}
-            />
-          ) : (
-            <SourceList
-              items={items}
-              selectedId={selected?.entry.id}
-              onSelect={setSelectedId}
-            />
-          )}
+          {listContent()}
         </section>
-        {tab === "plugin" ? (
-          <PluginDetail
-            plugin={selectedPlugin}
-            workingDirectory={snapshot.workingDirectory}
-            onOpenEntry={openEntry}
-          />
-        ) : (
-          <Detail
-            item={selected}
-            workingDirectory={snapshot.workingDirectory}
-            onSelectPlugin={(id) => {
-              setSelectedPluginId(id);
-              setTab("plugin");
-            }}
-          />
-        )}
+        {detailContent()}
       </div>
       {snapshot.coverage.length > 0 ? (
         <details className="coverage">
