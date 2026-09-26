@@ -3,12 +3,14 @@ import { dirname, join, resolve } from "node:path";
 import type {
   HookRecord,
   InventoryEntry,
+  McpRecord,
   PluginRecord
 } from "@agent-mapper/core";
 import { SourceCollector } from "./source-reader";
 import { findGitRoot } from "./discovery";
 import { scanPlugins } from "./plugin-reader";
 import { scanHooks } from "./hook-reader";
+import { scanMcp } from "./mcp-reader";
 export { discoverProjects, type DiscoveryResult } from "./discovery";
 
 export interface ScanOptions {
@@ -20,8 +22,20 @@ export interface ScanResult {
   entries: InventoryEntry[];
   plugins: PluginRecord[];
   hooks: HookRecord[];
+  mcpServers: McpRecord[];
   errors: string[];
   roots: { claude: string; codex: string };
+}
+
+async function scanRelated(options: {
+  workingDirectory: string;
+  home: string;
+  codexHome: string;
+  plugins: PluginRecord[];
+}) {
+  const hooks = await scanHooks(options);
+  const mcp = await scanMcp(options);
+  return { hooks, mcp };
 }
 
 function ancestors(path: string): string[] {
@@ -151,7 +165,7 @@ export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
     codexHome: roots.codex,
     collector
   });
-  const hooks = await scanHooks({
+  const { hooks, mcp } = await scanRelated({
     workingDirectory,
     home,
     codexHome: roots.codex,
@@ -161,8 +175,14 @@ export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
     entries: collector.entries,
     plugins: plugins.plugins,
     hooks: hooks.hooks,
+    mcpServers: mcp.mcpServers,
     errors: [
-      ...new Set([...collector.errors, ...plugins.errors, ...hooks.errors])
+      ...new Set([
+        ...collector.errors,
+        ...plugins.errors,
+        ...hooks.errors,
+        ...mcp.errors
+      ])
     ],
     roots
   };

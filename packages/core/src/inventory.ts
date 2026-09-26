@@ -80,6 +80,9 @@ export interface HookRecord {
   reason: string;
 }
 
+import type { McpRecord } from "./mcp";
+export type { McpRecord } from "./mcp";
+
 export interface ResolutionContext {
   workingDirectory: string;
   tool: ToolId;
@@ -104,6 +107,7 @@ export interface InventorySnapshot {
   items: ResolvedEntry[];
   plugins: PluginRecord[];
   hooks: HookRecord[];
+  mcpServers: McpRecord[];
   coverage: string[];
 }
 

@@ -36,6 +36,16 @@ interface ExplanationOptions {
   json: boolean;
 }
 
+function printMcp(
+  servers: Awaited<ReturnType<typeof buildSnapshot>>["mcpServers"]
+): void {
+  for (const server of servers) {
+    console.log(`${server.tool} MCP ${server.name}: ${server.availability}`);
+    console.log(`  ${server.sourcePath}#${server.locator}`);
+    console.log(`  ${server.transport} · ${server.destination}`);
+  }
+}
+
 async function explain(options: ExplanationOptions): Promise<void> {
   const snapshot = await buildSnapshot(options.folder);
   const items = snapshot.items.filter(({ entry }) =>
@@ -47,9 +57,16 @@ async function explain(options: ExplanationOptions): Promise<void> {
   const hooks = snapshot.hooks.filter((hook) =>
     options.tools.includes(hook.tool)
   );
+  const mcpServers = snapshot.mcpServers.filter((server) =>
+    options.tools.includes(server.tool)
+  );
   if (options.json) {
     console.log(
-      JSON.stringify({ ...snapshot, items, plugins, hooks }, null, 2)
+      JSON.stringify(
+        { ...snapshot, items, plugins, hooks, mcpServers },
+        null,
+        2
+      )
     );
     return;
   }
@@ -74,6 +91,7 @@ async function explain(options: ExplanationOptions): Promise<void> {
     console.log(`  ${hook.sourcePath}#${hook.locator}`);
     console.log(`  ${hook.reason}`);
   }
+  printMcp(mcpServers);
   for (const note of snapshot.coverage) {
     console.log(`Coverage: ${note}`);
   }

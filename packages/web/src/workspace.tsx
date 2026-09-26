@@ -3,62 +3,12 @@ import type { InventorySnapshot, ToolId } from "@agent-mapper/core";
 import { SourceList, Detail } from "./source-panel";
 import { PluginList, PluginDetail } from "./plugin-panel";
 import { HookList, HookDetail } from "./hook-panel";
+import { McpList, McpDetail } from "./mcp-panel";
 
-type Tab = "instruction" | "skill" | "hook" | "plugin";
+type Tab = "instruction" | "skill" | "hook" | "plugin" | "mcp";
 type ToolFilter = "all" | ToolId;
 
-interface HeaderProps {
-  snapshot: InventorySnapshot;
-  globalView: boolean;
-  tool: ToolFilter;
-  onToolChange(tool: ToolFilter): void;
-  onRescan(): void;
-}
-
-function Header({
-  snapshot,
-  globalView,
-  tool,
-  onToolChange,
-  onRescan
-}: HeaderProps) {
-  const toolNames: Record<ToolFilter, string> = {
-    all: "Both",
-    claude: "Claude",
-    codex: "Codex"
-  };
-  return (
-    <header className="workspace-header">
-      <div>
-        <div className="eyebrow">
-          {globalView ? "USER CONFIGURATION" : "SELECTED FOLDER"}
-        </div>
-        <h1 title={snapshot.workingDirectory}>
-          {globalView
-            ? "Global overview"
-            : snapshot.workingDirectory.split("/").at(-1)}
-        </h1>
-        <p className="header-path">{snapshot.workingDirectory}</p>
-      </div>
-      <div className="header-actions">
-        <div className="segmented" aria-label="Tool filter">
-          {(["all", "claude", "codex"] as const).map((value) => (
-            <button
-              key={value}
-              className={tool === value ? "selected" : ""}
-              onClick={() => onToolChange(value)}
-            >
-              {toolNames[value]}
-            </button>
-          ))}
-        </div>
-        <button className="rescan-button" onClick={onRescan}>
-          Rescan
-        </button>
-      </div>
-    </header>
-  );
-}
+import { Header } from "./workspace-header";
 
 interface WorkspaceProps {
   snapshot: InventorySnapshot;
@@ -78,6 +28,7 @@ export function Workspace({
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedPluginId, setSelectedPluginId] = useState<string>();
   const [selectedHookId, setSelectedHookId] = useState<string>();
+  const [selectedMcpId, setSelectedMcpId] = useState<string>();
   const items = snapshot.items.filter(
     ({ entry }) => entry.kind === tab && (tool === "all" || entry.tool === tool)
   );
@@ -87,13 +38,25 @@ export function Workspace({
   const hooks = snapshot.hooks.filter(
     (hook) => tool === "all" || hook.tool === tool
   );
+  const mcpServers = snapshot.mcpServers.filter(
+    (server) => tool === "all" || server.tool === tool
+  );
   const selected =
     items.find(({ entry }) => entry.id === selectedId) ?? items[0];
   const selectedPlugin =
     plugins.find((plugin) => plugin.id === selectedPluginId) ?? plugins[0];
   const selectedHook =
     hooks.find((hook) => hook.id === selectedHookId) ?? hooks[0];
+  const selectedMcp =
+    mcpServers.find((server) => server.id === selectedMcpId) ?? mcpServers[0];
   function openEntry(id: string) {
+    const server = snapshot.mcpServers.find((item) => item.id === id);
+    if (server) {
+      setTool(server.tool);
+      setTab("mcp");
+      setSelectedMcpId(id);
+      return;
+    }
     const hook = snapshot.hooks.find((item) => item.id === id);
     if (hook) {
       setTool(hook.tool);
@@ -114,6 +77,15 @@ export function Workspace({
     setTab("plugin");
   }
   function listContent() {
+    if (tab === "mcp") {
+      return (
+        <McpList
+          servers={mcpServers}
+          selectedId={selectedMcp?.id}
+          onSelect={setSelectedMcpId}
+        />
+      );
+    }
     if (tab === "hook") {
       return (
         <HookList
@@ -141,6 +113,15 @@ export function Workspace({
     );
   }
   function detailContent() {
+    if (tab === "mcp") {
+      return (
+        <McpDetail
+          server={selectedMcp}
+          workingDirectory={snapshot.workingDirectory}
+          onSelectPlugin={selectPlugin}
+        />
+      );
+    }
     if (tab === "hook") {
       return (
         <HookDetail
@@ -178,8 +159,9 @@ export function Workspace({
       />
       <div className="coverage-note">
         Fresh local CLI model · {snapshot.items.length} sources ·{" "}
-        {snapshot.hooks.length} hooks · {snapshot.plugins.length} plugins ·
-        Scanned {new Date(snapshot.scannedAt).toLocaleTimeString()}
+        {snapshot.hooks.length} hooks · {snapshot.plugins.length} plugins ·{" "}
+        {snapshot.mcpServers.length} MCP servers · Scanned{" "}
+        {new Date(snapshot.scannedAt).toLocaleTimeString()}
       </div>
       <nav className="tabs" aria-label="Inventory views">
         <button
@@ -217,6 +199,12 @@ export function Workspace({
           onClick={() => setTab("plugin")}
         >
           Plugins <span>{snapshot.plugins.length}</span>
+        </button>
+        <button
+          className={tab === "mcp" ? "active" : ""}
+          onClick={() => setTab("mcp")}
+        >
+          MCP <span>{snapshot.mcpServers.length}</span>
         </button>
       </nav>
       <div className="inventory-grid">

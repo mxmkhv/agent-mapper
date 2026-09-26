@@ -101,6 +101,12 @@ it("links a selected Claude plugin to its skill without exposing file content", 
     (item) => item.entry.pluginId === plugin?.id
   );
   expect(skill?.entry.id).toBe(plugin?.contributions[0]?.entryId);
+  const mcp = snapshot.mcpServers.find(
+    (server) => server.pluginId === plugin?.id
+  );
+  expect(mcp?.id).toBe(
+    plugin?.contributions.find((item) => item.kind === "mcp")?.entryId
+  );
   expect(JSON.stringify(snapshot)).not.toContain("private-value");
 });
 
