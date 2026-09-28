@@ -87,9 +87,15 @@ export function SearchPalette({
                 >
                   {record.name}
                 </span>
-                <PathLine
-                  path={record.pluginPath ?? shortPath(record.path, context)}
-                />
+                {record.kind === "plugin" ? (
+                  <span className="font-mono text-mono text-ink-faint">
+                    {record.summary}
+                  </span>
+                ) : (
+                  <PathLine
+                    path={record.pluginPath ?? shortPath(record.path, context)}
+                  />
+                )}
               </span>
               <span>{isLink(record) ? <SymlinkBadge /> : null}</span>
               <span className="text-caption text-ink-muted">
