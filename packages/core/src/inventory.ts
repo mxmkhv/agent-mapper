@@ -2,6 +2,7 @@ export type ToolId = "claude" | "codex";
 type EntryKind = "instruction" | "skill" | "command";
 type Scope = "global" | "project" | "unknown";
 type EntryScope = Scope | "managed";
+type HookScope = Scope | "managed";
 type ReadState = "readable" | "missing" | "unreadable";
 
 export interface InventoryEntry {
@@ -78,7 +79,7 @@ export interface HookRecord {
   handlerType: string;
   locator: string;
   sourcePath: string;
-  scope: Scope;
+  scope: HookScope;
   pluginId?: string;
   condition?: string;
   flags: string[];

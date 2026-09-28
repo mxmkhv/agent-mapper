@@ -2,9 +2,23 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { SourceCollector } from "./source-reader";
 
-interface ManagedInstruction {
+export interface ManagedSettingsFile {
   path: string;
-  content: string;
+  data: Record<string, unknown>;
+}
+
+export function managedClaudeDirectory(options: {
+  managedClaudeDir?: string;
+}): string {
+  if (options.managedClaudeDir) {
+    return options.managedClaudeDir;
+  }
+  if (process.platform === "win32") {
+    return join(process.env.ProgramFiles ?? "C:\\Program Files", "ClaudeCode");
+  }
+  return process.platform === "darwin"
+    ? "/Library/Application Support/ClaudeCode"
+    : "/etc/claude-code";
 }
 
 async function settingsPaths(
@@ -36,10 +50,10 @@ async function settingsPaths(
   return paths;
 }
 
-async function readInstruction(
+async function readSettings(
   path: string,
   errors: string[]
-): Promise<ManagedInstruction | undefined> {
+): Promise<ManagedSettingsFile | undefined> {
   let content: string;
   try {
     content = await readFile(path, "utf8");
@@ -62,21 +76,13 @@ async function readInstruction(
     errors.push(`${path}: Managed settings must be a JSON object.`);
     return undefined;
   }
-  if (!Object.hasOwn(settings, "claudeMd")) {
-    return undefined;
-  }
-  const value = (settings as Record<string, unknown>).claudeMd;
-  if (typeof value !== "string") {
-    errors.push(`${path}: claudeMd must be a string.`);
-    return undefined;
-  }
-  return { path, content: value };
+  return { path, data: settings as Record<string, unknown> };
 }
 
 export async function scanManagedClaude(
   collector: SourceCollector,
   directory: string
-): Promise<void> {
+): Promise<ManagedSettingsFile[]> {
   await collector.add({
     tool: "claude",
     kind: "instruction",
@@ -84,9 +90,23 @@ export async function scanManagedClaude(
     scope: "managed"
   });
 
-  let selected: ManagedInstruction | undefined;
+  const files: ManagedSettingsFile[] = [];
+  let selected: { path: string; content: string } | undefined;
   for (const path of await settingsPaths(directory, collector.errors)) {
-    selected = (await readInstruction(path, collector.errors)) ?? selected;
+    const file = await readSettings(path, collector.errors);
+    if (!file) {
+      continue;
+    }
+    files.push(file);
+    if (!Object.hasOwn(file.data, "claudeMd")) {
+      continue;
+    }
+    const value = file.data.claudeMd;
+    if (typeof value !== "string") {
+      collector.errors.push(`${path}: claudeMd must be a string.`);
+      continue;
+    }
+    selected = { path, content: value };
   }
   if (selected) {
     collector.addInline(
@@ -101,4 +121,5 @@ export async function scanManagedClaude(
       selected.content
     );
   }
+  return files;
 }

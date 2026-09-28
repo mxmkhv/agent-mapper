@@ -16,7 +16,7 @@ export { createAppServer } from "./server";
 function coverage(errors: string[]): string[] {
   return [
     ...errors,
-    "Hook coverage includes local skill and agent frontmatter. Agent Stop hooks become SubagentStop while running as subagents. Activation, project trust, managed sources, and unsupported TOML forms are not verified.",
+    "Hook coverage includes local managed files and skill and agent frontmatter. Agent Stop hooks become SubagentStop while running as subagents. Remote and device policy selection, activation, project trust, and unsupported TOML forms are not verified.",
     "MCP coverage excludes account and session connections, managed sources, approval state, and unsupported TOML forms. Servers are not contacted.",
     "Memory coverage includes local Markdown files only. Claude encoded folder names are candidates, not verified project matches; custom memory locations and live use are not resolved.",
     "Agent coverage includes local Claude Markdown and Codex TOML files, plus Claude plugin agent files. Managed and session agents, unsupported declarations, project trust, and live use are not verified. Agent prompts stay in source files.",

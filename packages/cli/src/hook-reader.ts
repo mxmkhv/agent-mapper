@@ -10,6 +10,8 @@ import { addGroups, type HookSource } from "./hook-record";
 import { addToml, codexHooksDisabled } from "./hook-toml";
 import { json, object, type JsonMap } from "./plugin-reader-common";
 import { addFrontmatterHooks } from "./hook-frontmatter";
+import { addManagedHooks, markManagedHookRestrictions } from "./hook-managed";
+import type { ManagedSettingsFile } from "./managed-claude-reader";
 
 function hookMaps(data: JsonMap): { events: JsonMap; prefix: string }[] {
   const extension = object(object(data.extensions)?.["com.openai"]);
@@ -113,7 +115,9 @@ async function applyClaudeDisabled(
     }
   }
   if (disabled) {
-    for (const hook of hooks.filter((item) => item.tool === "claude")) {
+    for (const hook of hooks.filter(
+      (item) => item.tool === "claude" && item.scope !== "managed"
+    )) {
       hook.availability = "disabled";
       hook.reason = "Claude settings disable hooks for this context.";
     }
@@ -169,6 +173,7 @@ export async function scanHooks(options: {
   plugins: PluginRecord[];
   entries: InventoryEntry[];
   agents: AgentRecord[];
+  managedSettings: ManagedSettingsFile[];
 }): Promise<{ hooks: HookRecord[]; errors: string[] }> {
   const hooks: HookRecord[] = [];
   const errors: string[] = [];
@@ -191,6 +196,7 @@ export async function scanHooks(options: {
     errors
   });
   await addPluginHooks(hooks, { plugins: options.plugins, errors });
+  addManagedHooks(hooks, { files: options.managedSettings, errors });
   await addFrontmatterHooks(hooks, {
     entries: options.entries,
     agents: options.agents,
@@ -198,6 +204,7 @@ export async function scanHooks(options: {
     errors
   });
   await applyClaudeDisabled(hooks, direct);
+  markManagedHookRestrictions(hooks, options.managedSettings);
   await applyCodexDisabled(hooks, options.codexHome);
   return { hooks, errors };
 }
