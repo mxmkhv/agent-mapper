@@ -6,6 +6,7 @@ import { shortPath, tildePath, type PathContext } from "../model/paths";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
 import { kindLabel } from "../ui/kind-icon";
 import { ToolGlyph } from "../ui/marks";
+import { PathText } from "../ui/path-text";
 
 /** Same approximation the core context estimate uses. */
 const charactersPerToken = 4;
@@ -74,7 +75,9 @@ export function Provenance({
         </>
       ) : null}
       <span className="text-ink-faint">›</span>
-      <span className="font-mono text-mono break-all">{file}</span>
+      <span className="font-mono text-mono break-words">
+        <PathText path={file} />
+      </span>
       {record.locator ? (
         <span className="font-mono text-mono text-ink-faint">
           {record.locator}
@@ -104,8 +107,8 @@ export function LinkRow({
         strokeWidth={1.6}
       />
       <ToolGlyph tool={record.tool} />
-      <span className="min-w-0 flex-1 font-mono text-mono break-all">
-        {shortPath(record.path, context)}
+      <span className="min-w-0 flex-1 font-mono text-mono break-words">
+        <PathText path={shortPath(record.path, context)} />
       </span>
       <ArrowRight
         aria-hidden="true"
@@ -191,8 +194,8 @@ export function Imports({
     <ul className="m-0 grid list-none gap-1.5 p-0">
       {imports.map((item) => (
         <li className="grid gap-0.5" key={item.id}>
-          <span className="font-mono text-mono break-all">
-            {tildePath(item.targetPath, context)}
+          <span className="font-mono text-mono break-words">
+            <PathText path={tildePath(item.targetPath, context)} />
           </span>
           <span
             className={`text-caption ${item.state === "missing" || item.state === "unreadable" ? "text-problem" : "text-ink-muted"}`}

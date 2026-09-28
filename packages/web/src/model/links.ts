@@ -22,12 +22,20 @@ export function linkedFrom(
   record: InventoryRecord,
   records: readonly InventoryRecord[]
 ): InventoryRecord[] {
-  return records.filter(
-    (item) =>
+  const seen = new Set<string>();
+  return records.filter((item) => {
+    const key = `${item.tool}|${item.path}`;
+    const links =
       item.id !== record.id &&
       item.realPath === record.path &&
-      item.path !== record.path
-  );
+      item.path !== record.path &&
+      !seen.has(key);
+    // Global view merges several projects' records, so the same link can appear more than once.
+    if (links) {
+      seen.add(key);
+    }
+    return links;
+  });
 }
 
 function targetFolder(record: InventoryRecord): string | undefined {

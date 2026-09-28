@@ -50,12 +50,15 @@ export function Header(props: HeaderProps) {
   return (
     <header className="flex min-h-14 min-w-0 items-center gap-4 px-5 py-3">
       <div className="flex min-w-0 flex-1 items-baseline gap-2.5">
-        <h1 className="m-0 text-title font-semibold tracking-tight whitespace-nowrap">
+        <h1
+          className="m-0 text-title font-semibold tracking-tight whitespace-nowrap"
+          title={title.path}
+        >
           {title.name}
         </h1>
         {title.path ? (
           <span
-            className="truncate font-mono text-label text-ink-muted"
+            className="hidden min-w-12 truncate font-mono text-label text-ink-muted xl:inline"
             title={title.path}
           >
             {title.path}
@@ -65,7 +68,7 @@ export function Header(props: HeaderProps) {
           <span className="truncate text-ink-muted">{title.subtitle}</span>
         ) : null}
         {title.branch ? (
-          <span className="inline-flex items-center gap-1 text-label whitespace-nowrap text-ink-muted">
+          <span className="inline-flex min-w-0 items-center gap-1 truncate text-label whitespace-nowrap text-ink-muted">
             <GitBranch
               aria-hidden="true"
               className="size-3.5"

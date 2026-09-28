@@ -6,6 +6,7 @@ import type { InventoryRecord, RecordKind } from "../model/record-types";
 import { stateText } from "../model/states";
 import { useSourceAction } from "../state/use-source-action";
 import { Button } from "../ui/button";
+import { PathText } from "../ui/path-text";
 import { KindIcon, kindSingular } from "../ui/kind-icon";
 import { StateMarker, SymlinkBadge, ToolGlyph } from "../ui/marks";
 import {
@@ -49,8 +50,8 @@ function Links({
               record={target}
             />
           ) : (
-            <p className="m-0 font-mono text-mono break-all">
-              {tildePath(record.realPath, scope.context)}
+            <p className="m-0 font-mono text-mono break-words">
+              <PathText path={tildePath(record.realPath, scope.context)} />
             </p>
           )}
         </Section>
