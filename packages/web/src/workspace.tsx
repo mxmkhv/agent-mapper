@@ -186,6 +186,7 @@ export function Workspace({
       <Detail
         item={selected}
         workingDirectory={snapshot.workingDirectory}
+        usage={snapshot.usage}
         onSelectPlugin={selectPlugin}
       />
     );

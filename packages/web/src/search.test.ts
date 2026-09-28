@@ -56,7 +56,13 @@ const snapshot: InventorySnapshot = {
   },
   worktrees: [],
   findings: [],
-  coverage: []
+  coverage: [],
+  usage: {
+    records: [],
+    coverage: { sessions: 0 },
+    unattributedInvocations: 0,
+    notes: []
+  }
 };
 
 it("finds items across tabs by name or source path without searching content", () => {

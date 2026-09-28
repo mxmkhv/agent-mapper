@@ -81,7 +81,13 @@ const snapshot: InventorySnapshot = {
   },
   findings: [],
   worktrees: [],
-  coverage: []
+  coverage: [],
+  usage: {
+    records: [],
+    coverage: { sessions: 0 },
+    unattributedInvocations: 0,
+    notes: []
+  }
 };
 
 it.each(["claude", "codex"] as const)(

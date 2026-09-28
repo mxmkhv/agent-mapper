@@ -1,6 +1,12 @@
 import { useState } from "react";
-import type { ResolvedEntry } from "@agent-mapper/core";
+import type {
+  ResolvedEntry,
+  UsageRecord,
+  UsageSummary
+} from "@agent-mapper/core";
 import { sourceAction } from "./api";
+
+const dateLength = 10;
 
 interface SourceListProps {
   items: ResolvedEntry[];
@@ -41,15 +47,43 @@ export function SourceList({ items, selectedId, onSelect }: SourceListProps) {
   );
 }
 
+function UsageEvidence({ record }: { record?: UsageRecord }) {
+  return (
+    <section className="detail-section">
+      <h3>Usage evidence</h3>
+      {record?.state === "recorded" ? (
+        <p>Recorded invocations: {record.count}</p>
+      ) : (
+        <p>
+          {record?.state === "none" ? "No recorded use" : "No usage coverage"}
+        </p>
+      )}
+      {record?.lastRecorded ? (
+        <p>Last recorded: {record.lastRecorded.slice(0, dateLength)}</p>
+      ) : null}
+      {record && record.coverage.sessions > 0 ? (
+        <p>
+          Claude Code logs: {record.coverage.sessions} sessions,{" "}
+          {record.coverage.from?.slice(0, dateLength)} to{" "}
+          {record.coverage.to?.slice(0, dateLength)}.
+        </p>
+      ) : null}
+      <p>Calls show invocation, not completion. Codex usage is not covered.</p>
+    </section>
+  );
+}
+
 interface DetailProps {
   item?: ResolvedEntry;
   workingDirectory: string;
+  usage: UsageSummary;
   onSelectPlugin(id: string): void;
 }
 
 export function Detail({
   item,
   workingDirectory,
+  usage,
   onSelectPlugin
 }: DetailProps) {
   const [actionError, setActionError] = useState("");
@@ -63,6 +97,9 @@ export function Detail({
     );
   }
   const { entry, resolution } = item;
+  const usageRecord = usage.records.find(
+    (record) => record.entryId === entry.id
+  );
   async function run(action: "open" | "reveal") {
     if (!item) {
       return;
@@ -108,6 +145,7 @@ export function Detail({
         ) : null}
         {entry.error ? <p className="inline-error">{entry.error}</p> : null}
       </section>
+      {entry.kind === "skill" ? <UsageEvidence record={usageRecord} /> : null}
       {entry.description ? (
         <section className="detail-section">
           <h3>Description</h3>
