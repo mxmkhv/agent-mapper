@@ -1,7 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app";
-import "./styles.css";
+import "./theme.css";
+import "./legacy-worktree.css";
 
 const root = document.getElementById("root");
 if (!root) {
