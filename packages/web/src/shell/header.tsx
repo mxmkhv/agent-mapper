@@ -48,7 +48,7 @@ export function Header(props: HeaderProps) {
     minute: "2-digit"
   });
   return (
-    <header className="flex min-h-14 items-center gap-4 px-5 py-3">
+    <header className="flex min-h-14 min-w-0 items-center gap-4 px-5 py-3">
       <div className="flex min-w-0 flex-1 items-baseline gap-2.5">
         <h1 className="m-0 text-title font-semibold tracking-tight whitespace-nowrap">
           {title.name}
@@ -82,14 +82,14 @@ export function Header(props: HeaderProps) {
           Search
           <kbd className="font-mono text-caption text-ink-faint">⌘K</kbd>
         </Button>
-        <span className="text-caption whitespace-nowrap text-ink-faint">
+        <span className="hidden text-caption whitespace-nowrap text-ink-faint xl:inline">
           {props.refreshing ? "Rescanning…" : `Scanned ${time}`}
         </span>
         <Button
           aria-label="Rescan"
           disabled={props.refreshing}
           onClick={props.onRescan}
-          title="Rescan"
+          title={`Rescan · scanned ${time}`}
           variant="icon"
         >
           <RefreshCw

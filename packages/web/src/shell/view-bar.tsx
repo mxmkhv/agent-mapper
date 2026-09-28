@@ -57,9 +57,11 @@ export function ViewBar(props: ViewBarProps) {
       <button
         className="inline-flex h-[26px] items-center gap-1.5 rounded-control px-1.5 text-label text-ink-muted hover:bg-hover hover:text-ink"
         onClick={props.onCoverage}
+        title={`${props.coverageCount} coverage notes`}
       >
         <Info aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
-        {props.coverageCount} coverage notes
+        {props.coverageCount}
+        <span className="hidden xl:inline">coverage notes</span>
       </button>
     </nav>
   );
