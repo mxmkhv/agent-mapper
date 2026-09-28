@@ -14,6 +14,7 @@ import { findSearchItem, type SearchItem } from "./search";
 import { ContextSummaryPanel } from "./context-summary";
 import { useSearchShortcut } from "./use-search-shortcut";
 import { selectSearchItem } from "./search-navigation";
+import { filterWorkspace } from "./workspace-filter";
 
 import { Header } from "./workspace-header";
 
@@ -44,24 +45,9 @@ export function Workspace({
   const [selectedAgentId, setSelectedAgentId] = useState<string>();
   const [searchOpen, setSearchOpen] = useState(false);
   useSearchShortcut(setSearchOpen);
-  const items = snapshot.items.filter(
-    ({ entry }) => entry.kind === tab && (tool === "all" || entry.tool === tool)
-  );
-  const plugins = snapshot.plugins.filter(
-    (plugin) => tool === "all" || plugin.tool === tool
-  );
-  const hooks = snapshot.hooks.filter(
-    (hook) => tool === "all" || hook.tool === tool
-  );
-  const mcpServers = snapshot.mcpServers.filter(
-    (server) => tool === "all" || server.tool === tool
-  );
-  const memories = snapshot.memories.filter(
-    (memory) => tool === "all" || memory.tool === tool
-  );
-  const agents = snapshot.agents.filter(
-    (agent) => tool === "all" || agent.tool === tool
-  );
+  const visible = filterWorkspace(snapshot, tool);
+  const items = visible.items.filter(({ entry }) => entry.kind === tab);
+  const { plugins, hooks, mcpServers, memories, agents } = visible;
   const selected =
     items.find(({ entry }) => entry.id === selectedId) ?? items[0];
   const selectedPlugin =
@@ -214,11 +200,11 @@ export function Workspace({
         onSearch={() => setSearchOpen(true)}
         onRescan={onRescan}
       />
-      <WorkspaceSummary snapshot={snapshot} />
+      <WorkspaceSummary snapshot={visible} />
       <ContextSummaryPanel context={snapshot.context} tool={tool} />
-      <WorkspaceTabs tab={tab} snapshot={snapshot} onSelect={setTab} />
+      <WorkspaceTabs tab={tab} snapshot={visible} onSelect={setTab} />
       <InventoryView
-        snapshot={snapshot}
+        snapshot={visible}
         tab={tab}
         tool={tool}
         list={listContent()}
