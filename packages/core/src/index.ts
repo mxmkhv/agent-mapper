@@ -3,4 +3,3 @@ export * from "./inventory";
 export * from "./context";
 export * from "./finding";
 export * from "./worktree";
-export * from "./usage";

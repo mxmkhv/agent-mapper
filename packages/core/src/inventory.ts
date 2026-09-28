@@ -120,7 +120,6 @@ export interface InventorySnapshot {
   findings: import("./finding").Finding[];
   worktrees: import("./worktree").WorktreeRecord[];
   comparison?: import("./worktree").WorktreeComparison;
-  usage: import("./usage").UsageSummary;
   coverage: string[];
 }
 

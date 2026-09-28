@@ -10,7 +10,6 @@ import {
 import { scanInventory, type ScanOptions } from "./inventory";
 import { scanWorktrees } from "./worktree-compare";
 import { buildFindings } from "./findings";
-import { readClaudeUsage } from "./usage-reader";
 export { createAppServer } from "./server";
 
 function coverage(errors: string[]): string[] {
@@ -57,11 +56,6 @@ export async function buildSnapshot(
   const worktree = await scanWorktrees(path);
   const items = resolveItems(scan.entries, path);
   const findings = await buildFindings(items, scan.plugins);
-  const usage = await readClaudeUsage({
-    home: options.home,
-    projectDirectory: path,
-    items
-  });
   return {
     workingDirectory: path,
     scannedAt: new Date().toISOString(),
@@ -79,7 +73,6 @@ export async function buildSnapshot(
     worktrees: worktree.worktrees,
     comparison: worktree.comparison,
     items,
-    usage,
     findings: findings.findings,
     coverage: coverage([...scan.errors, ...worktree.errors, ...findings.errors])
   };
@@ -111,12 +104,6 @@ export async function buildGlobalSnapshot(
     context: summarizeContext({ items, agents, memories }),
     findings: findings.findings,
     worktrees: [],
-    comparison: undefined,
-    usage: {
-      records: [],
-      coverage: { sessions: 0 },
-      unattributedInvocations: 0,
-      notes: ["Select a project to see Claude Code usage evidence."]
-    }
+    comparison: undefined
   };
 }
