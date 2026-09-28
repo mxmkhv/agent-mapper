@@ -1,12 +1,14 @@
 import { stat } from "node:fs/promises";
 import type { PluginRecord } from "@agent-mapper/core";
 import { readClaudePlugins } from "./plugin-claude-reader";
-import { readCodexPlugins } from "./plugin-codex-reader";
+import {
+  readCodexPlugins,
+  type CodexPluginReaderOptions
+} from "./plugin-codex-reader";
 import { inspectPlugin } from "./plugin-contributions";
-import type { PluginReaderOptions } from "./plugin-reader-common";
 import { SourceCollector } from "./source-reader";
 
-interface ReaderOptions extends PluginReaderOptions {
+interface ReaderOptions extends CodexPluginReaderOptions {
   collector: SourceCollector;
 }
 export interface PluginScan {

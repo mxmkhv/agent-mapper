@@ -154,7 +154,9 @@ async function applyCodexDisabled(
   }
   const disabled = user === false && project !== true;
   const uncertain = project === false || (user === false && project === true);
-  for (const hook of hooks.filter((item) => item.tool === "codex")) {
+  for (const hook of hooks.filter(
+    (item) => item.tool === "codex" && item.availability !== "disabled"
+  )) {
     if (disabled) {
       hook.availability = "disabled";
       hook.reason = "Codex user configuration disables hooks.";

@@ -61,14 +61,15 @@ async function scanRelated(options: {
   managedSettings: ManagedSettingsFile[];
   managedClaudeDir: string;
   contentFor(path: string): string | undefined;
+  toml: CodexTomlReader;
 }) {
-  const toml = new CodexTomlReader();
+  const { toml } = options;
   const [hooks, mcp, memory] = await Promise.all([
     scanHooks({ ...options, toml }),
     scanMcp({ ...options, toml }),
     scanMemory(options)
   ]);
-  return { hooks, mcp, memory, toml };
+  return { hooks, mcp, memory };
 }
 
 function configRoots(options: ScanOptions, home: string) {
@@ -94,6 +95,7 @@ async function scanBase(options: {
   root: string;
   roots: ReturnType<typeof configRoots>["roots"];
   managedClaudeDir: string;
+  toml: CodexTomlReader;
 }) {
   const collector = new SourceCollector();
   const managedSettings = await scanManagedClaude(
@@ -112,7 +114,8 @@ async function scanBase(options: {
     home: options.home,
     claudeConfigDir: options.roots.claude,
     codexHome: options.roots.codex,
-    collector
+    collector,
+    toml: options.toml
   });
   const agents = await scanAgents({
     workingDirectory: options.workingDirectory,
@@ -135,14 +138,16 @@ export async function scanInventory(
     resolvedContext ?? (await resolveScanContext(workingDirectory));
   const { roots, claudeStatePath } = configRoots(options, home);
   const managedClaudeDir = managedClaudeDirectory(options);
+  const toml = new CodexTomlReader();
   const { collector, managedSettings, plugins, agents } = await scanBase({
     workingDirectory,
     root: context.root,
     home,
     roots,
-    managedClaudeDir
+    managedClaudeDir,
+    toml
   });
-  const { hooks, mcp, memory, toml } = await scanRelated({
+  const { hooks, mcp, memory } = await scanRelated({
     workingDirectory,
     root: context.root,
     worktrees: context.worktrees,
@@ -155,7 +160,8 @@ export async function scanInventory(
     agents: agents.agents,
     managedSettings,
     managedClaudeDir,
-    contentFor: (path) => collector.content(path)
+    contentFor: (path) => collector.content(path),
+    toml
   });
   return {
     entries: collector.entries,

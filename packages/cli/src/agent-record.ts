@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { lstat, readFile } from "node:fs/promises";
 import { basename, extname } from "node:path";
 import type { AgentRecord, PluginRecord } from "@agent-mapper/core";
+import { parse } from "smol-toml";
 
 const idLength = 20;
 const frontmatterOffset = 4;
@@ -58,38 +59,27 @@ function markdownMetadata(content: string): Metadata {
   };
 }
 
-function hasClosedInstructions(
-  content: string,
-  opening: string | undefined
-): boolean {
-  if (!opening) {
-    return false;
-  }
-  if (opening !== '"""' && opening !== "'''") {
-    return true;
-  }
-  return content
-    .slice(content.indexOf(opening) + opening.length)
-    .includes(opening);
+function nonEmptyString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
 }
 
 function tomlMetadata(content: string): Metadata {
-  const topLevel = content.split(/^\s*\[/m, 1)[0] ?? "";
-  const name = /^\s*name\s*=\s*("(?:\\.|[^"\\])*"|'[^']*')\s*(?:#.*)?$/m.exec(
-    topLevel
-  )?.[1];
-  const description =
-    /^\s*description\s*=\s*("(?:\\.|[^"\\])*"|'[^']*')\s*(?:#.*)?$/m.exec(
-      topLevel
-    )?.[1];
-  const instructions =
-    /^\s*developer_instructions\s*=\s*("""|'''|"(?:\\.|[^"\\])*"|'[^']*')/m.exec(
-      topLevel
-    )?.[1];
+  let document;
+  try {
+    document = parse(content);
+  } catch {
+    return {
+      descriptionPresent: false,
+      instructionsPresent: false,
+      supported: false
+    };
+  }
   return {
-    name: name ? scalar(name) : undefined,
-    descriptionPresent: Boolean(description && scalar(description)),
-    instructionsPresent: hasClosedInstructions(topLevel, instructions),
+    name: nonEmptyString(document.name),
+    descriptionPresent: Boolean(nonEmptyString(document.description)),
+    instructionsPresent: Boolean(
+      nonEmptyString(document.developer_instructions)
+    ),
     supported: true
   };
 }
@@ -113,7 +103,11 @@ function availability(
   metadata: Metadata
 ): Pick<AgentRecord, "availability" | "reason"> {
   if (!metadata.supported) {
-    return unknown("Unsupported or missing frontmatter; inspect the source.");
+    return unknown(
+      source.tool === "codex"
+        ? "Agent TOML could not be parsed. Fix the syntax and rescan."
+        : "Unsupported or missing frontmatter; inspect the source."
+    );
   }
   if (!metadata.name && !source.plugin) {
     return unknown("No agent name was found in the declaration.");

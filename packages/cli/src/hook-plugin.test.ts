@@ -98,3 +98,43 @@ it("reads portable plugin inline hook arrays with distinct locators", async () =
   ]);
   expect(JSON.stringify(snapshot)).not.toContain("private-value");
 });
+
+it("keeps hooks from a disabled Codex plugin disabled when a project flag is uncertain", async () => {
+  const options = fixture();
+  const root = join(
+    options.codexHome,
+    "plugins",
+    "cache",
+    "market",
+    "off",
+    "1"
+  );
+  mkdirSync(root, { recursive: true });
+  mkdirSync(join(options.project, ".codex"));
+  writeFileSync(
+    join(options.codexHome, "config.toml"),
+    '[plugins."off@market"]\nenabled = false\n'
+  );
+  writeFileSync(
+    join(options.project, ".codex", "config.toml"),
+    "[features]\nhooks = false\n"
+  );
+  writeFileSync(
+    join(root, "plugin.json"),
+    JSON.stringify({
+      name: "off",
+      extensions: {
+        "com.openai": {
+          hooks: [{ Stop: [{ hooks: [{ type: "command", command: "x" }] }] }]
+        }
+      }
+    })
+  );
+  const snapshot = await buildSnapshot(options.project, options);
+  expect(snapshot.hooks).toMatchObject([
+    {
+      availability: "disabled",
+      reason: "Hooks are disabled by local settings or the parent plugin."
+    }
+  ]);
+});

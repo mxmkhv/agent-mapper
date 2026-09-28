@@ -144,3 +144,24 @@ it("does not scan global agents again as project agents in a home Git repo", asy
     )
   ).toBe(false);
 });
+
+it("reads Codex developer_instructions that contain lines starting with a bracket", async () => {
+  const options = fixture();
+  mkdirSync(join(options.codexHome, "agents"), { recursive: true });
+  writeFileSync(
+    join(options.codexHome, "agents", "reviewer.toml"),
+    'name = "reviewer"\ndescription = "Review changes"\ndeveloper_instructions = """\n[ ] run tests\n[docs](https://example.com)\n"""\n'
+  );
+  writeFileSync(
+    join(options.codexHome, "agents", "broken.toml"),
+    'name = "broken"\ndescription = "Unclosed\n'
+  );
+  const snapshot = await buildSnapshot(options.project, options);
+  expect(
+    snapshot.agents.map(({ name, availability }) => [name, availability])
+  ).toEqual([
+    ["broken", "unknown"],
+    ["reviewer", "configured"]
+  ]);
+  expect(snapshot.agents[0]?.reason).toContain("could not be parsed");
+});

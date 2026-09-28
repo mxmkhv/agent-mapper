@@ -1,9 +1,10 @@
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { PluginRecord, PluginState } from "@agent-mapper/core";
 import { codexProjectConfigPaths } from "./codex-config-paths";
+import type { CodexTomlReader } from "./codex-toml";
 import {
   cache,
+  object,
   plugin,
   splitKey,
   type CachedPlugin,
@@ -11,36 +12,22 @@ import {
   type PluginSetting
 } from "./plugin-reader-common";
 
+export interface CodexPluginReaderOptions extends PluginReaderOptions {
+  toml: CodexTomlReader;
+}
+
 async function settings(options: {
   path: string;
   project: boolean;
-  errors: string[];
+  toml: CodexTomlReader;
 }): Promise<Map<string, PluginSetting>> {
-  let source: string;
-  try {
-    source = await readFile(options.path, "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      options.errors.push(`${options.path}: Could not read settings.`);
-    }
-    return new Map();
-  }
   const result = new Map<string, PluginSetting>();
-  let key: string | undefined;
-  for (const line of source.split(/\r?\n/)) {
-    const heading = /^\s*\[plugins\."([^"]+)"\]\s*(?:#.*)?$/.exec(line);
-    if (heading) {
-      key = heading[1];
-      continue;
-    }
-    if (/^\s*\[/.test(line)) {
-      key = undefined;
-      continue;
-    }
-    const enabled = /^\s*enabled\s*=\s*(true|false)\s*(?:#.*)?$/.exec(line);
-    if (key && enabled) {
+  const plugins = object((await options.toml.read(options.path))?.plugins);
+  for (const [key, value] of Object.entries(plugins ?? {})) {
+    const enabled = object(value)?.enabled;
+    if (typeof enabled === "boolean") {
       result.set(key, {
-        enabled: enabled[1] === "true",
+        enabled,
         path: options.path,
         project: options.project
       });
@@ -50,14 +37,13 @@ async function settings(options: {
 }
 
 async function appliedSettings(
-  options: PluginReaderOptions,
-  errors: string[]
+  options: CodexPluginReaderOptions
 ): Promise<Map<string, PluginSetting>> {
   const root = options.root;
   const result = await settings({
     path: join(options.codexHome, "config.toml"),
     project: false,
-    errors
+    toml: options.toml
   });
   const userPath = join(options.codexHome, "config.toml");
   for (const path of codexProjectConfigPaths(root, options.workingDirectory)) {
@@ -67,7 +53,7 @@ async function appliedSettings(
     for (const [key, value] of await settings({
       path,
       project: true,
-      errors
+      toml: options.toml
     })) {
       result.set(key, value);
     }
@@ -139,15 +125,32 @@ function missingRecords(options: {
     if (options.cached.some((entry) => entry.key === key)) {
       continue;
     }
+    const base = {
+      tool: "codex" as const,
+      key,
+      ...splitKey(key),
+      scope: setting.project ? ("project" as const) : ("global" as const),
+      sourcePath: setting.path,
+      settingsEvidence: setting.path
+    };
+    if (!setting.enabled) {
+      const value = state(setting, 1);
+      result.push(
+        plugin({
+          ...base,
+          state: value,
+          reason:
+            value === "disabled"
+              ? "A setting disables this plugin; no installed cache copy was found."
+              : reason(value, setting)
+        })
+      );
+      continue;
+    }
     result.push(
       plugin({
-        tool: "codex",
-        key,
-        ...splitKey(key),
-        scope: setting.project ? "project" : "global",
+        ...base,
         state: options.cacheComplete ? "missing" : "unknown",
-        sourcePath: setting.path,
-        settingsEvidence: setting.path,
         reason: options.cacheComplete
           ? "Settings mention this plugin, but no installed cache copy was found."
           : "The plugin cache could not be fully read; installation cannot be verified."
@@ -158,10 +161,10 @@ function missingRecords(options: {
 }
 
 export async function readCodexPlugins(
-  options: PluginReaderOptions,
+  options: CodexPluginReaderOptions,
   errors: string[]
 ): Promise<PluginRecord[]> {
-  const applied = await appliedSettings(options, errors);
+  const applied = await appliedSettings(options);
   const beforeCache = errors.length;
   const cached = await cache(
     join(options.codexHome, "plugins", "cache"),
