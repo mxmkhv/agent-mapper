@@ -19,6 +19,7 @@ export interface CachedPlugin {
 export interface PluginReaderOptions {
   workingDirectory: string;
   home: string;
+  claudeConfigDir: string;
   codexHome: string;
 }
 

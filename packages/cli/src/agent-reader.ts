@@ -7,6 +7,7 @@ import { inspectAgent, type AgentSource } from "./agent-record";
 interface ScanOptions {
   workingDirectory: string;
   home: string;
+  claudeConfigDir: string;
   codexHome: string;
   plugins: PluginRecord[];
 }
@@ -183,7 +184,7 @@ export async function scanAgents(
   const agents: AgentRecord[] = [];
   const errors: string[] = [];
   await scanDirectory(agents, {
-    directory: join(options.home, ".claude", "agents"),
+    directory: join(options.claudeConfigDir, "agents"),
     tool: "claude",
     scope: "global",
     errors

@@ -7,6 +7,7 @@ import { inspectMemory, type MemorySource } from "./memory-record";
 interface ScanOptions {
   workingDirectory: string;
   home: string;
+  claudeConfigDir: string;
   codexHome: string;
 }
 
@@ -97,7 +98,7 @@ async function scanClaude(
   input: { options: ScanOptions; errors: string[]; global: boolean }
 ): Promise<void> {
   const { options, errors, global } = input;
-  const projects = join(options.home, ".claude", "projects");
+  const projects = join(options.claudeConfigDir, "projects");
   const root =
     (await findGitRoot(options.workingDirectory, "/")) ??
     options.workingDirectory;

@@ -23,6 +23,7 @@ function coverage(errors: string[]): string[] {
     "Worktree comparison checks common local configuration files by relative path and content. Generated folders and inherited global files are excluded. A changed settings file does not identify which declaration changed inside it.",
     "Context figures approximate known file text at four characters per token. Imported instruction content, skill listing budgets, memory loading, settings effects, and other runtime content are not estimated.",
     "Instruction resolution models default Claude Code and Codex file rules. Custom instruction file settings, trust decisions, and runtime overrides are not inspected.",
+    "Claude user configuration follows CLAUDE_CONFIG_DIR in this process. An existing Claude session may use a different environment.",
     "This view models a fresh local CLI session. Runtime flags, account-managed settings, and live session state are not inspected."
   ];
 }

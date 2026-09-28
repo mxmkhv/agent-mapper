@@ -42,14 +42,14 @@ async function addJson(
 }
 
 function directSources(options: {
-  home: string;
+  claudeConfigDir: string;
   codexHome: string;
   root: string;
 }): HookSource[] {
-  const { home, codexHome, root } = options;
+  const { claudeConfigDir, codexHome, root } = options;
   return [
     {
-      path: join(home, ".claude", "settings.json"),
+      path: join(claudeConfigDir, "settings.json"),
       tool: "claude",
       scope: "global"
     },
@@ -128,7 +128,7 @@ async function applyCodexDisabled(
 }
 
 export async function scanHooks(options: {
-  home: string;
+  claudeConfigDir: string;
   codexHome: string;
   workingDirectory: string;
   plugins: PluginRecord[];

@@ -46,7 +46,7 @@ async function appliedSettings(
     (await findGitRoot(options.workingDirectory, "/")) ??
     options.workingDirectory;
   const result = await settings({
-    path: join(options.home, ".claude", "settings.json"),
+    path: join(options.claudeConfigDir, "settings.json"),
     project: false,
     errors
   });
@@ -196,7 +196,7 @@ export async function readClaudePlugins(
   options: PluginReaderOptions,
   errors: string[]
 ): Promise<PluginRecord[]> {
-  const root = join(options.home, ".claude", "plugins");
+  const root = join(options.claudeConfigDir, "plugins");
   const installedPath = join(root, "installed_plugins.json");
   const installed = await json(installedPath, errors);
   if (installed && installed.version !== installedRecordVersion) {

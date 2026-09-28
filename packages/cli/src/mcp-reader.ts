@@ -199,7 +199,7 @@ function markClaudeShadowing(records: McpRecord[], projectPath: string): void {
 
 export async function scanMcp(options: {
   workingDirectory: string;
-  home: string;
+  claudeStatePath: string;
   codexHome: string;
   plugins: PluginRecord[];
 }): Promise<{ mcpServers: McpRecord[]; errors: string[] }> {
@@ -208,7 +208,7 @@ export async function scanMcp(options: {
   const root =
     (await findGitRoot(options.workingDirectory, "/")) ??
     options.workingDirectory;
-  const claudePath = join(options.home, ".claude.json");
+  const claudePath = options.claudeStatePath;
   await addJson(mcpServers, {
     source: { path: claudePath, tool: "claude", scope: "global" },
     errors

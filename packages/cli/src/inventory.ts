@@ -21,6 +21,7 @@ export interface ScanOptions {
   workingDirectory: string;
   home?: string;
   codexHome?: string;
+  claudeConfigDir?: string;
 }
 export interface ScanResult {
   entries: InventoryEntry[];
@@ -39,8 +40,9 @@ function scanErrors(groups: readonly { errors: string[] }[]): string[] {
 
 async function scanRelated(options: {
   workingDirectory: string;
-  home: string;
   codexHome: string;
+  claudeConfigDir: string;
+  claudeStatePath: string;
   plugins: PluginRecord[];
 }) {
   const hooks = await scanHooks(options);
@@ -176,14 +178,26 @@ async function scanProjectSources(
   }
 }
 
-export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
-  const home = resolve(options.home ?? homedir());
+function configRoots(options: ScanOptions, home: string) {
+  const customClaude = options.claudeConfigDir ?? process.env.CLAUDE_CONFIG_DIR;
   const roots = {
-    claude: join(home, ".claude"),
+    claude: resolve(
+      options.workingDirectory,
+      customClaude || join(home, ".claude")
+    ),
     codex: resolve(
       options.codexHome ?? process.env.CODEX_HOME ?? join(home, ".codex")
     )
   };
+  const claudeStatePath = customClaude
+    ? join(roots.claude, ".claude.json")
+    : join(home, ".claude.json");
+  return { roots, claudeStatePath };
+}
+
+export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
+  const home = resolve(options.home ?? homedir());
+  const { roots, claudeStatePath } = configRoots(options, home);
   const collector = new SourceCollector();
   await scanGlobal(collector, { home, ...roots });
   const workingDirectory = resolve(options.workingDirectory);
@@ -191,23 +205,27 @@ export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
   const plugins = await scanPlugins({
     workingDirectory,
     home,
+    claudeConfigDir: roots.claude,
     codexHome: roots.codex,
     collector
   });
   const { hooks, mcp } = await scanRelated({
     workingDirectory,
-    home,
+    claudeConfigDir: roots.claude,
+    claudeStatePath,
     codexHome: roots.codex,
     plugins: plugins.plugins
   });
   const memory = await scanMemory({
     workingDirectory,
     home,
+    claudeConfigDir: roots.claude,
     codexHome: roots.codex
   });
   const agents = await scanAgents({
     workingDirectory,
     home,
+    claudeConfigDir: roots.claude,
     codexHome: roots.codex,
     plugins: plugins.plugins
   });
