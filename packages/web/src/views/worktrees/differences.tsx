@@ -7,7 +7,9 @@ import type {
 import { useSourceAction } from "../../state/use-source-action";
 import { Button } from "../../ui/button";
 import { StateMarker } from "../../ui/marks";
+import { relevantDifferences } from "./difference-groups";
 import { DifferenceList, differenceInfo } from "./difference-list";
+import { PathText } from "../../ui/path-text";
 import { DetailPane, EmptyState, ListPane } from "./panes";
 
 function Side({
@@ -36,7 +38,9 @@ function Side({
       <h3 className="m-0 mb-2 text-caption font-semibold text-ink-faint">
         {label}
       </h3>
-      <p className="m-0 font-mono text-mono break-all">{side.path}</p>
+      <p className="m-0 font-mono text-mono break-words">
+        <PathText path={side.path} />
+      </p>
       <p className="mt-1 mb-0 text-label text-ink-muted">
         Git: {side.tracking} · File: {side.readState}
       </p>
@@ -71,9 +75,7 @@ export function Differences({
   workingDirectory,
   onSelectPath
 }: DifferencesProps) {
-  const rows = comparison.differences.filter(
-    (row) => row.tool === "shared" || row.tool === tool
-  );
+  const rows = relevantDifferences(comparison.differences, tool);
   const [selectedId, setSelectedId] = useState<string>();
   const selected = rows.find((row) => row.id === selectedId) ?? rows[0];
   if (!rows.length) {

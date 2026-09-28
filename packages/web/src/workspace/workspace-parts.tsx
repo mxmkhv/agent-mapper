@@ -15,6 +15,7 @@ import { InventoryView } from "../views/inventory-view";
 import { MapView } from "../views/map/map-view";
 import type { ReachProject } from "../views/reach/reach-model";
 import { ReachView } from "../views/reach/reach-view";
+import { relevantDifferences } from "../views/worktrees/difference-groups";
 import { WorktreeView } from "../views/worktrees/worktree-view";
 import type { WorkspaceState } from "./use-workspace";
 
@@ -62,9 +63,12 @@ export function tabsFor({ props, state }: PartsProps): ViewTab[] {
             id: "worktrees",
             label: "Worktrees",
             count:
-              props.snapshot.comparison?.differences.filter(
-                (row) => row.tool === "shared" || row.tool === props.tool
-              ).length ?? linked
+              (props.snapshot.comparison &&
+                relevantDifferences(
+                  props.snapshot.comparison.differences,
+                  props.tool
+                ).length) ??
+              linked
           }
         ]
       : [];

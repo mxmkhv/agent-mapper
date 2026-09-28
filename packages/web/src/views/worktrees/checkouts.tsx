@@ -3,6 +3,7 @@ import type { WorktreeRecord } from "@agent-mapper/core";
 import { GitBranch } from "lucide-react";
 import { Button } from "../../ui/button";
 import { StateLabel, StateMarker } from "../../ui/marks";
+import { PathText } from "../../ui/path-text";
 import { DetailPane, EmptyState, ListPane } from "./panes";
 
 const folderName = (path: string) => path.split("/").at(-1) ?? path;
@@ -37,7 +38,7 @@ export function Checkouts({ worktrees, onSelectPath }: CheckoutsProps) {
           return (
             <button
               aria-current={tree === selected ? "true" : undefined}
-              className={`grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2.5 px-3 text-left [&+&]:border-t [&+&]:border-wash ${tree === selected ? "bg-selected" : "hover:bg-hover"}`}
+              className={`grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_minmax(0,1fr)_72px] items-center gap-2.5 px-3 text-left [&+&]:border-t [&+&]:border-wash ${tree === selected ? "bg-selected" : "hover:bg-hover"}`}
               key={tree.path}
               onClick={() => setSelectedPath(tree.path)}
             >
@@ -73,8 +74,8 @@ export function Checkouts({ worktrees, onSelectPath }: CheckoutsProps) {
               {selected.branch ?? "detached or unavailable"}
             </dd>
             <dt className="text-ink-muted">Path</dt>
-            <dd className="m-0 font-mono text-mono break-all">
-              {selected.path}
+            <dd className="m-0 font-mono text-mono break-words">
+              <PathText path={selected.path} />
             </dd>
           </dl>
           {selected.state === "available" ? (

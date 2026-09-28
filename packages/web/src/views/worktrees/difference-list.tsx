@@ -73,12 +73,19 @@ function FileRow({
         strokeWidth={1.6}
       />
       <StateMarker tier={info.tier} />
-      <PathLine
-        path={
-          folder ? row.relativePath.slice(folder.length + 1) : row.relativePath
-        }
-        title={row.relativePath}
-      />
+      {folder && row.relativePath === folder ? (
+        // A symlinked skill folder is itself a difference; it has no file name of its own.
+        <span className="text-label text-ink-muted">Folder itself</span>
+      ) : (
+        <PathLine
+          path={
+            folder
+              ? row.relativePath.slice(folder.length + 1)
+              : row.relativePath
+          }
+          title={row.relativePath}
+        />
+      )}
       {row.tool === "shared" ? <span /> : <ToolGlyph tool={row.tool} />}
       <StateLabel text={info.label} tier="inactive" />
     </button>
@@ -101,7 +108,8 @@ export function DifferenceList({ rows, selectedId, onSelect }: ListProps) {
     });
   return groupDifferences(rows).map((group) => {
     const [only] = group.rows;
-    if (group.rows.length === 1 && only) {
+    // Loose files stay single rows; every skill or agent folder is a group, even with one file.
+    if (group.rows.length === 1 && only && only.relativePath === group.key) {
       return (
         <FileRow
           key={group.key}
