@@ -6,7 +6,11 @@ import type {
   WorktreeRecord
 } from "@agent-mapper/core";
 import { configFiles, type ConfigFile } from "./worktree-files";
-import { trackedFiles, type WorktreeScan } from "./worktree-git";
+import {
+  trackedFiles,
+  untrackedFiles,
+  type WorktreeScan
+} from "./worktree-git";
 
 const idLength = 20;
 
@@ -72,6 +76,22 @@ function difference(
   };
 }
 
+async function scanSide(path: string, excludedRoots: Set<string>) {
+  const errors: string[] = [];
+  const [tracked, untracked] = await Promise.all([
+    trackedFiles(path, errors),
+    untrackedFiles(path, errors)
+  ]);
+  const candidates =
+    tracked && untracked ? new Set([...tracked, ...untracked]) : undefined;
+  const config = await configFiles(path, { excludedRoots, candidates });
+  return {
+    files: config.files,
+    tracked,
+    errors: [...errors, ...config.errors]
+  };
+}
+
 async function compare(options: {
   mainPath: string;
   herePath: string;
@@ -82,12 +102,9 @@ async function compare(options: {
 }> {
   const { mainPath, herePath } = options;
   const excluded = new Set(options.worktrees.map((item) => item.path));
-  const trackingErrors: string[] = [];
-  const [main, here, mainTracked, hereTracked] = await Promise.all([
-    configFiles(mainPath, excluded),
-    configFiles(herePath, excluded),
-    trackedFiles(mainPath, trackingErrors),
-    trackedFiles(herePath, trackingErrors)
+  const [main, here] = await Promise.all([
+    scanSide(mainPath, excluded),
+    scanSide(herePath, excluded)
   ]);
   const paths = new Set([...main.files.keys(), ...here.files.keys()]);
   const differences = [...paths]
@@ -98,13 +115,18 @@ async function compare(options: {
           main: main.files.get(relativePath),
           here: here.files.get(relativePath)
         },
-        { mainTracked, hereTracked, mainPath, herePath }
+        {
+          mainTracked: main.tracked,
+          hereTracked: here.tracked,
+          mainPath,
+          herePath
+        }
       )
     )
     .filter((item): item is WorktreeDifference => Boolean(item));
   return {
     comparison: { mainPath, herePath, differences },
-    errors: [...main.errors, ...here.errors, ...trackingErrors]
+    errors: [...main.errors, ...here.errors]
   };
 }
 

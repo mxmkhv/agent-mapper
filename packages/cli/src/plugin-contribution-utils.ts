@@ -5,8 +5,17 @@ import type { PluginContribution } from "@agent-mapper/core";
 export async function fileExists(path: string): Promise<boolean> {
   try {
     return (await stat(path)).isFile();
-  } catch {
-    return false;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") {
+      return false;
+    }
+    throw new Error(
+      `${path}: Could not inspect plugin file. Check permissions.`,
+      {
+        cause: error
+      }
+    );
   }
 }
 
@@ -27,8 +36,17 @@ export async function safePath(
     return target === realRoot || target.startsWith(`${realRoot}${sep}`)
       ? path
       : undefined;
-  } catch {
-    return undefined;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") {
+      return undefined;
+    }
+    throw new Error(
+      `${path}: Could not resolve plugin path. Check permissions.`,
+      {
+        cause: error
+      }
+    );
   }
 }
 

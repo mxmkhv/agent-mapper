@@ -12,7 +12,11 @@ import { extname, resolve, sep } from "node:path";
 import type { InventorySnapshot } from "@agent-mapper/core";
 import { discoverProjects, type DiscoveryResult } from "./inventory";
 import { buildGlobalSnapshot, buildSnapshot } from "./service";
-import { performSourceAction, sourcePathIndex } from "./source-actions";
+import {
+  performSourceAction,
+  sourcePathIndex,
+  type SourcePathStore
+} from "./source-actions";
 
 export interface AppServerOptions {
   home?: string;
@@ -32,7 +36,7 @@ interface RequestContext {
   server: Server;
   token: string;
   options: AppServerOptions;
-  sourcePaths: Map<string, Map<string, string>>;
+  sourcePaths: SourcePathStore;
 }
 
 type ApiPayload =
@@ -84,7 +88,13 @@ async function inventoryPayload(
     url.searchParams.get("scope") === "global"
       ? await buildGlobalSnapshot(scanOptions)
       : await buildSnapshot(path ?? "", scanOptions);
-  context.sourcePaths.set(payload.workingDirectory, sourcePathIndex(payload));
+  const scope =
+    url.searchParams.get("scope") === "global" ? "global" : "project";
+  const previous = context.sourcePaths.get(payload.workingDirectory) ?? {};
+  context.sourcePaths.set(payload.workingDirectory, {
+    ...previous,
+    [scope]: sourcePathIndex(payload)
+  });
   return payload;
 }
 
@@ -211,7 +221,7 @@ async function handleRequest(context: RequestContext): Promise<void> {
 
 export function createAppServer(options: AppServerOptions): AppServer {
   const token = randomBytes(tokenBytes).toString("hex");
-  const sourcePaths = new Map<string, Map<string, string>>();
+  const sourcePaths: SourcePathStore = new Map();
   const server = createServer((request, response) => {
     void handleRequest({
       request,

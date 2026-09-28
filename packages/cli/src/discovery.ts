@@ -66,7 +66,7 @@ async function groupWorktrees(
     const previous = grouped.get(key);
     grouped.set(key, {
       path: key,
-      hits: [...(previous?.hits ?? []), ...project.hits],
+      hits: [...(previous?.hits ?? []), ...project.hits].sort(),
       worktrees: groupedWorktrees
     });
   }
@@ -87,6 +87,7 @@ export interface DiscoveryResult {
 class DiscoveryWalk {
   readonly projects = new Map<string, string[]>();
   readonly errors: string[] = [];
+  readonly gitRoots = new Map<string, Promise<string | undefined>>();
   constructor(
     readonly root: string,
     readonly maxDepth: number
@@ -98,7 +99,8 @@ class DiscoveryWalk {
     }
     const gitRoot = await findGitRoot(directory, {
       stop: this.root,
-      errors: this.errors
+      errors: this.errors,
+      cache: this.gitRoots
     });
     const project = gitRoot === this.root ? directory : (gitRoot ?? directory);
     this.projects.set(project, [...(this.projects.get(project) ?? []), path]);
@@ -112,7 +114,8 @@ class DiscoveryWalk {
     );
   }
 
-  async visit(directory: string, depth: number): Promise<void> {
+  async visit(directory: string, depth: number): Promise<string[]> {
+    const next: string[] = [];
     let items;
     try {
       items = await readdir(directory, { withFileTypes: true });
@@ -120,7 +123,7 @@ class DiscoveryWalk {
       this.errors.push(
         `${directory}: ${error instanceof Error ? error.message : String(error)}`
       );
-      return;
+      return next;
     }
     for (const item of items) {
       const path = join(directory, item.name);
@@ -134,9 +137,10 @@ class DiscoveryWalk {
         item.isDirectory() &&
         this.shouldVisit({ directory, name: item.name, depth })
       ) {
-        await this.visit(path, depth + 1);
+        next.push(path);
       }
     }
+    return next;
   }
 }
 
@@ -145,7 +149,14 @@ export async function discoverProjects(
   maxDepth = defaultDepth
 ): Promise<DiscoveryResult> {
   const walk = new DiscoveryWalk(resolve(home), maxDepth);
-  await walk.visit(walk.root, 0);
+  let directories = [walk.root];
+  for (let depth = 0; depth <= maxDepth && directories.length; depth += 1) {
+    const children = await boundedMap(directories, {
+      limit: maxConcurrentGitScans,
+      task: (directory) => walk.visit(directory, depth)
+    });
+    directories = children.flat();
+  }
   const grouped = await groupWorktrees(
     [...walk.projects].map(([path, hits]) => ({ path, hits })),
     walk.root
@@ -160,30 +171,41 @@ export async function discoverProjects(
 
 export async function findGitRoot(
   directory: string,
-  options: { stop: string; errors?: string[] }
-): Promise<string | undefined> {
-  const { stop, errors } = options;
-  let current = directory;
-  const prefix = stop === sep ? stop : `${stop}${sep}`;
-  while (current === stop || current.startsWith(prefix)) {
-    try {
-      await lstat(join(current, ".git"));
-      return current;
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code !== "ENOENT" && code !== "ENOTDIR") {
-        const message = `${join(current, ".git")}: Could not inspect Git root. Check permissions.`;
-        if (errors) {
-          errors.push(message);
-          return undefined;
-        }
-        throw new Error(message, { cause: error });
-      }
-      if (current === stop) {
-        break;
-      }
-      current = dirname(current);
-    }
+  options: {
+    stop: string;
+    errors?: string[];
+    cache?: Map<string, Promise<string | undefined>>;
   }
-  return undefined;
+): Promise<string | undefined> {
+  const { stop, errors, cache } = options;
+  const prefix = stop === sep ? stop : `${stop}${sep}`;
+  const lookup = (current: string): Promise<string | undefined> => {
+    if (current !== stop && !current.startsWith(prefix)) {
+      return Promise.resolve(undefined);
+    }
+    const cached = cache?.get(current);
+    if (cached) {
+      return cached;
+    }
+    const pending = (async () => {
+      try {
+        await lstat(join(current, ".git"));
+        return current;
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code !== "ENOENT" && code !== "ENOTDIR") {
+          const message = `${join(current, ".git")}: Could not inspect Git root. Check permissions.`;
+          if (errors) {
+            errors.push(message);
+            return undefined;
+          }
+          throw new Error(message, { cause: error });
+        }
+        return current === stop ? undefined : lookup(dirname(current));
+      }
+    })();
+    cache?.set(current, pending);
+    return pending;
+  };
+  return lookup(directory);
 }

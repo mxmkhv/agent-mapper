@@ -78,10 +78,13 @@ async function validatedDirectory(workingDirectory: string): Promise<string> {
   return path;
 }
 
-export async function buildSnapshot(
+async function buildSnapshotWithSources(
   workingDirectory: string,
   options: Omit<ScanOptions, "workingDirectory"> = {}
-): Promise<InventorySnapshot> {
+): Promise<{
+  snapshot: InventorySnapshot;
+  contentFor: ScanResult["contentFor"];
+}> {
   const path = await validatedDirectory(workingDirectory);
   const context = await resolveScanContext(path);
   const scan = await scanInventory(
@@ -94,7 +97,7 @@ export async function buildSnapshot(
     path,
     home: resolve(options.home ?? homedir())
   });
-  return {
+  const snapshot: InventorySnapshot = {
     workingDirectory: path,
     scannedAt: new Date().toISOString(),
     roots: scan.roots,
@@ -120,12 +123,23 @@ export async function buildSnapshot(
       ...findings.errors
     ])
   };
+  return { snapshot, contentFor: scan.contentFor };
+}
+
+export async function buildSnapshot(
+  workingDirectory: string,
+  options: Omit<ScanOptions, "workingDirectory"> = {}
+): Promise<InventorySnapshot> {
+  return (await buildSnapshotWithSources(workingDirectory, options)).snapshot;
 }
 
 export async function buildGlobalSnapshot(
   options: Omit<ScanOptions, "workingDirectory"> = {}
 ): Promise<InventorySnapshot> {
-  const snapshot = await buildSnapshot(options.home ?? homedir(), options);
+  const { snapshot, contentFor } = await buildSnapshotWithSources(
+    options.home ?? homedir(),
+    options
+  );
   const items = snapshot.items.filter(
     ({ entry }) => entry.scope === "global" || entry.scope === "managed"
   );
@@ -139,7 +153,12 @@ export async function buildGlobalSnapshot(
   const imports = snapshot.imports.filter((item) =>
     items.some(({ entry }) => entry.id === item.sourceEntryId)
   );
-  const findings = await buildFindings({ items, plugins, imports });
+  const findings = await buildFindings({
+    items,
+    plugins,
+    imports,
+    contentFor
+  });
   return {
     ...snapshot,
     items,
@@ -153,6 +172,7 @@ export async function buildGlobalSnapshot(
     agents,
     context: summarizeContext({ items, agents, memories }),
     findings: findings.findings,
+    coverage: [...new Set([...snapshot.coverage, ...findings.errors])],
     worktrees: [],
     comparison: undefined
   };

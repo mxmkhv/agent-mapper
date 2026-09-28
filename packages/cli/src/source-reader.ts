@@ -91,7 +91,12 @@ export class SourceCollector {
           directory = (await stat(childPath)).isDirectory();
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-            directory = true;
+            await this.add({
+              ...candidate,
+              kind: "skill",
+              path: childPath,
+              name: child.name
+            });
           } else {
             this.errors.push(
               `${childPath}: Could not inspect skill link. Check permissions.`

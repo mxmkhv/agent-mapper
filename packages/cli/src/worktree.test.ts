@@ -13,7 +13,7 @@ import { afterEach, expect, it } from "vitest";
 import type { InventorySnapshot } from "@agent-mapper/core";
 import { buildSnapshot } from "./service";
 import { discoverProjects } from "./discovery";
-import { sourcePath } from "./source-actions";
+import { sourcePathIndex } from "./source-actions";
 
 const roots: string[] = [];
 
@@ -90,10 +90,11 @@ function expectMetadata(
   const changed = snapshot.comparison?.differences.find(
     (row) => row.relativePath === "AGENTS.md"
   );
-  expect(sourcePath(snapshot, changed?.main?.id ?? "")).toBe(
+  const pathsById = sourcePathIndex(snapshot);
+  expect(pathsById.get(changed?.main?.id ?? "")).toBe(
     join(paths.main, "AGENTS.md")
   );
-  expect(sourcePath(snapshot, changed?.here?.id ?? "")).toBe(
+  expect(pathsById.get(changed?.here?.id ?? "")).toBe(
     join(paths.linked, "AGENTS.md")
   );
 }

@@ -6,9 +6,13 @@ import type { InventorySnapshot } from "@agent-mapper/core";
 
 interface ActionContext {
   request: IncomingMessage;
-  paths: Map<string, Map<string, string>>;
+  paths: SourcePathStore;
   launch?: (args: string[]) => Promise<void>;
 }
+export type SourcePathStore = Map<
+  string,
+  { global?: Map<string, string>; project?: Map<string, string> }
+>;
 const requestLimit = 16_384;
 const safeTextExtensions = new Set([
   ".md",
@@ -53,31 +57,6 @@ function launchOpen(args: string[]): Promise<void> {
         : reject(new Error(`macOS open exited with status ${code}.`))
     );
   });
-}
-
-function comparisonSourcePath(
-  snapshot: InventorySnapshot,
-  id: string
-): string | undefined {
-  const row = snapshot.comparison?.differences.find(
-    (item) => item.main?.id === id || item.here?.id === id
-  );
-  return row?.main?.id === id ? row.main.path : row?.here?.path;
-}
-
-export function sourcePath(
-  snapshot: InventorySnapshot,
-  id: string
-): string | undefined {
-  return (
-    snapshot.items.find((item) => item.entry.id === id)?.entry.path ??
-    snapshot.plugins.find((plugin) => plugin.id === id)?.sourcePath ??
-    snapshot.hooks.find((hook) => hook.id === id)?.sourcePath ??
-    snapshot.mcpServers.find((server) => server.id === id)?.sourcePath ??
-    snapshot.memories.find((memory) => memory.id === id)?.sourcePath ??
-    snapshot.agents.find((agent) => agent.id === id)?.sourcePath ??
-    comparisonSourcePath(snapshot, id)
-  );
 }
 
 export function sourcePathIndex(
@@ -145,7 +124,9 @@ export async function performSourceAction(
   if (body.action !== "open" && body.action !== "reveal") {
     throw new Error("Choose Open or Reveal.");
   }
-  const source = context.paths.get(body.path)?.get(body.id);
+  const indexes = context.paths.get(body.path);
+  const source =
+    indexes?.project?.get(body.id) ?? indexes?.global?.get(body.id);
   if (!source) {
     throw new Error("Source is no longer in this scan. Rescan and try again.");
   }

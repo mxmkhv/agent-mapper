@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { discoverProjects, scanInventory } from "./inventory";
+import { buildSnapshot } from "./service";
 
 const roots: string[] = [];
 
@@ -160,6 +161,34 @@ it("ignores skill-folder symlinks that point to regular files", async () => {
   const result = await scanInventory({ workingDirectory: project, home });
   expect(result.entries.some((entry) => entry.kind === "skill")).toBe(false);
   expect(result.errors.some((error) => error.includes("ENOTDIR"))).toBe(false);
+});
+
+it("reports a broken skill-folder symlink as a missing skill", async () => {
+  const home = fixture();
+  const project = join(home, "app");
+  const skills = join(home, ".claude", "skills");
+  mkdirSync(skills, { recursive: true });
+  mkdirSync(project);
+  const link = join(skills, "broken");
+  symlinkSync(join(home, "deleted"), link);
+
+  const result = await scanInventory({ workingDirectory: project, home });
+  expect(result.entries).toContainEqual(
+    expect.objectContaining({
+      kind: "skill",
+      name: "broken",
+      path: link,
+      readState: "missing",
+      isSymlink: true
+    })
+  );
+  expect(result.errors.some((error) => error.startsWith(`${link}:`))).toBe(
+    true
+  );
+  const snapshot = await buildSnapshot(project, { home });
+  expect(snapshot.findings).toContainEqual(
+    expect.objectContaining({ code: "broken-symlink" })
+  );
 });
 
 it("stops project instruction discovery at the Git root", async () => {

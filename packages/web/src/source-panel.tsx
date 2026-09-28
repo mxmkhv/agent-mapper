@@ -57,7 +57,10 @@ export function Detail({
   workingDirectory,
   onSelectPlugin
 }: DetailProps) {
-  const [actionError, setActionError] = useState("");
+  const [actionError, setActionError] = useState<{
+    id: string;
+    message: string;
+  }>();
   if (!item) {
     return (
       <aside className="detail">
@@ -73,10 +76,13 @@ export function Detail({
       return;
     }
     try {
-      setActionError("");
+      setActionError(undefined);
       await sourceAction({ path: workingDirectory, id: item.entry.id, action });
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : String(error));
+      setActionError({
+        id: item.entry.id,
+        message: error instanceof Error ? error.message : String(error)
+      });
     }
   }
   return (
@@ -131,9 +137,9 @@ export function Detail({
         <button onClick={() => void run("open")}>Open in editor</button>
         <button onClick={() => void run("reveal")}>Reveal in Finder</button>
       </div>
-      {actionError ? (
+      {actionError?.id === entry.id ? (
         <p className="inline-error" role="alert">
-          {actionError}
+          {actionError.message}
         </p>
       ) : null}
     </aside>

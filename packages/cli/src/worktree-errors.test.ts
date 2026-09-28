@@ -3,7 +3,8 @@ import {
   mkdirSync,
   realpathSync,
   rmSync,
-  symlinkSync
+  symlinkSync,
+  writeFileSync
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -65,4 +66,23 @@ it("reports unreadable comparison files and Git tracking failures", async () => 
   expect(errors).toContainEqual(
     expect.stringContaining("Could not list tracked files")
   );
+});
+
+it("walks candidate paths and local config directories", async () => {
+  const home = fixture();
+  mkdirSync(join(home, "candidate"));
+  mkdirSync(join(home, "unrelated", "deep"), { recursive: true });
+  mkdirSync(join(home, ".claude"));
+  writeFileSync(join(home, "candidate", "AGENTS.md"), "candidate");
+  writeFileSync(join(home, "unrelated", "deep", "AGENTS.md"), "unrelated");
+  writeFileSync(join(home, "unrelated", "deep", "source.ts"), "source");
+  writeFileSync(join(home, ".claude", "settings.local.json"), "{}");
+
+  const result = await configFiles(home, {
+    candidates: new Set(["candidate/AGENTS.md", "unrelated/deep/source.ts"])
+  });
+  expect([...result.files.keys()].sort()).toEqual([
+    ".claude/settings.local.json",
+    "candidate/AGENTS.md"
+  ]);
 });

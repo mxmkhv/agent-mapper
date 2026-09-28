@@ -60,7 +60,10 @@ function parsePorcelain(output: string): ParsedWorktree[] {
   return result;
 }
 
-async function mainWorktreeIndex(records: ParsedWorktree[]): Promise<number> {
+async function mainWorktreeIndex(
+  records: ParsedWorktree[],
+  errors: string[]
+): Promise<number> {
   const first = records[0];
   if (!first?.bare) {
     return records.findIndex((record) => !record.bare);
@@ -76,8 +79,12 @@ async function mainWorktreeIndex(records: ParsedWorktree[]): Promise<number> {
     if (index >= 0) {
       return index;
     }
-  } catch {
-    // A bare repository may have an unborn or detached HEAD.
+  } catch (error) {
+    if ((error as { code?: string | number }).code !== 1) {
+      errors.push(
+        `${first.path}: Could not inspect bare repository HEAD. Run git symbolic-ref HEAD in this repository.`
+      );
+    }
   }
   return records.findIndex((record) => !record.bare);
 }
@@ -86,7 +93,7 @@ async function worktreeRecords(
   records: ParsedWorktree[],
   errors: string[]
 ): Promise<WorktreeRecord[]> {
-  const mainIndex = await mainWorktreeIndex(records);
+  const mainIndex = await mainWorktreeIndex(records, errors);
   return Promise.all(
     records.map(async (record, index) => ({
       path: record.path,
@@ -196,6 +203,26 @@ export async function trackedFiles(
   } catch {
     errors.push(
       `${directory}: Could not list tracked files. Run git ls-files in this checkout.`
+    );
+    return undefined;
+  }
+}
+
+export async function untrackedFiles(
+  directory: string,
+  errors: string[]
+): Promise<Set<string> | undefined> {
+  try {
+    const output = await git(directory, [
+      "ls-files",
+      "-z",
+      "--others",
+      "--exclude-standard"
+    ]);
+    return new Set(output.split("\0").filter(Boolean));
+  } catch {
+    errors.push(
+      `${directory}: Could not list untracked files. Run git ls-files in this checkout; comparison will walk all directories.`
     );
     return undefined;
   }

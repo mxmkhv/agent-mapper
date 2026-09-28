@@ -83,6 +83,82 @@ interface VisitOptions {
   errors: string[];
   ancestors: Set<string>;
   excludedRoots: Set<string>;
+  candidateDirectories?: Set<string>;
+}
+
+function shouldEnter(
+  options: VisitOptions,
+  child: { parts: string[]; name: string; relativePath: string }
+): boolean {
+  const { parts, name, relativePath } = child;
+  return (
+    canEnter(parts, name) &&
+    (options.candidateDirectories === undefined ||
+      isConfigLink(parts, name) ||
+      options.candidateDirectories.has(relativePath))
+  );
+}
+
+function candidateDirectories(
+  files: Set<string> | undefined
+): Set<string> | undefined {
+  if (!files) {
+    return undefined;
+  }
+  const directories = new Set<string>();
+  for (const file of files) {
+    const parts = file.split("/");
+    const name = parts.at(-1) ?? "";
+    const parent = parts.slice(0, -1);
+    if (!included(parent, name) && !isConfigLink(parent, name)) {
+      continue;
+    }
+    for (let index = 1; index < parts.length; index += 1) {
+      directories.add(join(...parts.slice(0, index)));
+    }
+  }
+  return directories;
+}
+
+async function visitConfigLink(
+  root: string,
+  context: {
+    options: VisitOptions;
+    child: Dirent;
+    parts: string[];
+    ancestors: Set<string>;
+    relativePath: string;
+  }
+): Promise<void> {
+  const { options, child, parts, ancestors, relativePath } = context;
+  const path = join(root, relativePath);
+  let target;
+  try {
+    target = await stat(path);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") {
+      options.errors.push(
+        `${path}: Configuration link target is missing. Repair the link.`
+      );
+    } else {
+      options.errors.push(
+        `${path}: Could not inspect configuration link. Check permissions.`
+      );
+    }
+  }
+  if (target?.isDirectory()) {
+    options.files.set(
+      relativePath,
+      await recordDirectoryLink({ root, relativePath, errors: options.errors })
+    );
+    await visit(root, { ...options, relative: relativePath, ancestors });
+  } else if (included(parts, child.name)) {
+    options.files.set(
+      relativePath,
+      await record({ root, relativePath, errors: options.errors })
+    );
+  }
 }
 
 async function visitChild(
@@ -99,30 +175,23 @@ async function visitChild(
   if (options.excludedRoots.has(join(root, relativePath))) {
     return;
   }
-  if (child.isDirectory() && canEnter(parts, child.name)) {
+  if (
+    child.isDirectory() &&
+    shouldEnter(options, { parts, name: child.name, relativePath })
+  ) {
     await visit(root, { ...options, relative: relativePath, ancestors });
   } else if (
     child.isSymbolicLink() &&
     canEnter(parts, child.name) &&
     isConfigLink(parts, child.name)
   ) {
-    const target = await stat(join(root, relativePath)).catch(() => undefined);
-    if (target?.isDirectory()) {
-      options.files.set(
-        relativePath,
-        await recordDirectoryLink({
-          root,
-          relativePath,
-          errors: options.errors
-        })
-      );
-      await visit(root, { ...options, relative: relativePath, ancestors });
-    } else if (included(parts, child.name)) {
-      options.files.set(
-        relativePath,
-        await record({ root, relativePath, errors: options.errors })
-      );
-    }
+    await visitConfigLink(root, {
+      options,
+      child,
+      parts,
+      ancestors,
+      relativePath
+    });
   } else if (
     (child.isFile() || child.isSymbolicLink()) &&
     included(parts, child.name)
@@ -170,7 +239,7 @@ async function visit(root: string, options: VisitOptions): Promise<void> {
 
 export async function configFiles(
   root: string,
-  excludedRoots: Set<string> = new Set()
+  options: { excludedRoots?: Set<string>; candidates?: Set<string> } = {}
 ): Promise<{
   files: Map<string, ConfigFile>;
   errors: string[];
@@ -182,7 +251,8 @@ export async function configFiles(
     files,
     errors,
     ancestors: new Set(),
-    excludedRoots
+    excludedRoots: options.excludedRoots ?? new Set(),
+    candidateDirectories: candidateDirectories(options.candidates)
   });
   return { files, errors };
 }

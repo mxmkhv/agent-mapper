@@ -114,7 +114,7 @@ export function makeEntry(options: {
     kind: candidate.kind,
     name:
       candidate.kind === "skill"
-        ? (details.name ?? basename(dirname(candidate.path)))
+        ? (details.name ?? candidate.name ?? basename(dirname(candidate.path)))
         : (candidate.name ?? basename(candidate.path)),
     path: candidate.path,
     scope: candidate.scope,
