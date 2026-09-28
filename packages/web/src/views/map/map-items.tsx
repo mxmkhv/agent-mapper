@@ -18,22 +18,52 @@ const chipTone = {
   unknown: "border-dashed border-hairline-strong",
   approval: "border-dashed border-hairline-strong",
   problem: "border-problem text-problem"
-};
+} satisfies Record<InventoryRecord["tier"], string>;
+
+/** Chip border and fill follow the state: solid wash when active, outline when inactive, dashed when unknown. */
+export function chipClass(record: InventoryRecord, selectedId?: string) {
+  return record.id === selectedId
+    ? "border-ink bg-surface"
+    : chipTone[record.tier];
+}
+
+/** Names that repeat within a group, so their chips can show what tells them apart. */
+export function repeatedNames(records: readonly InventoryRecord[]) {
+  const seen = new Map<string, number>();
+  for (const record of records) {
+    seen.set(record.name, (seen.get(record.name) ?? 0) + 1);
+  }
+  return new Set(
+    [...seen].filter(([, count]) => count > 1).map(([name]) => name)
+  );
+}
+
+const parentFolder = (path: string) =>
+  path.split("/").slice(0, -1).at(-1) ?? path;
 
 function Chip({
   record,
   showLink,
+  repeated,
   ...props
-}: ItemProps & { record: InventoryRecord; showLink: boolean }) {
-  const selected = record.id === props.selectedId;
+}: ItemProps & {
+  record: InventoryRecord;
+  showLink: boolean;
+  repeated: boolean;
+}) {
   return (
     <button
-      className={`inline-flex h-6 max-w-full items-center gap-1.5 rounded-control border px-2 text-label hover:border-hairline-strong ${selected ? "border-ink bg-surface" : chipTone[record.tier]}`}
+      className={`inline-flex h-6 max-w-full items-center gap-1.5 rounded-control border px-2 text-label hover:border-hairline-strong ${chipClass(record, props.selectedId)}`}
       onClick={() => props.onSelect(record.id)}
       title={stateText(record)}
     >
       {record.tier === "active" ? null : <StateMarker tier={record.tier} />}
       <span className="truncate">{record.name}</span>
+      {repeated ? (
+        <span className="truncate font-mono text-caption text-ink-faint">
+          {parentFolder(record.path)}
+        </span>
+      ) : null}
       {record.kind === "hook" || record.kind === "mcp" ? (
         <span className="truncate text-caption text-ink-faint">
           {record.summary}
@@ -69,6 +99,7 @@ export function ChipRow({
   ...props
 }: ChipRowProps) {
   const shared = sharedLinkFolder(records);
+  const repeated = repeatedNames(records);
   return (
     <div className="grid grid-cols-[22px_minmax(0,1fr)] gap-1.5 px-2 py-2 [&+&]:border-t [&+&]:border-wash">
       <span className="pt-0.5">
@@ -93,6 +124,7 @@ export function ChipRow({
               <Chip
                 key={record.id}
                 record={record}
+                repeated={repeated.has(record.name)}
                 showLink={!shared || linkFolder(record) !== shared.folder}
                 {...props}
               />
@@ -143,7 +175,7 @@ function LoadList({
             ) : null}
           </span>
           <span className="flex min-w-0 items-center justify-end gap-2 text-caption text-ink-muted">
-            <span className="truncate font-mono text-mono text-ink-faint">
+            <span className="hidden truncate font-mono text-mono text-ink-faint xl:inline">
               {shortPath(record.path, props.context)}
             </span>
             <StateLabel text={stateLabel(record)} tier={record.tier} />

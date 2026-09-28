@@ -38,6 +38,43 @@ function kindGroups(records: InventoryRecord[]): KindGroup[] {
     .filter((group) => group.records.length > 0);
 }
 
+/**
+ * A plugin version is a candidate, not a contribution, when it is inactive or when its selection is
+ * unknown while another version of the same plugin is selected.
+ */
+function isBackgroundVersion(
+  plugin: InventoryRecord,
+  plugins: readonly InventoryRecord[]
+): boolean {
+  if (plugin.tier === "inactive") {
+    return true;
+  }
+  return (
+    plugin.tier === "unknown" &&
+    plugins.some(
+      (other) => other.name === plugin.name && other.tier === "active"
+    )
+  );
+}
+
+const tierRank = {
+  active: 0,
+  approval: 1,
+  unknown: 2,
+  problem: 3,
+  inactive: 4
+} satisfies Record<InventoryRecord["tier"], number>;
+
+/** Plugins in display order: selected first, candidates and cached versions after. */
+function pluginsFor(allPlugins: InventoryRecord[], showInactive: boolean) {
+  const plugins = allPlugins
+    .filter(
+      (plugin) => showInactive || !isBackgroundVersion(plugin, allPlugins)
+    )
+    .sort((a, b) => tierRank[a.tier] - tierRank[b.tier]);
+  return { plugins, hiddenPlugins: allPlugins.length - plugins.length };
+}
+
 /** Layers for one tool. Managed appears only when something is managed; inactive items only on request. */
 export function buildMap(
   records: readonly InventoryRecord[],
@@ -56,9 +93,6 @@ export function buildMap(
       const allPlugins = records.filter(
         (record) => record.kind === "plugin" && record.layer === layer
       );
-      const plugins = allPlugins.filter(
-        (record) => showInactive || record.tier !== "inactive"
-      );
       return {
         layer,
         kinds: kindGroups(
@@ -69,8 +103,7 @@ export function buildMap(
               !record.plugin
           )
         ),
-        plugins,
-        hiddenPlugins: allPlugins.length - plugins.length
+        ...pluginsFor(allPlugins, showInactive)
       };
     });
 }

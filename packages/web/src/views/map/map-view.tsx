@@ -5,7 +5,7 @@ import type { InventoryRecord, RecordKind } from "../../model/record-types";
 import { stateText } from "../../model/states";
 import { KindIcon, kindLabel, kindOrder } from "../../ui/kind-icon";
 import { StateMarker, ToolGlyph, toolName } from "../../ui/marks";
-import { ChipRow } from "./map-items";
+import { chipClass, ChipRow, repeatedNames } from "./map-items";
 import { buildMap, loadOrder, type MapLayer } from "./map-model";
 import { StartupBudget } from "./startup-budget";
 
@@ -19,15 +19,6 @@ interface MapViewProps {
   onSelect(id: string): void;
   onKind(kind: RecordKind): void;
   onToggleInactive(): void;
-}
-
-function chipStyle(plugin: InventoryRecord, selectedId?: string): string {
-  if (plugin.id === selectedId) {
-    return "border-ink bg-surface";
-  }
-  return plugin.tier === "active"
-    ? "border-transparent bg-wash"
-    : "border-dashed border-hairline-strong";
 }
 
 function Contributions({ plugin }: { plugin: InventoryRecord }) {
@@ -57,8 +48,9 @@ function PluginChips({
     return null;
   }
   const selected = layer.plugins.filter(
-    (plugin) => plugin.tier !== "inactive"
+    (plugin) => plugin.tier === "active"
   ).length;
+  const repeated = repeatedNames(layer.plugins);
   return (
     <div className="grid grid-cols-[22px_minmax(0,1fr)] gap-1.5 px-2 py-2">
       <span className="pt-0.5">
@@ -72,7 +64,7 @@ function PluginChips({
         <div className="flex flex-wrap gap-1">
           {layer.plugins.map((plugin) => (
             <button
-              className={`inline-flex h-6 items-center gap-1.5 rounded-control border px-2 text-label hover:border-hairline-strong ${chipStyle(plugin, props.selectedId)}`}
+              className={`inline-flex h-6 items-center gap-1.5 rounded-control border px-2 text-label hover:border-hairline-strong ${chipClass(plugin, props.selectedId)}`}
               key={plugin.id}
               onClick={() => props.onSelect(plugin.id)}
               title={`${plugin.name} ${plugin.summary ?? ""} · ${stateText(plugin)}`}
@@ -81,13 +73,19 @@ function PluginChips({
                 <StateMarker tier={plugin.tier} />
               )}
               {plugin.name}
+              {repeated.has(plugin.name) ? (
+                <span className="font-mono text-caption text-ink-faint">
+                  {plugin.summary}
+                </span>
+              ) : null}
               <Contributions plugin={plugin} />
             </button>
           ))}
         </div>
         {layer.hiddenPlugins ? (
           <p className="mt-1.5 mb-0 text-caption text-ink-faint">
-            {layer.hiddenPlugins} cached or disabled versions hidden ·{" "}
+            {layer.hiddenPlugins} other{" "}
+            {layer.hiddenPlugins === 1 ? "version" : "versions"} hidden ·{" "}
             <button
               className="text-ink-muted underline underline-offset-2"
               onClick={props.onToggleInactive}
@@ -119,12 +117,16 @@ function LayerRow({
     !layer.kinds.length && !layer.plugins.length && !layer.hiddenPlugins;
   return (
     <>
-      <div className="border-t border-hairline pt-3.5">
+      <div className="sticky top-3 self-start border-t border-hairline pt-3.5">
         <strong className="block text-label font-semibold">
           {layerLabel[layer.layer]}
         </strong>
-        <span className="mt-0.5 block font-mono text-caption break-words text-ink-faint">
-          {hint}
+        <span className="mt-0.5 flex flex-wrap gap-x-1 font-mono text-caption text-ink-faint">
+          {hint.split(" · ").map((part, index) => (
+            <span className="whitespace-nowrap" key={part}>
+              {index ? `· ${part}` : part}
+            </span>
+          ))}
         </span>
       </div>
       <div className="min-w-0 border-t border-hairline pt-2.5 pb-3.5">

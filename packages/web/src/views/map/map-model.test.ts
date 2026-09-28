@@ -56,6 +56,14 @@ const records = [
   }),
   record({ id: "kit", layer: "plugins", kind: "plugin" }),
   record({
+    id: "kit-candidate",
+    name: "kit",
+    layer: "plugins",
+    kind: "plugin",
+    tier: "unknown",
+    label: "unknown"
+  }),
+  record({
     id: "old-kit",
     layer: "plugins",
     kind: "plugin",
@@ -79,7 +87,8 @@ it("hides inactive items until asked and counts hidden plugin versions", () => {
     "project-claude"
   ]);
   expect(plugins?.plugins.map((item) => item.id)).toEqual(["kit"]);
-  expect(plugins?.hiddenPlugins).toBe(1);
+  // The cached version and the unconfirmed duplicate of a selected plugin both stay out of the way.
+  expect(plugins?.hiddenPlugins).toBe(2);
   expect(plugins?.kinds).toEqual([]);
   const [, , withInactive] = buildMap(records, true);
   expect(withInactive?.kinds[0]?.records.map((item) => item.id)).toEqual([
