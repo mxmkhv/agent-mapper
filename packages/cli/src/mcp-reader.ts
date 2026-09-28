@@ -1,9 +1,9 @@
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { McpRecord, PluginRecord } from "@agent-mapper/core";
 import { findGitRoot } from "./discovery";
 import { add, type Source } from "./mcp-record";
 import { addManagedMcp } from "./mcp-managed";
+import { addCodexMcp } from "./mcp-codex";
 import type { ManagedSettingsFile } from "./managed-claude-reader";
 import { json, object, type JsonMap } from "./plugin-reader-common";
 
@@ -51,86 +51,6 @@ async function addJson(
   } else {
     addMap(records, { source: options.source, data, prefix: "mcpServers" });
   }
-}
-
-function tomlName(heading: string): string | undefined {
-  const match = /^mcp_servers\.(?:([A-Za-z0-9_-]+)|"((?:\\.|[^"\\])*)")$/.exec(
-    heading
-  );
-  if (!match) {
-    return undefined;
-  }
-  if (match[1]) {
-    return match[1];
-  }
-  try {
-    return JSON.parse(`"${match[2] ?? ""}"`) as string;
-  } catch {
-    return undefined;
-  }
-}
-
-function tomlString(value: string): string | undefined {
-  const trimmed = value.trim();
-  if (/^"(?:\\.|[^"\\])*"$/.test(trimmed)) {
-    try {
-      return JSON.parse(trimmed) as string;
-    } catch {
-      return undefined;
-    }
-  }
-  return /^'[^']*'$/.test(trimmed) ? trimmed.slice(1, -1) : undefined;
-}
-
-async function addToml(
-  records: McpRecord[],
-  options: {
-    source: Source;
-    errors: string[];
-  }
-): Promise<void> {
-  let content: string;
-  try {
-    content = await readFile(options.source.path, "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      options.errors.push(
-        `${options.source.path}: Could not read MCP settings.`
-      );
-    }
-    return;
-  }
-  let current: { name: string; value: JsonMap } | undefined;
-  const finish = () => {
-    if (current) {
-      add(records, {
-        source: options.source,
-        name: current.name,
-        value: current.value,
-        locator: `mcp_servers.${current.name}`
-      });
-    }
-  };
-  for (const line of content.split(/\r?\n/)) {
-    const heading = /^\s*\[([^\]]+)\]\s*(?:#.*)?$/.exec(line);
-    if (heading) {
-      finish();
-      const name = tomlName(heading[1] ?? "");
-      current = name ? { name, value: {} } : undefined;
-      continue;
-    }
-    if (!current) {
-      continue;
-    }
-    const pair = /^\s*(command|url|enabled|type)\s*=\s*(.+?)\s*(?:#.*)?$/.exec(
-      line
-    );
-    if (pair) {
-      current.value[pair[1] ?? ""] =
-        pair[2] === "false" ? false : tomlString(pair[2] ?? "");
-    }
-  }
-  finish();
 }
 
 async function addPlugins(
@@ -228,20 +148,10 @@ export async function scanMcp(options: {
     source: { path: join(root, ".mcp.json"), tool: "claude", scope: "project" },
     errors
   });
-  await addToml(mcpServers, {
-    source: {
-      path: join(options.codexHome, "config.toml"),
-      tool: "codex",
-      scope: "global"
-    },
-    errors
-  });
-  await addToml(mcpServers, {
-    source: {
-      path: join(root, ".codex", "config.toml"),
-      tool: "codex",
-      scope: "project"
-    },
+  await addCodexMcp(mcpServers, {
+    root,
+    workingDirectory: options.workingDirectory,
+    codexHome: options.codexHome,
     errors
   });
   await addPlugins(mcpServers, { plugins: options.plugins, errors });

@@ -111,9 +111,49 @@ it("reads Codex user and project declarations with disabled state", async () => 
   ).toEqual([
     ["files", "stdio", "configured"],
     ["remote", "http", "disabled"],
-    ["project docs", "http", "configured"]
+    ["project docs", "http", "unknown"]
   ]);
   expect(JSON.stringify(snapshot)).not.toContain("private-value");
+});
+
+it("reads Codex MCP layers through the selected folder", async () => {
+  const options = fixture();
+  const nested = join(options.project, "packages", "app");
+  mkdirSync(join(options.project, ".codex"));
+  mkdirSync(join(nested, ".codex"), { recursive: true });
+  writeFileSync(
+    join(options.codexHome, "config.toml"),
+    '[mcp_servers.shared]\nurl = "https://user.example/private-value"\n'
+  );
+  writeFileSync(
+    join(options.project, ".codex", "config.toml"),
+    '[mcp_servers.shared]\nurl = "https://root.example/private-value"\n[mcp_servers.root_only]\ncommand = "node"\n'
+  );
+  writeFileSync(
+    join(nested, ".codex", "config.toml"),
+    '[mcp_servers.shared]\nurl = "https://nested.example/private-value"\n[mcp_servers.nested_only]\ncommand = "node"\nenabled = false\n'
+  );
+  const snapshot = await buildSnapshot(nested, options);
+  expect(
+    snapshot.mcpServers.map(({ name, scope, availability }) => [
+      name,
+      scope,
+      availability
+    ])
+  ).toEqual([
+    ["shared", "global", "unknown"],
+    ["shared", "project", "unknown"],
+    ["root_only", "project", "unknown"],
+    ["shared", "project", "unknown"],
+    ["nested_only", "project", "disabled"]
+  ]);
+  expect(snapshot.mcpServers[1]?.reason).toContain(
+    "higher-priority Codex layer"
+  );
+  expect(snapshot.mcpServers[3]?.destination).toBe("https://nested.example");
+  expect(JSON.stringify(snapshot)).not.toContain("private-value");
+  const global = await buildGlobalSnapshot(options);
+  expect(global.mcpServers.map(({ name }) => name)).toEqual(["shared"]);
 });
 
 it("reports malformed JSON without exposing its content", async () => {

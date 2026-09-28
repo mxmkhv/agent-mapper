@@ -57,6 +57,18 @@ function transport(value: JsonMap): McpRecord["transport"] {
 
 const idLength = 20;
 
+function managedState(
+  kind: NonNullable<Source["managedKind"]>
+): Pick<McpRecord, "availability" | "reason"> {
+  return {
+    availability: "unknown",
+    reason:
+      kind === "exclusive"
+        ? "Declared in local managed-mcp.json; runtime filters and connection state are not verified."
+        : "Provided by a local managed setting; higher-priority policy selection and connection state are not verified."
+  };
+}
+
 function configuredState(options: {
   source: Source;
   value?: JsonMap;
@@ -64,13 +76,7 @@ function configuredState(options: {
 }): Pick<McpRecord, "availability" | "reason"> {
   const { source, value, kind } = options;
   if (source.managedKind) {
-    return {
-      availability: "unknown",
-      reason:
-        source.managedKind === "exclusive"
-          ? "Declared in local managed-mcp.json; runtime filters and connection state are not verified."
-          : "Provided by a local managed setting; higher-priority policy selection and connection state are not verified."
-    };
+    return managedState(source.managedKind);
   }
   if (value?.enabled === false || source.plugin?.state === "disabled") {
     return {
@@ -88,6 +94,13 @@ function configuredState(options: {
     return {
       availability: "unknown",
       reason: "Transport or declaration is unsupported; inspect the source."
+    };
+  }
+  if (source.tool === "codex" && source.scope === "project") {
+    return {
+      availability: "unknown",
+      reason:
+        "Project MCP declaration requires project trust; the trust decision was not verified."
     };
   }
   if (source.tool === "claude" && source.path.endsWith("/.mcp.json")) {
