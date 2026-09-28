@@ -21,6 +21,7 @@ import {
 } from "./managed-claude-reader";
 import { resolveScanContext, type ScanContext } from "./scan-context";
 import { scanGlobal, scanProjectSources } from "./instruction-sources";
+import { CodexTomlReader } from "./codex-toml";
 export { discoverProjects, type DiscoveryResult } from "./discovery";
 
 export interface ScanOptions {
@@ -61,12 +62,13 @@ async function scanRelated(options: {
   managedClaudeDir: string;
   contentFor(path: string): string | undefined;
 }) {
+  const toml = new CodexTomlReader();
   const [hooks, mcp, memory] = await Promise.all([
-    scanHooks(options),
-    scanMcp(options),
+    scanHooks({ ...options, toml }),
+    scanMcp({ ...options, toml }),
     scanMemory(options)
   ]);
-  return { hooks, mcp, memory };
+  return { hooks, mcp, memory, toml };
 }
 
 function configRoots(options: ScanOptions, home: string) {
@@ -140,7 +142,7 @@ export async function scanInventory(
     roots,
     managedClaudeDir
   });
-  const { hooks, mcp, memory } = await scanRelated({
+  const { hooks, mcp, memory, toml } = await scanRelated({
     workingDirectory,
     root: context.root,
     worktrees: context.worktrees,
@@ -162,7 +164,7 @@ export async function scanInventory(
     mcpServers: mcp.mcpServers,
     memories: memory.memories,
     agents: agents.agents,
-    errors: scanErrors([collector, plugins, hooks, mcp, memory, agents]),
+    errors: scanErrors([collector, plugins, hooks, mcp, memory, agents, toml]),
     roots,
     contentFor: (path) => collector.content(path)
   };

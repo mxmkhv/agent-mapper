@@ -5,6 +5,7 @@ import { addManagedMcp } from "./mcp-managed";
 import { addCodexMcp } from "./mcp-codex";
 import type { ManagedSettingsFile } from "./managed-claude-reader";
 import { json, object, type JsonMap } from "./plugin-reader-common";
+import type { CodexTomlReader } from "./codex-toml";
 
 function addMap(
   records: McpRecord[],
@@ -113,6 +114,7 @@ export async function scanMcp(options: {
   plugins: PluginRecord[];
   managedClaudeDir: string;
   managedSettings: ManagedSettingsFile[];
+  toml: CodexTomlReader;
 }): Promise<{ mcpServers: McpRecord[]; errors: string[] }> {
   const mcpServers: McpRecord[] = [];
   const errors: string[] = [];
@@ -142,7 +144,7 @@ export async function scanMcp(options: {
     root,
     workingDirectory: options.workingDirectory,
     codexHome: options.codexHome,
-    errors
+    toml: options.toml
   });
   await addPlugins(mcpServers, { plugins: options.plugins, errors });
   markClaudeShadowing(mcpServers, join(root, ".mcp.json"));

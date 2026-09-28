@@ -117,7 +117,7 @@ interface HookInput {
 }
 const idLength = 20;
 
-export function append(hooks: HookRecord[], input: HookInput): void {
+function append(hooks: HookRecord[], input: HookInput): void {
   const { source, event, group, groupIndex, handler, handlerIndex } = input;
   const locator = `${source.locatorPrefix ?? "hooks"}.${event}[${groupIndex}].hooks[${handlerIndex}]`;
   const id = createHash("sha256")

@@ -12,6 +12,7 @@ import { addFrontmatterHooks } from "./hook-frontmatter";
 import { addManagedHooks, markManagedHookRestrictions } from "./hook-managed";
 import type { ManagedSettingsFile } from "./managed-claude-reader";
 import { codexProjectConfigPaths } from "./codex-config-paths";
+import type { CodexTomlReader } from "./codex-toml";
 
 function hookMaps(data: JsonMap): { events: JsonMap; prefix: string }[] {
   const extension = object(object(data.extensions)?.["com.openai"]);
@@ -133,11 +134,11 @@ async function applyCodexDisabled(
     codexHome: string;
     root: string;
     workingDirectory: string;
-    errors: string[];
+    toml: CodexTomlReader;
   }
 ): Promise<void> {
   const userPath = join(options.codexHome, "config.toml");
-  const user = await codexHooksSetting(userPath, options.errors);
+  const user = await codexHooksSetting(userPath, options.toml);
   let project: boolean | undefined;
   for (const path of codexProjectConfigPaths(
     options.root,
@@ -146,7 +147,7 @@ async function applyCodexDisabled(
     if (path === userPath) {
       continue;
     }
-    const value = await codexHooksSetting(path, options.errors);
+    const value = await codexHooksSetting(path, options.toml);
     if (value !== undefined) {
       project = value;
     }
@@ -172,7 +173,7 @@ async function addCodexTomlHooks(
     workingDirectory: string;
     codexHome: string;
     seen: Set<string>;
-    errors: string[];
+    toml: CodexTomlReader;
   }
 ): Promise<void> {
   const paths = [
@@ -188,7 +189,7 @@ async function addCodexTomlHooks(
     options.seen.add(source.path);
     await addToml(hooks, {
       source: { ...source, tool: "codex" },
-      errors: options.errors
+      toml: options.toml
     });
   }
 }
@@ -203,6 +204,7 @@ export async function scanHooks(options: {
   agents: AgentRecord[];
   managedSettings: ManagedSettingsFile[];
   contentFor(path: string): string | undefined;
+  toml: CodexTomlReader;
 }): Promise<{ hooks: HookRecord[]; errors: string[] }> {
   const hooks: HookRecord[] = [];
   const errors: string[] = [];
@@ -221,7 +223,7 @@ export async function scanHooks(options: {
     workingDirectory: options.workingDirectory,
     codexHome: options.codexHome,
     seen,
-    errors
+    toml: options.toml
   });
   await addPluginHooks(hooks, { plugins: options.plugins, errors });
   addManagedHooks(hooks, { files: options.managedSettings, errors });
@@ -238,7 +240,7 @@ export async function scanHooks(options: {
     codexHome: options.codexHome,
     root,
     workingDirectory: options.workingDirectory,
-    errors
+    toml: options.toml
   });
   return { hooks, errors };
 }

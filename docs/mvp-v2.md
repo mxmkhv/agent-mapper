@@ -275,20 +275,20 @@ Unknown hook events and plugin schemas must produce visible entries or source-le
 
 ## Tech stack
 
-| Part                         | Choice                                                                    |
-| ---------------------------- | ------------------------------------------------------------------------- |
-| Published CLI                | Node; Bun bundles a Node-targeted distribution                            |
-| Development and workspaces   | Bun 1.4.0; Node 26.7.0 toolchain                                          |
-| Language                     | TypeScript 7.0.2, strict, noUncheckedIndexedAccess, noImplicitOverride    |
-| UI and build                 | React 19, Vite 8, Tailwind 4                                              |
-| Lint                         | Oxlint with native rules and the original nine vendored anti-slop rules   |
-| Formatting                   | Prettier                                                                  |
-| Unused code and dependencies | Knip across all workspaces                                                |
-| Tests                        | Vitest, real-tool hook tests, Git gate integration tests                  |
-| Hooks                        | Shared TypeScript scripts with shell launchers; native Git hooks          |
-| CI                           | Full validation on Linux and macOS                                        |
-| Planned UI additions         | shadcn/ui, cmdk, TanStack Query when their features are built             |
-| Parsing                      | Platform JSON; YAML and TOML dependencies reviewed when readers are built |
+| Part                         | Choice                                                                  |
+| ---------------------------- | ----------------------------------------------------------------------- |
+| Published CLI                | Node; Bun bundles a Node-targeted distribution                          |
+| Development and workspaces   | Bun 1.4.0; Node 26.7.0 toolchain                                        |
+| Language                     | TypeScript 7.0.2, strict, noUncheckedIndexedAccess, noImplicitOverride  |
+| UI and build                 | React 19, Vite 8, Tailwind 4                                            |
+| Lint                         | Oxlint with native rules and the original nine vendored anti-slop rules |
+| Formatting                   | Prettier                                                                |
+| Unused code and dependencies | Knip across all workspaces                                              |
+| Tests                        | Vitest, real-tool hook tests, Git gate integration tests                |
+| Hooks                        | Shared TypeScript scripts with shell launchers; native Git hooks        |
+| CI                           | Full validation on Linux and macOS                                      |
+| Planned UI additions         | shadcn/ui, cmdk, TanStack Query when their features are built           |
+| Parsing                      | Platform JSON; reviewed, pinned YAML and TOML dependencies              |
 
 Registry dependencies are pinned exactly in manifests; internal workspace packages use `workspace:*`, and `bun.lock` records transitive resolutions. No ESLint or second TypeScript compiler. Tooling requires Node 22.22.1 or newer; the final published CLI minimum must also match the filesystem APIs selected during implementation.
 
