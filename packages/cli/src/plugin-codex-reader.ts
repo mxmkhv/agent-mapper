@@ -132,13 +132,14 @@ function cachedRecord(options: {
   });
 }
 
-function missingRecords(
-  settingsMap: Map<string, PluginSetting>,
-  cached: CachedPlugin[]
-): PluginRecord[] {
+function missingRecords(options: {
+  settings: Map<string, PluginSetting>;
+  cached: CachedPlugin[];
+  cacheComplete: boolean;
+}): PluginRecord[] {
   const result: PluginRecord[] = [];
-  for (const [key, setting] of settingsMap) {
-    if (cached.some((entry) => entry.key === key)) {
+  for (const [key, setting] of options.settings) {
+    if (options.cached.some((entry) => entry.key === key)) {
       continue;
     }
     result.push(
@@ -147,11 +148,12 @@ function missingRecords(
         key,
         ...splitKey(key),
         scope: setting.project ? "project" : "global",
-        state: "missing",
+        state: options.cacheComplete ? "missing" : "unknown",
         sourcePath: setting.path,
         settingsEvidence: setting.path,
-        reason:
-          "Settings mention this plugin, but no installed cache copy was found."
+        reason: options.cacheComplete
+          ? "Settings mention this plugin, but no installed cache copy was found."
+          : "The plugin cache could not be fully read; installation cannot be verified."
       })
     );
   }
@@ -163,7 +165,12 @@ export async function readCodexPlugins(
   errors: string[]
 ): Promise<PluginRecord[]> {
   const applied = await appliedSettings(options, errors);
-  const cached = await cache(join(options.codexHome, "plugins", "cache"));
+  const beforeCache = errors.length;
+  const cached = await cache(
+    join(options.codexHome, "plugins", "cache"),
+    errors
+  );
+  const cacheComplete = errors.length === beforeCache;
   const found = cached.map((entry) =>
     cachedRecord({
       entry,
@@ -172,5 +179,8 @@ export async function readCodexPlugins(
       workingDirectory: options.workingDirectory
     })
   );
-  return [...found, ...missingRecords(applied, cached)];
+  return [
+    ...found,
+    ...missingRecords({ settings: applied, cached, cacheComplete })
+  ];
 }

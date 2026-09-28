@@ -1,20 +1,20 @@
-import { basename, extname, join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import type { PluginRecord } from "@agent-mapper/core";
 import { json, object, type JsonMap } from "./plugin-reader-common";
 import {
   addContribution,
   fileExists,
-  markdownFiles,
   paths,
   safePath,
   skillFiles
 } from "./plugin-contribution-utils";
 import { SourceCollector } from "./source-reader";
 import { addPluginCommands } from "./plugin-command-contributions";
+import { addAgents } from "./plugin-agent-contributions";
 
 async function addSkills(
   record: PluginRecord,
-  options: { manifest: JsonMap; collector?: SourceCollector }
+  options: { manifest: JsonMap; collector?: SourceCollector; errors: string[] }
 ): Promise<void> {
   const root = record.installPath;
   if (!root) {
@@ -26,7 +26,7 @@ async function addSkills(
     if (!directory) {
       continue;
     }
-    for (const path of await skillFiles(directory)) {
+    for (const path of await skillFiles(directory, options.errors)) {
       if (!(await fileExists(path))) {
         continue;
       }
@@ -58,48 +58,6 @@ async function addSkills(
           contribution.entryId = entry.id;
         }
       }
-    }
-  }
-}
-
-async function addAgents(
-  record: PluginRecord,
-  manifest: JsonMap
-): Promise<void> {
-  const root = record.installPath;
-  if (!root) {
-    return;
-  }
-  const declared = manifest.agents;
-  const locations = declared === undefined ? ["./agents"] : paths(declared);
-  for (const relative of locations) {
-    const path = await safePath(root, relative);
-    if (!path) {
-      continue;
-    }
-    const files = extname(path) === ".md" ? [path] : await markdownFiles(path);
-    for (const file of files) {
-      addContribution(record.contributions, {
-        kind: "agent",
-        name:
-          extname(path) === ".md"
-            ? basename(file, ".md")
-            : file.slice(path.length + 1).replace(/\.md$/, ""),
-        sourcePath: file
-      });
-    }
-  }
-  const inline = object(declared);
-  if (inline) {
-    for (const [name, value] of Object.entries(inline)) {
-      const source = object(value)?.source;
-      const sourcePath =
-        typeof source === "string" ? await safePath(root, source) : undefined;
-      addContribution(record.contributions, {
-        kind: "agent",
-        name,
-        sourcePath: sourcePath ?? record.sourcePath
-      });
     }
   }
 }
@@ -218,14 +176,19 @@ export async function inspectPlugin(
   const manifests = await readManifest(record, options.errors);
   await addSkills(record, {
     manifest: manifests.components,
-    collector: options.collector
+    collector: options.collector,
+    errors: options.errors
   });
   if (record.tool === "claude") {
     await addPluginCommands(record, {
       manifest: manifests.components,
-      collector: options.collector
+      collector: options.collector,
+      errors: options.errors
     });
-    await addAgents(record, manifests.components);
+    await addAgents(record, {
+      manifest: manifests.components,
+      errors: options.errors
+    });
   }
   const defaultHooks = join(root, "hooks", "hooks.json");
   if (

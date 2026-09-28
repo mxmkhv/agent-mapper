@@ -57,6 +57,7 @@ function winningClaudeFile({
   ) {
     return undefined;
   }
+  const directory = entry.path.slice(0, entry.path.lastIndexOf("/"));
   return entries.find(
     (candidate) =>
       candidate.tool === "claude" &&
@@ -65,6 +66,8 @@ function winningClaudeFile({
         candidate.name === "CLAUDE.local.md") &&
       candidate.readState === "readable" &&
       (candidate.characters ?? 0) > 0 &&
+      (candidate.path.slice(0, candidate.path.lastIndexOf("/")) === directory ||
+        candidate.path === `${directory}/.claude/CLAUDE.md`) &&
       entryApplies(candidate, context.workingDirectory)
   );
 }

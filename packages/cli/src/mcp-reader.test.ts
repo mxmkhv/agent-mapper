@@ -156,6 +156,25 @@ it("reads Codex MCP layers through the selected folder", async () => {
   expect(global.mcpServers.map(({ name }) => name)).toEqual(["shared"]);
 });
 
+it("stops a Codex MCP section at an array table and keeps quoted URL fragments", async () => {
+  const options = fixture();
+  writeFileSync(
+    join(options.codexHome, "config.toml"),
+    '[mcp_servers.github]\nurl = "https://example.com/sse#v2" # endpoint\n[[hooks.PreToolUse.hooks]]\ntype = "command"\ncommand = "private-hook-command"\n'
+  );
+  const snapshot = await buildSnapshot(options.project, options);
+  expect(snapshot.mcpServers).toMatchObject([
+    {
+      name: "github",
+      transport: "http",
+      destination: "https://example.com"
+    }
+  ]);
+  expect(JSON.stringify(snapshot.mcpServers)).not.toContain(
+    "private-hook-command"
+  );
+});
+
 it("reports malformed JSON without exposing its content", async () => {
   const options = fixture();
   writeFileSync(

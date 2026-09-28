@@ -109,7 +109,15 @@ async function visitChild(
 
 async function visit(root: string, options: VisitOptions): Promise<void> {
   const directory = join(root, options.relative);
-  const canonical = await realpath(directory);
+  let canonical: string;
+  try {
+    canonical = await realpath(directory);
+  } catch {
+    options.errors.push(
+      `${directory}: Could not resolve configuration directory. Check that it exists and is readable.`
+    );
+    return;
+  }
   if (options.ancestors.has(canonical)) {
     options.errors.push(
       `${directory}: Configuration link creates a directory cycle. Inspect the link target.`

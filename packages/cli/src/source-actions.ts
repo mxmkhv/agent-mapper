@@ -1,13 +1,24 @@
 import { spawn } from "node:child_process";
+import { lstat } from "node:fs/promises";
 import type { IncomingMessage } from "node:http";
-import { buildSnapshot } from "./service";
-import type { AppServerOptions } from "./server";
+import { extname } from "node:path";
+import type { InventorySnapshot } from "@agent-mapper/core";
 
 interface ActionContext {
   request: IncomingMessage;
-  options: AppServerOptions;
+  paths: Map<string, Map<string, string>>;
+  launch?: (args: string[]) => Promise<void>;
 }
 const requestLimit = 16_384;
+const safeTextExtensions = new Set([
+  ".md",
+  ".txt",
+  ".json",
+  ".jsonc",
+  ".toml",
+  ".yaml",
+  ".yml"
+]);
 
 async function readJson(
   request: IncomingMessage
@@ -45,7 +56,7 @@ function launchOpen(args: string[]): Promise<void> {
 }
 
 function comparisonSourcePath(
-  snapshot: Awaited<ReturnType<typeof buildSnapshot>>,
+  snapshot: InventorySnapshot,
   id: string
 ): string | undefined {
   const row = snapshot.comparison?.differences.find(
@@ -55,7 +66,7 @@ function comparisonSourcePath(
 }
 
 export function sourcePath(
-  snapshot: Awaited<ReturnType<typeof buildSnapshot>>,
+  snapshot: InventorySnapshot,
   id: string
 ): string | undefined {
   return (
@@ -69,6 +80,61 @@ export function sourcePath(
   );
 }
 
+export function sourcePathIndex(
+  snapshot: InventorySnapshot
+): Map<string, string> {
+  const result = new Map<string, string>();
+  const add = (id: string, path: string) => {
+    if (!result.has(id)) {
+      result.set(id, path);
+    }
+  };
+  for (const item of snapshot.items) {
+    add(item.entry.id, item.entry.path);
+  }
+  for (const item of snapshot.plugins) {
+    add(item.id, item.sourcePath);
+  }
+  for (const item of snapshot.hooks) {
+    add(item.id, item.sourcePath);
+  }
+  for (const item of snapshot.mcpServers) {
+    add(item.id, item.sourcePath);
+  }
+  for (const item of snapshot.memories) {
+    add(item.id, item.sourcePath);
+  }
+  for (const item of snapshot.agents) {
+    add(item.id, item.sourcePath);
+  }
+  for (const row of snapshot.comparison?.differences ?? []) {
+    if (row.main) {
+      add(row.main.id, row.main.path);
+    }
+    if (row.here) {
+      add(row.here.id, row.here.path);
+    }
+  }
+  return result;
+}
+
+export async function openArguments(
+  action: "open" | "reveal",
+  source: string
+): Promise<string[]> {
+  if (action === "reveal" || !safeTextExtensions.has(extname(source))) {
+    return ["-R", source];
+  }
+  try {
+    return (await lstat(source)).isFile() ? [source] : ["-R", source];
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Error(`${source} no longer exists. Rescan and try again.`);
+    }
+    throw error;
+  }
+}
+
 export async function performSourceAction(
   context: ActionContext
 ): Promise<void> {
@@ -79,13 +145,11 @@ export async function performSourceAction(
   if (body.action !== "open" && body.action !== "reveal") {
     throw new Error("Choose Open or Reveal.");
   }
-  const snapshot = await buildSnapshot(body.path, {
-    home: context.options.home,
-    codexHome: context.options.codexHome
-  });
-  const source = sourcePath(snapshot, body.id);
+  const source = context.paths.get(body.path)?.get(body.id);
   if (!source) {
     throw new Error("Source is no longer in this scan. Rescan and try again.");
   }
-  await launchOpen(body.action === "reveal" ? ["-R", source] : [source]);
+  await (context.launch ?? launchOpen)(
+    await openArguments(body.action, source)
+  );
 }

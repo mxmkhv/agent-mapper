@@ -34,6 +34,51 @@ function tomlString(value: string): string | undefined {
   return /^'[^']*'$/.test(trimmed) ? trimmed.slice(1, -1) : undefined;
 }
 
+function parseTomlMcp(
+  content: string,
+  options: { records: McpRecord[]; source: Source }
+): void {
+  let current: { name: string; value: JsonMap } | undefined;
+  const finish = () => {
+    if (current) {
+      add(options.records, {
+        source: options.source,
+        name: current.name,
+        value: current.value,
+        locator: `mcp_servers.${current.name}`
+      });
+    }
+  };
+  for (const line of content.split(/\r?\n/)) {
+    const heading = /^\s*\[([^\]]+)\]\s*(?:#.*)?$/.exec(line);
+    if (/^\s*\[/.test(line)) {
+      finish();
+      const name = heading ? tomlName(heading[1] ?? "") : undefined;
+      current = name ? { name, value: {} } : undefined;
+      continue;
+    }
+    if (!current) {
+      continue;
+    }
+    const pair =
+      /^\s*(command|url|enabled|type)\s*=\s*("(?:\\.|[^"\\])*"|'[^']*'|true|false)\s*(?:#.*)?$/.exec(
+        line
+      );
+    if (pair) {
+      let value: string | boolean | undefined;
+      if (pair[2] === "false") {
+        value = false;
+      } else if (pair[2] === "true") {
+        value = true;
+      } else {
+        value = tomlString(pair[2] ?? "");
+      }
+      current.value[pair[1] ?? ""] = value;
+    }
+  }
+  finish();
+}
+
 async function addToml(
   records: McpRecord[],
   options: { source: Source; errors: string[] }
@@ -49,37 +94,7 @@ async function addToml(
     }
     return;
   }
-  let current: { name: string; value: JsonMap } | undefined;
-  const finish = () => {
-    if (current) {
-      add(records, {
-        source: options.source,
-        name: current.name,
-        value: current.value,
-        locator: `mcp_servers.${current.name}`
-      });
-    }
-  };
-  for (const line of content.split(/\r?\n/)) {
-    const heading = /^\s*\[([^\]]+)\]\s*(?:#.*)?$/.exec(line);
-    if (heading) {
-      finish();
-      const name = tomlName(heading[1] ?? "");
-      current = name ? { name, value: {} } : undefined;
-      continue;
-    }
-    if (!current) {
-      continue;
-    }
-    const pair = /^\s*(command|url|enabled|type)\s*=\s*(.+?)\s*(?:#.*)?$/.exec(
-      line
-    );
-    if (pair) {
-      current.value[pair[1] ?? ""] =
-        pair[2] === "false" ? false : tomlString(pair[2] ?? "");
-    }
-  }
-  finish();
+  parseTomlMcp(content, { records, source: options.source });
 }
 
 function markCollisions(records: McpRecord[]): void {

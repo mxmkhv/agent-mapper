@@ -55,9 +55,17 @@ async function linkCommand(options: {
   contribution.entryId = entry?.id;
 }
 
+async function commandFiles(path: string, errors: string[]): Promise<string[]> {
+  return extname(path) === ".md" ? [path] : markdownFiles(path, { errors });
+}
+
 async function addCommandFiles(
   record: PluginRecord,
-  options: { locations: string[]; collector?: SourceCollector }
+  options: {
+    locations: string[];
+    collector?: SourceCollector;
+    errors: string[];
+  }
 ): Promise<void> {
   const root = record.installPath!;
   for (const relative of options.locations) {
@@ -65,7 +73,7 @@ async function addCommandFiles(
     if (!path) {
       continue;
     }
-    const files = extname(path) === ".md" ? [path] : await markdownFiles(path);
+    const files = await commandFiles(path, options.errors);
     for (const file of files) {
       if (
         !(await fileExists(file)) ||
@@ -144,7 +152,7 @@ async function addInlineCommands(
 
 export async function addPluginCommands(
   record: PluginRecord,
-  options: { manifest: JsonMap; collector?: SourceCollector }
+  options: { manifest: JsonMap; collector?: SourceCollector; errors: string[] }
 ): Promise<void> {
   if (!record.installPath) {
     return;
@@ -152,7 +160,8 @@ export async function addPluginCommands(
   const declared = options.manifest.commands;
   await addCommandFiles(record, {
     locations: declared === undefined ? ["./commands"] : paths(declared),
-    collector: options.collector
+    collector: options.collector,
+    errors: options.errors
   });
   await addInlineCommands(record, {
     declared,

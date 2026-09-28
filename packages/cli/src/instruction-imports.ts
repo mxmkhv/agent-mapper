@@ -35,6 +35,10 @@ function importPaths(content: string): string[] {
   let fence: { marker: string; length: number } | undefined;
   const inline = { ticks: 0 };
   for (const line of content.split(/\r?\n/)) {
+    if (line.trim() === "") {
+      inline.ticks = 0;
+      continue;
+    }
     const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
     if (fence) {
       if (marker?.[0] === fence.marker && marker.length >= fence.length) {

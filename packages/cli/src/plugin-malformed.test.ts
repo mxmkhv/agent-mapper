@@ -116,7 +116,7 @@ it("keeps a broken cached version visible", async () => {
     snapshot.plugins.find((item) => item.key === "broken-link@market")
   ).toMatchObject({
     state: "missing",
-    reason: "Installation path is missing or unreadable."
+    reason: "Installation path is missing."
   });
   expect(snapshot.findings).toContainEqual(
     expect.objectContaining({ code: "missing-plugin", level: "problem" })

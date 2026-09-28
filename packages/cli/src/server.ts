@@ -12,12 +12,13 @@ import { extname, resolve, sep } from "node:path";
 import type { InventorySnapshot } from "@agent-mapper/core";
 import { discoverProjects, type DiscoveryResult } from "./inventory";
 import { buildGlobalSnapshot, buildSnapshot } from "./service";
-import { performSourceAction } from "./source-actions";
+import { performSourceAction, sourcePathIndex } from "./source-actions";
 
 export interface AppServerOptions {
   home?: string;
   codexHome?: string;
   webRoot: string;
+  launchSource?: (args: string[]) => Promise<void>;
 }
 export interface AppServer {
   token: string;
@@ -31,6 +32,7 @@ interface RequestContext {
   server: Server;
   token: string;
   options: AppServerOptions;
+  sourcePaths: Map<string, Map<string, string>>;
 }
 
 type ApiPayload =
@@ -66,6 +68,26 @@ function sendJson(reply: JsonReply): void {
   reply.response.end(JSON.stringify(reply.payload));
 }
 
+async function inventoryPayload(
+  context: RequestContext,
+  url: URL
+): Promise<InventorySnapshot> {
+  const path = url.searchParams.get("path");
+  const scanOptions = {
+    home: context.options.home,
+    codexHome: context.options.codexHome
+  };
+  if (!path && url.searchParams.get("scope") !== "global") {
+    throw new Error("Choose a folder to scan.");
+  }
+  const payload =
+    url.searchParams.get("scope") === "global"
+      ? await buildGlobalSnapshot(scanOptions)
+      : await buildSnapshot(path ?? "", scanOptions);
+  context.sourcePaths.set(payload.workingDirectory, sourcePathIndex(payload));
+  return payload;
+}
+
 async function handleApi(context: RequestContext, url: URL): Promise<void> {
   const { request, response } = context;
   if (request.headers.authorization !== `Bearer ${context.token}`) {
@@ -88,23 +110,19 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
     return;
   }
   if (request.method === "GET" && url.pathname === "/api/inventory") {
-    const path = url.searchParams.get("path");
-    const scanOptions = {
-      home: context.options.home,
-      codexHome: context.options.codexHome
-    };
-    if (!path && url.searchParams.get("scope") !== "global") {
-      throw new Error("Choose a folder to scan.");
-    }
-    const payload =
-      url.searchParams.get("scope") === "global"
-        ? await buildGlobalSnapshot(scanOptions)
-        : await buildSnapshot(path ?? "", scanOptions);
-    sendJson({ response, status: status.ok, payload });
+    sendJson({
+      response,
+      status: status.ok,
+      payload: await inventoryPayload(context, url)
+    });
     return;
   }
   if (request.method === "POST" && url.pathname === "/api/source-action") {
-    await performSourceAction(context);
+    await performSourceAction({
+      request,
+      paths: context.sourcePaths,
+      launch: context.options.launchSource
+    });
     sendJson({ response, status: status.ok, payload: { ok: true } });
     return;
   }
@@ -193,17 +211,23 @@ async function handleRequest(context: RequestContext): Promise<void> {
 
 export function createAppServer(options: AppServerOptions): AppServer {
   const token = randomBytes(tokenBytes).toString("hex");
+  const sourcePaths = new Map<string, Map<string, string>>();
   const server = createServer((request, response) => {
-    void handleRequest({ request, response, server, token, options }).catch(
-      (error: unknown) => {
-        const message = error instanceof Error ? error.message : String(error);
-        sendJson({
-          response,
-          status: status.badRequest,
-          payload: { error: message }
-        });
-      }
-    );
+    void handleRequest({
+      request,
+      response,
+      server,
+      token,
+      options,
+      sourcePaths
+    }).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      sendJson({
+        response,
+        status: status.badRequest,
+        payload: { error: message }
+      });
+    });
   });
   return {
     token,

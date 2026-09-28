@@ -128,3 +128,26 @@ it("uses Claude's project AGENTS fallback only without a project CLAUDE file", (
     })[0]?.resolution.availability
   ).toBe("shadowed");
 });
+
+it("does not shadow nested Claude AGENTS guidance with an ancestor CLAUDE file", () => {
+  const results = resolveInventory(
+    [
+      entry({
+        id: "ancestor",
+        tool: "claude",
+        name: "CLAUDE.md",
+        path: "/work/CLAUDE.md",
+        characters: 40
+      }),
+      entry({
+        id: "nested",
+        tool: "claude",
+        path: "/work/app/AGENTS.md",
+        characters: 80
+      })
+    ],
+    { workingDirectory: "/work/app", tool: "claude" }
+  );
+  expect(results[1]?.resolution.availability).toBe("expected");
+  expect(results[1]?.resolution.estimatedTokens?.startup).toBe(20);
+});

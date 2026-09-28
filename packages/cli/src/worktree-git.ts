@@ -23,6 +23,7 @@ interface ParsedWorktree {
   branch?: string;
   head?: string;
   prunable: boolean;
+  bare: boolean;
 }
 
 function parsePorcelain(output: string): ParsedWorktree[] {
@@ -38,19 +39,62 @@ function parsePorcelain(output: string): ParsedWorktree[] {
       if (current) {
         result.push(current);
       }
-      current = { path: field.slice("worktree ".length), prunable: false };
+      current = {
+        path: field.slice("worktree ".length),
+        prunable: false,
+        bare: false
+      };
     } else if (current && field.startsWith("branch refs/heads/")) {
       current.branch = field.slice("branch refs/heads/".length);
     } else if (current && field.startsWith("HEAD ")) {
       current.head = field.slice("HEAD ".length);
     } else if (current && field.startsWith("prunable")) {
       current.prunable = true;
+    } else if (current && field === "bare") {
+      current.bare = true;
     }
   }
   if (current) {
     result.push(current);
   }
   return result;
+}
+
+async function mainWorktreeIndex(records: ParsedWorktree[]): Promise<number> {
+  const first = records[0];
+  if (!first?.bare) {
+    return records.findIndex((record) => !record.bare);
+  }
+  try {
+    const primaryBranch = (
+      await git(first.path, ["symbolic-ref", "--quiet", "HEAD"])
+    ).trim();
+    const index = records.findIndex(
+      (record) =>
+        !record.bare && `refs/heads/${record.branch}` === primaryBranch
+    );
+    if (index >= 0) {
+      return index;
+    }
+  } catch {
+    // A bare repository may have an unborn or detached HEAD.
+  }
+  return records.findIndex((record) => !record.bare);
+}
+
+async function worktreeRecords(
+  records: ParsedWorktree[]
+): Promise<WorktreeRecord[]> {
+  const mainIndex = await mainWorktreeIndex(records);
+  return Promise.all(
+    records.map(async (record, index) => ({
+      path: record.path,
+      isMain: index === mainIndex,
+      state: await state(record),
+      branch: record.branch,
+      head: record.head
+    }))
+  );
 }
 
 async function state(record: ParsedWorktree): Promise<WorktreeRecord["state"]> {
@@ -111,15 +155,7 @@ export async function readWorktrees(directory: string): Promise<{
     const records = parsePorcelain(
       await git(directory, ["worktree", "list", "--porcelain", "-z"])
     );
-    const worktrees = await Promise.all(
-      records.map(async (record, index) => ({
-        path: record.path,
-        isMain: index === 0,
-        state: await state(record),
-        branch: record.branch,
-        head: record.head
-      }))
-    );
+    const worktrees = await worktreeRecords(records);
     return { selectedRoot, worktrees, errors: [] };
   } catch {
     return {

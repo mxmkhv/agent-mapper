@@ -114,6 +114,15 @@ export async function scanWorktrees(directory: string): Promise<{
   if (!main || !git.selectedRoot || git.selectedRoot === main.path) {
     return { worktrees: git.worktrees, errors: git.errors };
   }
+  if (main.state !== "available") {
+    return {
+      worktrees: git.worktrees,
+      errors: [
+        ...git.errors,
+        `${main.path}: The main checkout is unavailable. Restore it or run git worktree repair before comparing configuration.`
+      ]
+    };
+  }
   const result = await compare(main.path, git.selectedRoot);
   return {
     worktrees: git.worktrees,

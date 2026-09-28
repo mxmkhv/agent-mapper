@@ -61,21 +61,32 @@ export async function json(
   }
 }
 
-async function directories(path: string): Promise<string[]> {
+async function directories(path: string, errors: string[]): Promise<string[]> {
   try {
     return (await readdir(path, { withFileTypes: true }))
       .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
       .map((entry) => entry.name);
-  } catch {
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      errors.push(
+        `${path}: Could not list plugin cache directory. Check permissions.`
+      );
+    }
     return [];
   }
 }
 
-export async function cache(root: string): Promise<CachedPlugin[]> {
+export async function cache(
+  root: string,
+  errors: string[]
+): Promise<CachedPlugin[]> {
   const result: CachedPlugin[] = [];
-  for (const marketplace of await directories(root)) {
-    for (const name of await directories(join(root, marketplace))) {
-      for (const version of await directories(join(root, marketplace, name))) {
+  for (const marketplace of await directories(root, errors)) {
+    for (const name of await directories(join(root, marketplace), errors)) {
+      for (const version of await directories(
+        join(root, marketplace, name),
+        errors
+      )) {
         result.push({
           key: `${name}@${marketplace}`,
           name,

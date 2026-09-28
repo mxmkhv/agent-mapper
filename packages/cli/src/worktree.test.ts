@@ -14,6 +14,7 @@ import type { InventorySnapshot } from "@agent-mapper/core";
 import { buildSnapshot } from "./service";
 import { discoverProjects } from "./discovery";
 import { sourcePath } from "./source-actions";
+import { configFiles } from "./worktree-files";
 
 const roots: string[] = [];
 
@@ -192,6 +193,50 @@ it("shows registered stale worktrees without scanning missing folders", async ()
   expect(snapshot.comparison).toBeUndefined();
 });
 
+it("keeps a linked checkout scannable when its main checkout is gone", async () => {
+  const { home, main: source } = fixture();
+  const bare = join(home, "repo.git");
+  const main = join(home, "bare-main");
+  const linked = join(home, "bare-linked");
+  execFileSync("git", ["clone", "--bare", source, bare], { stdio: "ignore" });
+  git(bare, "worktree", "add", main, "main");
+  git(bare, "worktree", "add", "--detach", linked);
+  rmSync(main, { recursive: true, force: true });
+  const snapshot = await buildSnapshot(linked, {
+    home,
+    codexHome: join(home, ".codex")
+  });
+  expect(snapshot.worktrees).toContainEqual(
+    expect.objectContaining({ path: main, isMain: true, state: "prunable" })
+  );
+  expect(snapshot.comparison).toBeUndefined();
+  expect(snapshot.coverage).toContainEqual(
+    expect.stringContaining("main checkout is unavailable")
+  );
+});
+
+it("uses the first checkout instead of a bare repository as the baseline", async () => {
+  const { home, main } = fixture();
+  const bare = join(home, "repo.git");
+  const bareMain = join(home, "bare-main");
+  const bareFeature = join(home, "bare-feature");
+  execFileSync("git", ["clone", "--bare", main, bare], { stdio: "ignore" });
+  git(bare, "worktree", "add", bareMain, "main");
+  git(bare, "worktree", "add", "--detach", bareFeature);
+  writeFileSync(join(bareFeature, "AGENTS.md"), "Feature instructions");
+  const snapshot = await buildSnapshot(bareFeature, {
+    home,
+    codexHome: join(home, ".codex")
+  });
+  expect(snapshot.worktrees.find((item) => item.isMain)?.path).toBe(bareMain);
+  expect(snapshot.comparison?.mainPath).toBe(bareMain);
+  expect(
+    snapshot.comparison?.differences.find(
+      (item) => item.relativePath === "AGENTS.md"
+    )?.state
+  ).toBe("different-content");
+});
+
 it("reports a broken Git checkout instead of treating it as a plain folder", async () => {
   const home = realpathSync(
     mkdtempSync(join(tmpdir(), "agent-mapper-broken-git-"))
@@ -205,5 +250,15 @@ it("reports a broken Git checkout instead of treating it as a plain folder", asy
   });
   expect(snapshot.coverage).toContainEqual(
     expect.stringContaining("Could not inspect Git worktrees")
+  );
+});
+
+it("reports a removed configuration directory without throwing", async () => {
+  const { home } = fixture();
+  const missing = join(home, "removed");
+  const result = await configFiles(missing);
+  expect(result.files.size).toBe(0);
+  expect(result.errors).toContainEqual(
+    expect.stringContaining("Could not resolve configuration directory")
   );
 });

@@ -223,13 +223,20 @@ export async function readClaudePlugins(
         "Several installation records match this plugin; the selected version is unknown.";
     }
   }
-  const found = [
-    ...known,
-    ...(await cachedClaudeRecords({
-      root,
-      installed: known,
-      settings: applied
-    }))
+  const beforeCache = errors.length;
+  const cached = await cachedClaudeRecords({
+    root,
+    installed: known,
+    settings: applied,
+    errors
+  });
+  const found = [...known, ...cached];
+  return [
+    ...found,
+    ...unmatchedClaudeSettings({
+      settings: applied,
+      found,
+      cacheComplete: errors.length === beforeCache
+    })
   ];
-  return [...found, ...unmatchedClaudeSettings(applied, found)];
 }

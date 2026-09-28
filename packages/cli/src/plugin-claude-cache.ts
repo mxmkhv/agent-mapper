@@ -59,9 +59,13 @@ export async function cachedClaudeRecords(options: {
   root: string;
   installed: PluginRecord[];
   settings: Map<string, PluginSetting>;
+  errors: string[];
 }): Promise<PluginRecord[]> {
   const result: PluginRecord[] = [];
-  for (const entry of await cache(join(options.root, "cache"))) {
+  for (const entry of await cache(
+    join(options.root, "cache"),
+    options.errors
+  )) {
     if (
       options.installed.some(
         (record) =>
@@ -89,16 +93,27 @@ export async function cachedClaudeRecords(options: {
   return result;
 }
 
-export function unmatchedClaudeSettings(
-  settingsMap: Map<string, PluginSetting>,
-  found: PluginRecord[]
-): PluginRecord[] {
+export function unmatchedClaudeSettings(options: {
+  settings: Map<string, PluginSetting>;
+  found: PluginRecord[];
+  cacheComplete: boolean;
+}): PluginRecord[] {
   const result: PluginRecord[] = [];
-  for (const [key, setting] of settingsMap) {
-    if (found.some((record) => record.key === key)) {
+  for (const [key, setting] of options.settings) {
+    if (options.found.some((record) => record.key === key)) {
       continue;
     }
-    const value: PluginState = setting.enabled ? "missing" : "disabled";
+    let value: PluginState = "disabled";
+    if (setting.enabled) {
+      value = options.cacheComplete ? "missing" : "unknown";
+    }
+    let reason =
+      "Settings disable this plugin; no installation record or cached files were found.";
+    if (setting.enabled) {
+      reason = options.cacheComplete
+        ? "Settings enable this plugin, but no installation record or cached files were found."
+        : "The plugin cache could not be fully read; installation cannot be verified.";
+    }
     result.push(
       plugin({
         tool: "claude",
@@ -108,9 +123,7 @@ export function unmatchedClaudeSettings(
         state: value,
         sourcePath: setting.path,
         settingsEvidence: setting.path,
-        reason: setting.enabled
-          ? "Settings enable this plugin, but no installation record or cached files were found."
-          : "Settings disable this plugin; no installation record or cached files were found."
+        reason
       })
     );
   }

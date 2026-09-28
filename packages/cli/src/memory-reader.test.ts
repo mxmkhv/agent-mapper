@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   mkdtempSync,
   mkdirSync,
@@ -128,4 +129,42 @@ it("keeps a broken memory link visible with an actionable read state", async () 
     readState: "unreadable"
   });
   expect(snapshot.memories[0]?.error).toContain("Open the source");
+});
+
+it("uses the main checkout's Claude memory folder for a linked worktree", async () => {
+  const options = fixture();
+  rmSync(join(options.project, ".git"), { recursive: true });
+  execFileSync("git", ["-C", options.project, "init", "-b", "main"], {
+    stdio: "ignore"
+  });
+  writeFileSync(join(options.project, "AGENTS.md"), "Instructions");
+  execFileSync("git", ["-C", options.project, "add", "."], {
+    stdio: "ignore"
+  });
+  execFileSync(
+    "git",
+    [
+      "-C",
+      options.project,
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "commit",
+      "-m",
+      "Initial"
+    ],
+    { stdio: "ignore" }
+  );
+  const linked = join(options.home, "linked");
+  execFileSync(
+    "git",
+    ["-C", options.project, "worktree", "add", "--detach", linked],
+    {
+      stdio: "ignore"
+    }
+  );
+  writeMemorySources(options);
+  const snapshot = await buildSnapshot(linked, options);
+  expect(snapshot.memories.some((item) => item.tool === "claude")).toBe(true);
 });

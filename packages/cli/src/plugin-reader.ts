@@ -24,9 +24,17 @@ async function inspect(
         record.state = "missing";
         record.reason = "Installation path is not a folder.";
       }
-    } catch {
-      record.state = "missing";
-      record.reason = "Installation path is missing or unreadable.";
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        record.state = "missing";
+        record.reason = "Installation path is missing.";
+      } else {
+        record.state = "unknown";
+        record.reason = "Installation path could not be inspected.";
+        options.errors.push(
+          `${record.installPath}: Could not inspect plugin installation. Check permissions.`
+        );
+      }
     }
   }
   if (record.state !== "missing") {

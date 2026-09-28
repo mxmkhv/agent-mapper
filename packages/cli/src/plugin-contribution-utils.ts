@@ -42,7 +42,10 @@ export function paths(value: unknown): string[] {
   return [];
 }
 
-export async function skillFiles(directory: string): Promise<string[]> {
+export async function skillFiles(
+  directory: string,
+  errors: string[]
+): Promise<string[]> {
   if (await fileExists(join(directory, "SKILL.md"))) {
     return [join(directory, "SKILL.md")];
   }
@@ -51,7 +54,12 @@ export async function skillFiles(directory: string): Promise<string[]> {
     return children
       .filter((child) => child.isDirectory() || child.isSymbolicLink())
       .map((child) => join(directory, child.name, "SKILL.md"));
-  } catch {
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      errors.push(
+        `${directory}: Could not list plugin skills. Check permissions.`
+      );
+    }
     return [];
   }
 }
@@ -60,8 +68,9 @@ const maxMarkdownDepth = 6;
 
 export async function markdownFiles(
   directory: string,
-  depth = 0
+  options: { errors: string[]; depth?: number }
 ): Promise<string[]> {
+  const depth = options.depth ?? 0;
   try {
     const children = await readdir(directory, { withFileTypes: true });
     const files = children
@@ -72,11 +81,19 @@ export async function markdownFiles(
     }
     for (const child of children.filter((item) => item.isDirectory())) {
       files.push(
-        ...(await markdownFiles(join(directory, child.name), depth + 1))
+        ...(await markdownFiles(join(directory, child.name), {
+          ...options,
+          depth: depth + 1
+        }))
       );
     }
     return files;
-  } catch {
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      options.errors.push(
+        `${directory}: Could not list plugin Markdown files. Check permissions.`
+      );
+    }
     return [];
   }
 }

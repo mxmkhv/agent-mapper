@@ -137,3 +137,20 @@ it("does not claim a punctuation-ended import loaded or is missing", async () =>
     false
   );
 });
+
+it("resumes import scanning after an unclosed inline tick and a blank line", async () => {
+  const { home, project } = fixture();
+  writeFileSync(
+    join(project, "CLAUDE.md"),
+    "A stray `tick\n\n@missing.md @../shared.md"
+  );
+  writeFileSync(join(home, "shared.md"), "External guidance");
+  const snapshot = await buildSnapshot(project, { home });
+  expect(snapshot.imports).toMatchObject([
+    { targetPath: join(project, "missing.md"), state: "missing" },
+    { targetPath: join(home, "shared.md"), state: "approval-unknown" }
+  ]);
+  expect(snapshot.findings.some(({ code }) => code === "missing-import")).toBe(
+    true
+  );
+});

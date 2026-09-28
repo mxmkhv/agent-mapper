@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import type { MemoryRecord } from "@agent-mapper/core";
 import { findGitRoot } from "./discovery";
 import { inspectMemory, type MemorySource } from "./memory-record";
+import { readWorktrees } from "./worktree-git";
 
 interface ScanOptions {
   workingDirectory: string;
@@ -99,9 +100,12 @@ async function scanClaude(
 ): Promise<void> {
   const { options, errors, global } = input;
   const projects = join(options.claudeConfigDir, "projects");
-  const root =
+  const selectedRoot =
     (await findGitRoot(options.workingDirectory, "/")) ??
     options.workingDirectory;
+  const worktrees = await readWorktrees(options.workingDirectory);
+  const root =
+    worktrees.worktrees.find((item) => item.isMain)?.path ?? selectedRoot;
   const names = global
     ? (await children(projects, errors))
         .filter((item) => item.isDirectory())
