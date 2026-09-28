@@ -15,7 +15,7 @@ import { InventoryView } from "../views/inventory-view";
 import { MapView } from "../views/map/map-view";
 import type { ReachProject } from "../views/reach/reach-model";
 import { ReachView } from "../views/reach/reach-view";
-import { WorktreePanel } from "../worktree-panel";
+import { WorktreeView } from "../views/worktrees/worktree-view";
 import type { WorkspaceState } from "./use-workspace";
 
 export interface WorkspaceProps {
@@ -61,7 +61,10 @@ export function tabsFor({ props, state }: PartsProps): ViewTab[] {
           {
             id: "worktrees",
             label: "Worktrees",
-            count: props.snapshot.comparison?.differences.length ?? linked
+            count:
+              props.snapshot.comparison?.differences.filter(
+                (row) => row.tool === "shared" || row.tool === props.tool
+              ).length ?? linked
           }
         ]
       : [];
@@ -126,15 +129,13 @@ export function Content({ props, state, reach }: PartsProps) {
   }
   if (state.view === "worktrees") {
     return (
-      <div className="inventory-grid m-5">
-        <WorktreePanel
-          comparison={props.snapshot.comparison}
-          onSelectPath={props.onSelectPath}
-          tool={props.tool}
-          workingDirectory={props.snapshot.workingDirectory}
-          worktrees={props.snapshot.worktrees}
-        />
-      </div>
+      <WorktreeView
+        comparison={props.snapshot.comparison}
+        onSelectPath={props.onSelectPath}
+        tool={props.tool}
+        workingDirectory={props.snapshot.workingDirectory}
+        worktrees={props.snapshot.worktrees}
+      />
     );
   }
   return (
