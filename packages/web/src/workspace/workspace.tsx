@@ -11,6 +11,7 @@ import { ViewBar, type ViewTab } from "../shell/view-bar";
 import { toolName } from "../ui/marks";
 import { FindingsView } from "../views/findings-view";
 import { InventoryView } from "../views/inventory-view";
+import { MapView } from "../views/map/map-view";
 import { SearchPalette } from "../views/search-palette";
 import { WorktreePanel } from "../worktree-panel";
 import { useWorkspace, type WorkspaceState } from "./use-workspace";
@@ -28,6 +29,7 @@ interface WorkspaceProps {
 
 function tabsFor(props: WorkspaceProps, state: WorkspaceState): ViewTab[] {
   const tabs: ViewTab[] = [
+    ...(props.isProject ? [{ id: "map" as const, label: "Map" }] : []),
     { id: "inventory", label: "Inventory", count: state.visible.length },
     {
       id: "findings",
@@ -79,6 +81,21 @@ function Content({
         findings={state.findings}
         onSelect={state.select}
         toolName={toolName[props.tool]}
+      />
+    );
+  }
+  if (state.view === "map") {
+    return (
+      <MapView
+        context={state.context}
+        estimate={props.snapshot.context}
+        onKind={state.filterKind}
+        onSelect={state.select}
+        onToggleInactive={state.toggleInactive}
+        records={state.toolRecords}
+        selectedId={state.selected?.id}
+        showInactive={state.showInactive}
+        tool={props.tool}
       />
     );
   }
