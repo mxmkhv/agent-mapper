@@ -3,6 +3,7 @@ import type { WorktreeDifference } from "@agent-mapper/core";
 
 const excluded = new Set([
   ".git",
+  ".worktrees",
   ".artifacts",
   "node_modules",
   "dist",

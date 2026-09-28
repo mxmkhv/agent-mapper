@@ -6,7 +6,7 @@ import type {
   WorktreeRecord
 } from "@agent-mapper/core";
 import { configFiles, type ConfigFile } from "./worktree-files";
-import { readWorktrees, trackedFiles } from "./worktree-git";
+import { trackedFiles, type WorktreeScan } from "./worktree-git";
 
 const idLength = 20;
 
@@ -72,18 +72,22 @@ function difference(
   };
 }
 
-async function compare(
-  mainPath: string,
-  herePath: string
-): Promise<{
+async function compare(options: {
+  mainPath: string;
+  herePath: string;
+  worktrees: WorktreeRecord[];
+}): Promise<{
   comparison: WorktreeComparison;
   errors: string[];
 }> {
+  const { mainPath, herePath } = options;
+  const excluded = new Set(options.worktrees.map((item) => item.path));
+  const trackingErrors: string[] = [];
   const [main, here, mainTracked, hereTracked] = await Promise.all([
-    configFiles(mainPath),
-    configFiles(herePath),
-    trackedFiles(mainPath),
-    trackedFiles(herePath)
+    configFiles(mainPath, excluded),
+    configFiles(herePath, excluded),
+    trackedFiles(mainPath, trackingErrors),
+    trackedFiles(herePath, trackingErrors)
   ]);
   const paths = new Set([...main.files.keys(), ...here.files.keys()]);
   const differences = [...paths]
@@ -100,16 +104,18 @@ async function compare(
     .filter((item): item is WorktreeDifference => Boolean(item));
   return {
     comparison: { mainPath, herePath, differences },
-    errors: [...main.errors, ...here.errors]
+    errors: [...main.errors, ...here.errors, ...trackingErrors]
   };
 }
 
-export async function scanWorktrees(directory: string): Promise<{
+export async function scanWorktrees(
+  directory: string,
+  git: WorktreeScan
+): Promise<{
   worktrees: WorktreeRecord[];
   comparison?: WorktreeComparison;
   errors: string[];
 }> {
-  const git = await readWorktrees(directory);
   const main = git.worktrees.find((item) => item.isMain);
   if (!main || !git.selectedRoot || git.selectedRoot === main.path) {
     return { worktrees: git.worktrees, errors: git.errors };
@@ -123,7 +129,11 @@ export async function scanWorktrees(directory: string): Promise<{
       ]
     };
   }
-  const result = await compare(main.path, git.selectedRoot);
+  const result = await compare({
+    mainPath: main.path,
+    herePath: git.selectedRoot,
+    worktrees: git.worktrees
+  });
   return {
     worktrees: git.worktrees,
     comparison: result.comparison,

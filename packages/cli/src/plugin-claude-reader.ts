@@ -1,6 +1,5 @@
 import { join } from "node:path";
 import type { PluginRecord, PluginState } from "@agent-mapper/core";
-import { findGitRoot } from "./discovery";
 import {
   json,
   object,
@@ -42,9 +41,7 @@ async function appliedSettings(
   options: PluginReaderOptions,
   errors: string[]
 ): Promise<Map<string, PluginSetting>> {
-  const root =
-    (await findGitRoot(options.workingDirectory, "/")) ??
-    options.workingDirectory;
+  const root = options.root;
   const result = await settings({
     path: join(options.claudeConfigDir, "settings.json"),
     project: false,

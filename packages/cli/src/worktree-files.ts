@@ -22,10 +22,12 @@ export interface ConfigFile {
   readState: "readable" | "unreadable";
 }
 
-async function recordDirectoryLink(
-  root: string,
-  relativePath: string
-): Promise<ConfigFile> {
+async function recordDirectoryLink(options: {
+  root: string;
+  relativePath: string;
+  errors: string[];
+}): Promise<ConfigFile> {
+  const { root, relativePath, errors } = options;
   const path = join(root, relativePath);
   const base = {
     path,
@@ -38,11 +40,19 @@ async function recordDirectoryLink(
     const fingerprint = createHash("sha256").update(target).digest("hex");
     return { ...base, fingerprint, readState: "readable" };
   } catch {
+    errors.push(
+      `${path}: Could not read configuration link. Check permissions.`
+    );
     return { ...base, readState: "unreadable" };
   }
 }
 
-async function record(root: string, relativePath: string): Promise<ConfigFile> {
+async function record(options: {
+  root: string;
+  relativePath: string;
+  errors: string[];
+}): Promise<ConfigFile> {
+  const { root, relativePath, errors } = options;
   const path = join(root, relativePath);
   const base = {
     path,
@@ -60,6 +70,9 @@ async function record(root: string, relativePath: string): Promise<ConfigFile> {
       .digest("hex");
     return { ...base, fingerprint, readState: "readable" };
   } catch {
+    errors.push(
+      `${path}: Could not read configuration file. Check permissions.`
+    );
     return { ...base, readState: "unreadable" };
   }
 }
@@ -69,6 +82,7 @@ interface VisitOptions {
   files: Map<string, ConfigFile>;
   errors: string[];
   ancestors: Set<string>;
+  excludedRoots: Set<string>;
 }
 
 async function visitChild(
@@ -82,6 +96,9 @@ async function visitChild(
 ): Promise<void> {
   const { options, child, parts, ancestors } = context;
   const relativePath = join(options.relative, child.name);
+  if (options.excludedRoots.has(join(root, relativePath))) {
+    return;
+  }
   if (child.isDirectory() && canEnter(parts, child.name)) {
     await visit(root, { ...options, relative: relativePath, ancestors });
   } else if (
@@ -93,17 +110,27 @@ async function visitChild(
     if (target?.isDirectory()) {
       options.files.set(
         relativePath,
-        await recordDirectoryLink(root, relativePath)
+        await recordDirectoryLink({
+          root,
+          relativePath,
+          errors: options.errors
+        })
       );
       await visit(root, { ...options, relative: relativePath, ancestors });
     } else if (included(parts, child.name)) {
-      options.files.set(relativePath, await record(root, relativePath));
+      options.files.set(
+        relativePath,
+        await record({ root, relativePath, errors: options.errors })
+      );
     }
   } else if (
     (child.isFile() || child.isSymbolicLink()) &&
     included(parts, child.name)
   ) {
-    options.files.set(relativePath, await record(root, relativePath));
+    options.files.set(
+      relativePath,
+      await record({ root, relativePath, errors: options.errors })
+    );
   }
 }
 
@@ -141,12 +168,21 @@ async function visit(root: string, options: VisitOptions): Promise<void> {
   }
 }
 
-export async function configFiles(root: string): Promise<{
+export async function configFiles(
+  root: string,
+  excludedRoots: Set<string> = new Set()
+): Promise<{
   files: Map<string, ConfigFile>;
   errors: string[];
 }> {
   const files = new Map<string, ConfigFile>();
   const errors: string[] = [];
-  await visit(root, { relative: "", files, errors, ancestors: new Set() });
+  await visit(root, {
+    relative: "",
+    files,
+    errors,
+    ancestors: new Set(),
+    excludedRoots
+  });
   return { files, errors };
 }

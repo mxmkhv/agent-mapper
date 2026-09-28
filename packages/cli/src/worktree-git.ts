@@ -83,29 +83,40 @@ async function mainWorktreeIndex(records: ParsedWorktree[]): Promise<number> {
 }
 
 async function worktreeRecords(
-  records: ParsedWorktree[]
+  records: ParsedWorktree[],
+  errors: string[]
 ): Promise<WorktreeRecord[]> {
   const mainIndex = await mainWorktreeIndex(records);
   return Promise.all(
     records.map(async (record, index) => ({
       path: record.path,
       isMain: index === mainIndex,
-      state: await state(record),
+      state: await state(record, errors),
       branch: record.branch,
       head: record.head
     }))
   );
 }
 
-async function state(record: ParsedWorktree): Promise<WorktreeRecord["state"]> {
+async function state(
+  record: ParsedWorktree,
+  errors: string[]
+): Promise<WorktreeRecord["state"]> {
   if (record.prunable) {
     return "prunable";
   }
   try {
     await lstat(record.path);
     return "available";
-  } catch {
-    return "missing";
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") {
+      return "missing";
+    }
+    errors.push(
+      `${record.path}: Could not inspect worktree folder. Check permissions.`
+    );
+    return "unknown";
   }
 }
 
@@ -115,7 +126,11 @@ async function hasGitMarker(directory: string): Promise<boolean> {
     try {
       await lstat(join(path, ".git"));
       return true;
-    } catch {
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT" && code !== "ENOTDIR") {
+        return true;
+      }
       const parent = dirname(path);
       if (parent === path) {
         return false;
@@ -125,11 +140,13 @@ async function hasGitMarker(directory: string): Promise<boolean> {
   }
 }
 
-export async function readWorktrees(directory: string): Promise<{
+export interface WorktreeScan {
   selectedRoot?: string;
   worktrees: WorktreeRecord[];
   errors: string[];
-}> {
+}
+
+export async function readWorktrees(directory: string): Promise<WorktreeScan> {
   let selectedRoot: string;
   try {
     selectedRoot = (
@@ -155,8 +172,9 @@ export async function readWorktrees(directory: string): Promise<{
     const records = parsePorcelain(
       await git(directory, ["worktree", "list", "--porcelain", "-z"])
     );
-    const worktrees = await worktreeRecords(records);
-    return { selectedRoot, worktrees, errors: [] };
+    const errors: string[] = [];
+    const worktrees = await worktreeRecords(records, errors);
+    return { selectedRoot, worktrees, errors };
   } catch {
     return {
       selectedRoot,
@@ -169,12 +187,16 @@ export async function readWorktrees(directory: string): Promise<{
 }
 
 export async function trackedFiles(
-  directory: string
+  directory: string,
+  errors: string[]
 ): Promise<Set<string> | undefined> {
   try {
     const output = await git(directory, ["ls-files", "-z", "--cached"]);
     return new Set(output.split("\0").filter(Boolean));
   } catch {
+    errors.push(
+      `${directory}: Could not list tracked files. Run git ls-files in this checkout.`
+    );
     return undefined;
   }
 }

@@ -259,6 +259,29 @@ summary:focus-visible {
   color: var(--foreground);
 }
 
+.rescan-notice {
+  display: block;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 12px 34px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.rescan-notice.error {
+  color: var(--danger);
+}
+.rescan-notice h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.rescan-notice p {
+  margin: 4px 0;
+}
+.rescan-notice button {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+
 .workspace {
   max-width: 1600px;
   margin: 0 auto;

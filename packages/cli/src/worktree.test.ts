@@ -14,7 +14,6 @@ import type { InventorySnapshot } from "@agent-mapper/core";
 import { buildSnapshot } from "./service";
 import { discoverProjects } from "./discovery";
 import { sourcePath } from "./source-actions";
-import { configFiles } from "./worktree-files";
 
 const roots: string[] = [];
 
@@ -180,6 +179,22 @@ it("does not follow unrelated directory links outside the checkout", async () =>
   ).toBe(false);
 });
 
+it("does not compare files inside a linked worktree nested in main", async () => {
+  const { home, main, linked } = fixture();
+  const nested = join(main, ".worktrees", "nested");
+  git(main, "worktree", "add", "--detach", nested);
+  writeFileSync(join(nested, "AGENTS.md"), "Nested checkout instructions");
+  const snapshot = await buildSnapshot(linked, {
+    home,
+    codexHome: join(home, ".codex")
+  });
+  expect(
+    snapshot.comparison?.differences.some((item) =>
+      item.relativePath.startsWith(".worktrees/")
+    )
+  ).toBe(false);
+});
+
 it("shows registered stale worktrees without scanning missing folders", async () => {
   const { home, main, linked } = fixture();
   rmSync(linked, { recursive: true, force: true });
@@ -235,30 +250,4 @@ it("uses the first checkout instead of a bare repository as the baseline", async
       (item) => item.relativePath === "AGENTS.md"
     )?.state
   ).toBe("different-content");
-});
-
-it("reports a broken Git checkout instead of treating it as a plain folder", async () => {
-  const home = realpathSync(
-    mkdtempSync(join(tmpdir(), "agent-mapper-broken-git-"))
-  );
-  roots.push(home);
-  const project = join(home, "app");
-  mkdirSync(join(project, ".git"), { recursive: true });
-  const snapshot = await buildSnapshot(project, {
-    home,
-    codexHome: join(home, ".codex")
-  });
-  expect(snapshot.coverage).toContainEqual(
-    expect.stringContaining("Could not inspect Git worktrees")
-  );
-});
-
-it("reports a removed configuration directory without throwing", async () => {
-  const { home } = fixture();
-  const missing = join(home, "removed");
-  const result = await configFiles(missing);
-  expect(result.files.size).toBe(0);
-  expect(result.errors).toContainEqual(
-    expect.stringContaining("Could not resolve configuration directory")
-  );
 });

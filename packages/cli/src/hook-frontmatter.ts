@@ -28,13 +28,18 @@ function header(content: string): string | undefined {
 
 async function hookEvents(
   path: string,
-  errors: string[]
+  options: {
+    errors: string[];
+    contentFor(path: string): string | undefined;
+  }
 ): Promise<ReturnType<typeof object>> {
   let content: string;
   try {
-    content = await readFile(path, "utf8");
+    content = options.contentFor(path) ?? (await readFile(path, "utf8"));
   } catch {
-    errors.push(`${path}: Could not read hook frontmatter. Check permissions.`);
+    options.errors.push(
+      `${path}: Could not read hook frontmatter. Check permissions.`
+    );
     return undefined;
   }
   const frontmatter = header(content);
@@ -42,23 +47,25 @@ async function hookEvents(
     return undefined;
   }
   if (frontmatter.length > maxHeaderCharacters) {
-    errors.push(`${path}: Hook frontmatter is too large to inspect.`);
+    options.errors.push(`${path}: Hook frontmatter is too large to inspect.`);
     return undefined;
   }
   try {
     const document = parseDocument(frontmatter, { uniqueKeys: true });
     if (document.errors.length) {
-      errors.push(`${path}: Could not parse hook frontmatter YAML.`);
+      options.errors.push(`${path}: Could not parse hook frontmatter YAML.`);
       return undefined;
     }
     const data = object(document.toJS({ maxAliasCount: 0 }));
     const events = object(data?.hooks);
     if (!events) {
-      errors.push(`${path}: Hook frontmatter must contain an event map.`);
+      options.errors.push(
+        `${path}: Hook frontmatter must contain an event map.`
+      );
     }
     return events;
   } catch {
-    errors.push(`${path}: Could not parse hook frontmatter YAML.`);
+    options.errors.push(`${path}: Could not parse hook frontmatter YAML.`);
     return undefined;
   }
 }
@@ -119,6 +126,7 @@ export async function addFrontmatterHooks(
     agents: AgentRecord[];
     plugins: PluginRecord[];
     errors: string[];
+    contentFor(path: string): string | undefined;
   }
 ): Promise<void> {
   const sources = [
@@ -126,7 +134,7 @@ export async function addFrontmatterHooks(
     ...agentSources(options.agents, options.plugins)
   ];
   for (const source of sources) {
-    const events = await hookEvents(source.path, options.errors);
+    const events = await hookEvents(source.path, options);
     if (events) {
       addGroups(hooks, { source, events });
     }

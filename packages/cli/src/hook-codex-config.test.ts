@@ -20,6 +20,16 @@ it("reads Codex TOML hooks in nested project config layers", async () => {
       join(nested, ".codex", "config.toml"),
       '[[hooks.PreToolUse]]\n[[hooks.PreToolUse.hooks]]\ntype = "command"\ncommand = "private-value"\n'
     );
+    writeFileSync(
+      join(nested, ".codex", "hooks.json"),
+      JSON.stringify({
+        hooks: {
+          SessionStart: [
+            { hooks: [{ type: "command", command: "private-value" }] }
+          ]
+        }
+      })
+    );
     const snapshot = await buildSnapshot(nested, {
       home,
       codexHome: join(home, ".codex")
@@ -31,6 +41,7 @@ it("reads Codex TOML hooks in nested project config layers", async () => {
         availability
       ])
     ).toEqual([
+      ["SessionStart", "project", "unknown"],
       ["Stop", "project", "unknown"],
       ["PreToolUse", "project", "unknown"]
     ]);
@@ -70,6 +81,28 @@ it("keeps opposing user and project hook flags uncertain until trust is known", 
       availability: "unknown",
       reason: expect.stringContaining("trusted")
     });
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+it("keeps hook group locators unique across unrelated TOML tables", async () => {
+  const home = mkdtempSync(join(tmpdir(), "agent-mapper-hook-groups-"));
+  try {
+    const codexHome = join(home, ".codex");
+    const project = join(home, "app");
+    mkdirSync(codexHome);
+    mkdirSync(project);
+    writeFileSync(
+      join(codexHome, "config.toml"),
+      '[[hooks.PreToolUse]]\n[[hooks.PreToolUse.hooks]]\ntype = "command"\n[features]\nhooks = true\n[[hooks.PreToolUse]]\n[[hooks.PreToolUse.hooks]]\ntype = "command"\n'
+    );
+    const snapshot = await buildSnapshot(project, { home, codexHome });
+    expect(snapshot.hooks.map((hook) => hook.locator)).toEqual([
+      "hooks.PreToolUse[0].hooks[0]",
+      "hooks.PreToolUse[1].hooks[0]"
+    ]);
+    expect(new Set(snapshot.hooks.map((hook) => hook.id)).size).toBe(2);
   } finally {
     rmSync(home, { recursive: true, force: true });
   }

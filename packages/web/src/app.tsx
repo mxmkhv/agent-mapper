@@ -32,13 +32,21 @@ export function App() {
         error={projects.error}
       />
       <main className="main-area">
-        {inventory.loading ? (
+        {inventory.loading && !inventory.value ? (
           <output className="status-screen">
             Scanning {selectedPath || "global sources"}…
           </output>
         ) : null}
+        {inventory.loading && inventory.value ? (
+          <output className="rescan-notice">Refreshing inventory…</output>
+        ) : null}
         {inventory.error ? (
-          <div className="status-screen error" role="alert">
+          <div
+            className={
+              inventory.value ? "rescan-notice error" : "status-screen error"
+            }
+            role="alert"
+          >
             <h2>Could not scan this folder</h2>
             <p>{inventory.error}</p>
             <button onClick={() => setRefresh((value) => value + 1)}>
@@ -46,7 +54,7 @@ export function App() {
             </button>
           </div>
         ) : null}
-        {inventory.value && !inventory.loading ? (
+        {inventory.value ? (
           <Workspace
             key={selectedPath || "global"}
             snapshot={inventory.value}

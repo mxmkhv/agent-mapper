@@ -203,6 +203,7 @@ export async function scanInstructionImports(options: {
   items: ResolvedEntry[];
   home: string;
   workingDirectory: string;
+  contentFor(path: string): string | undefined;
 }): Promise<{ imports: InstructionImport[]; errors: string[] }> {
   const imports: InstructionImport[] = [];
   const errors: string[] = [];
@@ -218,7 +219,9 @@ export async function scanInstructionImports(options: {
       continue;
     }
     try {
-      const content = await readFile(root.entry.path, "utf8");
+      const content =
+        options.contentFor(root.entry.path) ??
+        (await readFile(root.entry.path, "utf8"));
       await visit({
         ...options,
         content,

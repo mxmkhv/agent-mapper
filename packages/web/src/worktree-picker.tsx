@@ -70,8 +70,9 @@ export function WorktreePicker({ worktrees, onSelectPath }: Props) {
               </div>
             ) : (
               <p className="inline-error">
-                Git still lists this checkout, but its folder is unavailable.
-                Inspect it with git worktree list.
+                {selected.state === "unknown"
+                  ? "This checkout could not be inspected. Check permissions and the scan coverage notes."
+                  : "Git still lists this checkout, but its folder is unavailable. Inspect it with git worktree list."}
               </p>
             )}
           </>

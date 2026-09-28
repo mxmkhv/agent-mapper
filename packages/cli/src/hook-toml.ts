@@ -24,6 +24,7 @@ interface TomlState {
   handlerIndex: number;
   matcher?: string;
   handler?: JsonMap;
+  groups: Map<string, number>;
 }
 
 function finish(
@@ -57,17 +58,15 @@ function setHeading(
   if (handlerSection) {
     if (state.event !== event) {
       state.event = event;
-      state.groupIndex = 0;
+      state.groupIndex = state.groups.get(event) ?? 0;
       state.handlerIndex = -1;
     }
     state.handlerIndex += 1;
     state.handler = {};
   } else {
-    if (state.event !== event) {
-      state.groupIndex = -1;
-    }
     state.event = event;
-    state.groupIndex += 1;
+    state.groupIndex = (state.groups.get(event) ?? -1) + 1;
+    state.groups.set(event, state.groupIndex);
     state.handlerIndex = -1;
     state.matcher = undefined;
   }
@@ -97,7 +96,11 @@ function parseToml(
   hooks: HookRecord[],
   options: { source: HookSource; content: string }
 ): void {
-  const state: TomlState = { groupIndex: -1, handlerIndex: -1 };
+  const state: TomlState = {
+    groupIndex: -1,
+    handlerIndex: -1,
+    groups: new Map()
+  };
   for (const line of options.content.split(/\r?\n/)) {
     const section =
       /^\s*\[\[hooks\.([A-Za-z][A-Za-z0-9]*)(\.hooks)?\]\]\s*(?:#.*)?$/.exec(

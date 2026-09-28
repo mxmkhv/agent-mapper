@@ -7,6 +7,7 @@ interface LoadState<T> {
   error?: string;
   loading: boolean;
   key?: string;
+  path?: string;
 }
 
 export function useProjects(): LoadState<ProjectList> {
@@ -40,18 +41,27 @@ export function useInventory(
   useEffect(() => {
     const controller = new AbortController();
     void getInventory(path, controller.signal).then(
-      (value) => setState({ value, loading: false, key }),
+      (value) => setState({ value, loading: false, key, path }),
       (error: unknown) => {
         if (!controller.signal.aborted) {
-          setState({
+          setState((previous) => ({
+            value: previous.path === path ? previous.value : undefined,
             error: error instanceof Error ? error.message : String(error),
             loading: false,
-            key
-          });
+            key,
+            path
+          }));
         }
       }
     );
     return () => controller.abort();
   }, [path, key]);
-  return state.key !== key ? { loading: true } : state;
+  return state.key !== key
+    ? {
+        value: state.path === path ? state.value : undefined,
+        loading: true,
+        key,
+        path
+      }
+    : state;
 }

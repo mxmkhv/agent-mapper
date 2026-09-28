@@ -1,11 +1,10 @@
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type {
   AgentRecord,
   HookRecord,
   InventoryEntry,
   PluginRecord
 } from "@agent-mapper/core";
-import { findGitRoot } from "./discovery";
 import { addGroups, type HookSource } from "./hook-record";
 import { addToml, codexHooksSetting } from "./hook-toml";
 import { json, object, type JsonMap } from "./plugin-reader-common";
@@ -54,6 +53,7 @@ function directSources(options: {
   claudeConfigDir: string;
   codexHome: string;
   root: string;
+  workingDirectory: string;
 }): HookSource[] {
   const { claudeConfigDir, codexHome, root } = options;
   return [
@@ -77,11 +77,13 @@ function directSources(options: {
       tool: "codex",
       scope: "global"
     },
-    {
-      path: join(root, ".codex", "hooks.json"),
-      tool: "codex",
-      scope: "project"
-    }
+    ...codexProjectConfigPaths(root, options.workingDirectory).map(
+      (path): HookSource => ({
+        path: join(dirname(path), "hooks.json"),
+        tool: "codex",
+        scope: "project"
+      })
+    )
   ];
 }
 
@@ -192,6 +194,7 @@ async function addCodexTomlHooks(
 }
 
 export async function scanHooks(options: {
+  root: string;
   claudeConfigDir: string;
   codexHome: string;
   workingDirectory: string;
@@ -199,12 +202,11 @@ export async function scanHooks(options: {
   entries: InventoryEntry[];
   agents: AgentRecord[];
   managedSettings: ManagedSettingsFile[];
+  contentFor(path: string): string | undefined;
 }): Promise<{ hooks: HookRecord[]; errors: string[] }> {
   const hooks: HookRecord[] = [];
   const errors: string[] = [];
-  const root =
-    (await findGitRoot(options.workingDirectory, "/")) ??
-    options.workingDirectory;
+  const root = options.root;
   const direct = directSources({ ...options, root });
   const seen = new Set<string>();
   for (const source of direct) {
@@ -227,7 +229,8 @@ export async function scanHooks(options: {
     entries: options.entries,
     agents: options.agents,
     plugins: options.plugins,
-    errors
+    errors,
+    contentFor: options.contentFor
   });
   await applyClaudeDisabled(hooks, direct);
   markManagedHookRestrictions(hooks, options.managedSettings);

@@ -1,8 +1,9 @@
 import { lstat, readdir } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import type { WorktreeRecord } from "@agent-mapper/core";
 import { readWorktrees } from "./worktree-git";
+import { boundedMap } from "./bounded-map";
 
 const discoveryNames = new Set([
   ".claude",
@@ -27,6 +28,7 @@ const excludedDirectories = [
 ];
 const exclusions = new Set(excludedDirectories);
 const defaultDepth = 6;
+const maxConcurrentGitScans = 8;
 interface VisitCandidate {
   directory: string;
   name: string;
@@ -38,13 +40,17 @@ interface DiscoveredProject {
   worktrees?: WorktreeRecord[];
 }
 
-async function groupWorktrees(projects: DiscoveredProject[]): Promise<{
+async function groupWorktrees(
+  projects: DiscoveredProject[],
+  home: string
+): Promise<{
   projects: DiscoveredProject[];
   errors: string[];
 }> {
-  const scanned = await Promise.all(
-    projects.map((project) => readWorktrees(project.path))
-  );
+  const scanned = await boundedMap(projects, {
+    limit: maxConcurrentGitScans,
+    task: (project) => readWorktrees(project.path)
+  });
   const grouped = new Map<string, DiscoveredProject>();
   const errors: string[] = [];
   for (const [index, project] of projects.entries()) {
@@ -52,12 +58,16 @@ async function groupWorktrees(projects: DiscoveredProject[]): Promise<{
     errors.push(...(result?.errors ?? []));
     const worktrees = result?.worktrees ?? [];
     const main = worktrees.find((item) => item.isMain);
-    const key = main?.path ?? project.path;
+    let key = main?.path ?? project.path;
+    if (key === home) {
+      key = project.path;
+    }
+    const groupedWorktrees = main && main.path !== home ? worktrees : undefined;
     const previous = grouped.get(key);
     grouped.set(key, {
       path: key,
       hits: [...(previous?.hits ?? []), ...project.hits],
-      worktrees: main ? worktrees : undefined
+      worktrees: groupedWorktrees
     });
   }
   return {
@@ -86,7 +96,11 @@ class DiscoveryWalk {
     if (directory === this.root) {
       return;
     }
-    const project = (await findGitRoot(directory, this.root)) ?? directory;
+    const gitRoot = await findGitRoot(directory, {
+      stop: this.root,
+      errors: this.errors
+    });
+    const project = gitRoot === this.root ? directory : (gitRoot ?? directory);
     this.projects.set(project, [...(this.projects.get(project) ?? []), path]);
   }
 
@@ -133,7 +147,8 @@ export async function discoverProjects(
   const walk = new DiscoveryWalk(resolve(home), maxDepth);
   await walk.visit(walk.root, 0);
   const grouped = await groupWorktrees(
-    [...walk.projects].map(([path, hits]) => ({ path, hits }))
+    [...walk.projects].map(([path, hits]) => ({ path, hits })),
+    walk.root
   );
   return {
     projects: grouped.projects,
@@ -145,14 +160,25 @@ export async function discoverProjects(
 
 export async function findGitRoot(
   directory: string,
-  stop: string
+  options: { stop: string; errors?: string[] }
 ): Promise<string | undefined> {
+  const { stop, errors } = options;
   let current = directory;
-  while (current.startsWith(stop)) {
+  const prefix = stop === sep ? stop : `${stop}${sep}`;
+  while (current === stop || current.startsWith(prefix)) {
     try {
       await lstat(join(current, ".git"));
       return current;
-    } catch {
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT" && code !== "ENOTDIR") {
+        const message = `${join(current, ".git")}: Could not inspect Git root. Check permissions.`;
+        if (errors) {
+          errors.push(message);
+          return undefined;
+        }
+        throw new Error(message, { cause: error });
+      }
       if (current === stop) {
         break;
       }

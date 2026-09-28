@@ -153,7 +153,8 @@ function paragraphs(content: string): Set<string> {
 }
 
 async function repeatedFindings(
-  items: ResolvedEntry[]
+  items: ResolvedEntry[],
+  contentFor?: (path: string) => string | undefined
 ): Promise<{ findings: Finding[]; errors: string[] }> {
   const candidates = items.filter(
     ({ entry, resolution }) =>
@@ -167,7 +168,9 @@ async function repeatedFindings(
   const errors: string[] = [];
   for (const item of candidates) {
     try {
-      const content = await readFile(item.entry.path, "utf8");
+      const content =
+        contentFor?.(item.entry.path) ??
+        (await readFile(item.entry.path, "utf8"));
       for (const paragraph of paragraphs(content)) {
         const key = `${item.entry.tool}:${paragraph}`;
         seen.set(key, [...(seen.get(key) ?? []), item]);
@@ -213,9 +216,10 @@ export async function buildFindings(options: {
   items: ResolvedEntry[];
   plugins: PluginRecord[];
   imports: InstructionImport[];
+  contentFor?: (path: string) => string | undefined;
 }): Promise<{ findings: Finding[]; errors: string[] }> {
   const { items, plugins, imports } = options;
-  const repeated = await repeatedFindings(items);
+  const repeated = await repeatedFindings(items, options.contentFor);
   const findings = [
     ...items.flatMap(entryFindings),
     ...plugins.flatMap(pluginFindings),

@@ -124,3 +124,23 @@ it("keeps duplicate Claude names in one scope unresolved", async () => {
     "unknown"
   ]);
 });
+
+it("does not scan global agents again as project agents in a home Git repo", async () => {
+  const options = fixture();
+  mkdirSync(join(options.home, ".git"));
+  const directory = join(options.home, ".claude", "agents");
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(
+    join(directory, "reviewer.md"),
+    "---\nname: reviewer\ndescription: Review code\n---\nPrompt"
+  );
+  const snapshot = await buildSnapshot(options.nested, options);
+  expect(snapshot.agents).toMatchObject([
+    { name: "reviewer", scope: "global", availability: "configured" }
+  ]);
+  expect(
+    snapshot.findings.some((finding) =>
+      finding.title.includes("Multiple agents")
+    )
+  ).toBe(false);
+});

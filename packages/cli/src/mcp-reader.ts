@@ -1,6 +1,5 @@
 import { join } from "node:path";
 import type { McpRecord, PluginRecord } from "@agent-mapper/core";
-import { findGitRoot } from "./discovery";
 import { add, type Source } from "./mcp-record";
 import { addManagedMcp } from "./mcp-managed";
 import { addCodexMcp } from "./mcp-codex";
@@ -32,23 +31,10 @@ async function addJson(
   options: {
     source: Source;
     errors: string[];
-    project?: string;
   }
 ): Promise<void> {
   const data = await json(options.source.path, options.errors);
-  if (!data) {
-    return;
-  }
-  if (options.project) {
-    const project = object(object(data.projects)?.[options.project]);
-    if (project) {
-      addMap(records, {
-        source: { ...options.source, scope: "project" },
-        data: project,
-        prefix: `projects.${options.project}.mcpServers`
-      });
-    }
-  } else {
+  if (data) {
     addMap(records, { source: options.source, data, prefix: "mcpServers" });
   }
 }
@@ -119,12 +105,9 @@ function markClaudeShadowing(records: McpRecord[], projectPath: string): void {
   }
 }
 
-async function projectRoot(workingDirectory: string): Promise<string> {
-  return (await findGitRoot(workingDirectory, "/")) ?? workingDirectory;
-}
-
 export async function scanMcp(options: {
   workingDirectory: string;
+  root: string;
   claudeStatePath: string;
   codexHome: string;
   plugins: PluginRecord[];
@@ -133,17 +116,24 @@ export async function scanMcp(options: {
 }): Promise<{ mcpServers: McpRecord[]; errors: string[] }> {
   const mcpServers: McpRecord[] = [];
   const errors: string[] = [];
-  const root = await projectRoot(options.workingDirectory);
+  const root = options.root;
   const claudePath = options.claudeStatePath;
-  await addJson(mcpServers, {
-    source: { path: claudePath, tool: "claude", scope: "global" },
-    errors
-  });
-  await addJson(mcpServers, {
-    source: { path: claudePath, tool: "claude", scope: "global" },
-    errors,
-    project: root
-  });
+  const claudeState = await json(claudePath, errors);
+  if (claudeState) {
+    addMap(mcpServers, {
+      source: { path: claudePath, tool: "claude", scope: "global" },
+      data: claudeState,
+      prefix: "mcpServers"
+    });
+    const project = object(object(claudeState.projects)?.[root]);
+    if (project) {
+      addMap(mcpServers, {
+        source: { path: claudePath, tool: "claude", scope: "project" },
+        data: project,
+        prefix: `projects.${root}.mcpServers`
+      });
+    }
+  }
   await addJson(mcpServers, {
     source: { path: join(root, ".mcp.json"), tool: "claude", scope: "project" },
     errors

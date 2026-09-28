@@ -1,11 +1,11 @@
 import { readdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import type { AgentRecord, PluginRecord } from "@agent-mapper/core";
-import { findGitRoot } from "./discovery";
 import { inspectAgent, type AgentSource } from "./agent-record";
 
 interface ScanOptions {
   workingDirectory: string;
+  root: string;
   home: string;
   claudeConfigDir: string;
   codexHome: string;
@@ -88,10 +88,13 @@ async function scanProject(
   input: { options: ScanOptions; errors: string[] }
 ): Promise<void> {
   const { options, errors } = input;
-  const root =
-    (await findGitRoot(options.workingDirectory, "/")) ??
-    options.workingDirectory;
-  for (const directory of projectDirectories(root, options.workingDirectory)) {
+  for (const directory of projectDirectories(
+    options.root,
+    options.workingDirectory
+  )) {
+    if (resolve(directory) === resolve(options.home)) {
+      continue;
+    }
     await scanDirectory(agents, {
       directory: join(directory, ".claude", "agents"),
       tool: "claude",

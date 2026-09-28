@@ -11,6 +11,7 @@ import { scanInventory, type ScanOptions, type ScanResult } from "./inventory";
 import { scanWorktrees } from "./worktree-compare";
 import { buildFindings } from "./findings";
 import { scanInstructionImports } from "./instruction-imports";
+import { resolveScanContext } from "./scan-context";
 export { createAppServer } from "./server";
 
 function coverage(errors: string[]): string[] {
@@ -46,12 +47,14 @@ async function analyzeSources(options: {
   const imports = await scanInstructionImports({
     items,
     home,
-    workingDirectory: path
+    workingDirectory: path,
+    contentFor: scan.contentFor
   });
   const findings = await buildFindings({
     items,
     plugins: scan.plugins,
-    imports: imports.imports
+    imports: imports.imports,
+    contentFor: scan.contentFor
   });
   return { items, imports, findings };
 }
@@ -80,8 +83,12 @@ export async function buildSnapshot(
   options: Omit<ScanOptions, "workingDirectory"> = {}
 ): Promise<InventorySnapshot> {
   const path = await validatedDirectory(workingDirectory);
-  const scan = await scanInventory({ ...options, workingDirectory: path });
-  const worktree = await scanWorktrees(path);
+  const context = await resolveScanContext(path);
+  const scan = await scanInventory(
+    { ...options, workingDirectory: path },
+    context
+  );
+  const worktree = await scanWorktrees(path, context.worktrees);
   const { items, imports, findings } = await analyzeSources({
     scan,
     path,

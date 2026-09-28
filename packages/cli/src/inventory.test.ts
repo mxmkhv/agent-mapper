@@ -39,6 +39,21 @@ it("finds project hits without walking generated or hidden home folders", async 
   ]);
   expect(result.exclusions).toContain("node_modules");
 });
+
+it("keeps folders separate when home itself is a Git repository", async () => {
+  const home = fixture();
+  mkdirSync(join(home, ".git"));
+  for (const name of ["a", "b"]) {
+    const project = join(home, "work", name);
+    mkdirSync(project, { recursive: true });
+    writeFileSync(join(project, "AGENTS.md"), "Instructions");
+  }
+  const result = await discoverProjects(home);
+  expect(result.projects.map((project) => project.path)).toEqual([
+    join(home, "work", "a"),
+    join(home, "work", "b")
+  ]);
+});
 it("reads ancestor instructions and project skills for both tools", async () => {
   const home = fixture();
   const project = join(home, "app");
@@ -132,6 +147,19 @@ it("shows a broken symlink instead of dropping it", async () => {
       path: join(project, "AGENTS.md")
     }
   ]);
+});
+
+it("ignores skill-folder symlinks that point to regular files", async () => {
+  const home = fixture();
+  const project = join(home, "app");
+  const skills = join(home, ".claude", "skills");
+  mkdirSync(skills, { recursive: true });
+  mkdirSync(project);
+  writeFileSync(join(home, "README.md"), "Not a skill");
+  symlinkSync(join(home, "README.md"), join(skills, "readme"));
+  const result = await scanInventory({ workingDirectory: project, home });
+  expect(result.entries.some((entry) => entry.kind === "skill")).toBe(false);
+  expect(result.errors.some((error) => error.includes("ENOTDIR"))).toBe(false);
 });
 
 it("stops project instruction discovery at the Git root", async () => {

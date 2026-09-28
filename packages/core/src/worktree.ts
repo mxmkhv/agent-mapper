@@ -3,7 +3,7 @@ import type { ToolId } from "./inventory";
 export interface WorktreeRecord {
   path: string;
   isMain: boolean;
-  state: "available" | "prunable" | "missing";
+  state: "available" | "prunable" | "missing" | "unknown";
   branch?: string;
   head?: string;
 }

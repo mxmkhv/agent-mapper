@@ -30,10 +30,21 @@ function sessionToken(): string {
 }
 
 async function request(path: string, init?: RequestInit): Promise<ApiPayload> {
-  const response = await fetch(path, {
-    ...init,
-    headers: { ...init?.headers, authorization: `Bearer ${sessionToken()}` }
-  });
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...init,
+      headers: { ...init?.headers, authorization: `Bearer ${sessionToken()}` }
+    });
+  } catch (error) {
+    if (init?.signal?.aborted) {
+      throw error;
+    }
+    throw new Error(
+      "Could not reach the local server. Check that agent-mapper is running, then try again.",
+      { cause: error }
+    );
+  }
   const payload: unknown = await response.json();
   if (!response.ok) {
     if (
