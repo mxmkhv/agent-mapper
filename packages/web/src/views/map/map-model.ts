@@ -24,6 +24,8 @@ export interface MapLayer {
   kinds: KindGroup[];
   plugins: InventoryRecord[];
   hiddenPlugins: number;
+  /** Cached, disabled, or unconfirmed duplicate versions, counted whether or not they are shown. */
+  backgroundPlugins: number;
 }
 
 function kindGroups(records: InventoryRecord[]): KindGroup[] {
@@ -72,7 +74,14 @@ function pluginsFor(allPlugins: InventoryRecord[], showInactive: boolean) {
       (plugin) => showInactive || !isBackgroundVersion(plugin, allPlugins)
     )
     .sort((a, b) => tierRank[a.tier] - tierRank[b.tier]);
-  return { plugins, hiddenPlugins: allPlugins.length - plugins.length };
+  const backgroundPlugins = allPlugins.filter((plugin) =>
+    isBackgroundVersion(plugin, allPlugins)
+  ).length;
+  return {
+    plugins,
+    hiddenPlugins: allPlugins.length - plugins.length,
+    backgroundPlugins
+  };
 }
 
 /** Layers for one tool. Managed appears only when something is managed; inactive items only on request. */

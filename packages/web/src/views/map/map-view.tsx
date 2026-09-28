@@ -44,7 +44,7 @@ function PluginChips({
   layer: MapLayer;
   props: MapViewProps;
 }) {
-  if (!layer.plugins.length && !layer.hiddenPlugins) {
+  if (!layer.plugins.length && !layer.backgroundPlugins) {
     return null;
   }
   const selected = layer.plugins.filter(
@@ -82,15 +82,17 @@ function PluginChips({
             </button>
           ))}
         </div>
-        {layer.hiddenPlugins ? (
+        {layer.backgroundPlugins ? (
           <p className="mt-1.5 mb-0 text-caption text-ink-faint">
-            {layer.hiddenPlugins} other{" "}
-            {layer.hiddenPlugins === 1 ? "version" : "versions"} hidden ·{" "}
+            {props.showInactive ? "Showing " : ""}
+            {layer.backgroundPlugins} other{" "}
+            {layer.backgroundPlugins === 1 ? "version" : "versions"}
+            {props.showInactive ? "" : " hidden"} ·{" "}
             <button
               className="text-ink-muted underline underline-offset-2"
               onClick={props.onToggleInactive}
             >
-              show
+              {props.showInactive ? "hide" : "show"}
             </button>
           </p>
         ) : null}
@@ -114,22 +116,24 @@ function LayerRow({
     tool: props.tool
   });
   const empty =
-    !layer.kinds.length && !layer.plugins.length && !layer.hiddenPlugins;
+    !layer.kinds.length && !layer.plugins.length && !layer.backgroundPlugins;
   return (
-    <>
-      <div className="sticky top-3 self-start border-t border-hairline pt-3.5">
+    // Each layer is its own row, so its sticky label scrolls away with the layer instead of stacking.
+    <section className="grid grid-cols-[92px_minmax(0,1fr)] gap-x-3 border-t border-hairline">
+      <div className="sticky top-0 self-start bg-canvas pt-3.5 pb-2">
         <strong className="block text-label font-semibold">
           {layerLabel[layer.layer]}
         </strong>
-        <span className="mt-0.5 flex flex-wrap gap-x-1 font-mono text-caption text-ink-faint">
-          {hint.split(" · ").map((part, index) => (
-            <span className="whitespace-nowrap" key={part}>
-              {index ? `· ${part}` : part}
-            </span>
-          ))}
-        </span>
+        {hint.split(" · ").map((part) => (
+          <span
+            className="mt-0.5 block font-mono text-caption break-words text-ink-faint"
+            key={part}
+          >
+            {part}
+          </span>
+        ))}
       </div>
-      <div className="min-w-0 border-t border-hairline pt-2.5 pb-3.5">
+      <div className="min-w-0 pt-2.5 pb-3.5">
         {empty ? (
           <p className="m-0 px-3 py-2 text-label text-ink-faint">
             Nothing at this layer
@@ -152,7 +156,7 @@ function LayerRow({
           </div>
         )}
       </div>
-    </>
+    </section>
   );
 }
 
@@ -161,9 +165,8 @@ export function MapView(props: MapViewProps) {
   const layers = buildMap(props.records, props.showInactive);
   const order = loadOrder(props.records);
   return (
-    <div className="grid grid-cols-[92px_minmax(0,1fr)] gap-x-3 px-5 pt-4 pb-10">
-      <div />
-      <div className="max-w-[860px] px-1 pb-3">
+    <div className="px-5 pt-4 pb-10">
+      <div className="ml-[104px] max-w-[860px] px-1 pb-3">
         <div className="flex items-center gap-2 text-[14px] font-semibold">
           <ToolGlyph tool={props.tool} />
           {toolName[props.tool]}
