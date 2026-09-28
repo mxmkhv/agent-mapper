@@ -6,6 +6,13 @@ import type { InventoryEntry, ToolId } from "@agent-mapper/core";
 const frontmatterStart = 4;
 const frontmatterEndLength = 4;
 const idLength = 20;
+function lineCount(content: string): number {
+  if (!content) {
+    return 0;
+  }
+  const lines = content.split(/\r\n|\n|\r/).length;
+  return lines - Number(/[\r\n]$/.test(content));
+}
 interface SkillMetadata {
   name?: string;
   characters?: number;
@@ -125,6 +132,7 @@ export class SourceCollector {
     }
     if (source.state === "readable") {
       item.characters = source.content.length;
+      item.lineCount = lineCount(source.content);
       if (details.characters !== undefined) {
         item.metadataCharacters = details.characters;
       }

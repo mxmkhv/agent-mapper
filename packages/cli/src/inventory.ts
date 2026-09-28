@@ -83,7 +83,8 @@ async function scanDirectory(
       tool,
       kind: "instruction",
       path: join(directory, name),
-      scope: "project"
+      scope: "project",
+      projectPath: name.startsWith(".claude/") ? directory : undefined
     });
   }
   const skillPaths = [

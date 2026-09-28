@@ -1,6 +1,7 @@
 import type { InventorySnapshot } from "@agent-mapper/core";
 
 export type Tab =
+  | "finding"
   | "instruction"
   | "skill"
   | "agent"
@@ -19,6 +20,12 @@ interface TabsProps {
 export function WorkspaceTabs({ tab, snapshot, onSelect }: TabsProps) {
   return (
     <nav className="tabs" aria-label="Inventory views">
+      <button
+        className={tab === "finding" ? "active" : ""}
+        onClick={() => onSelect("finding")}
+      >
+        Findings <span>{snapshot.findings.length}</span>
+      </button>
       <button
         className={tab === "instruction" ? "active" : ""}
         onClick={() => onSelect("instruction")}

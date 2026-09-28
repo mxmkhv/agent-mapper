@@ -6,7 +6,7 @@ import { HookList, HookDetail } from "./hook-panel";
 import { McpList, McpDetail } from "./mcp-panel";
 import { MemoryList, MemoryDetail } from "./memory-panel";
 import { AgentList, AgentDetail } from "./agent-panel";
-import { WorktreePanel } from "./worktree-panel";
+import { InventoryView } from "./inventory-view";
 import { CoverageNotes, WorkspaceSummary } from "./workspace-summary";
 import { WorkspaceTabs, type Tab } from "./workspace-tabs";
 import { SearchPalette } from "./search-palette";
@@ -217,28 +217,15 @@ export function Workspace({
       <WorkspaceSummary snapshot={snapshot} />
       <ContextSummaryPanel context={snapshot.context} tool={tool} />
       <WorkspaceTabs tab={tab} snapshot={snapshot} onSelect={setTab} />
-      <div className="inventory-grid">
-        {tab === "worktree" ? (
-          <WorktreePanel
-            worktrees={snapshot.worktrees}
-            comparison={snapshot.comparison}
-            tool={tool}
-            workingDirectory={snapshot.workingDirectory}
-            onSelectPath={onSelectPath}
-          />
-        ) : (
-          <>
-            <section className="inventory-list">
-              <div className="list-heading">
-                <span>NAME</span>
-                <span>EXPECTED STATE</span>
-              </div>
-              {listContent()}
-            </section>
-            {detailContent()}
-          </>
-        )}
-      </div>
+      <InventoryView
+        snapshot={snapshot}
+        tab={tab}
+        tool={tool}
+        list={listContent()}
+        detail={detailContent()}
+        onOpenSource={openEntry}
+        onSelectPath={onSelectPath}
+      />
       <CoverageNotes notes={snapshot.coverage} />
       {searchOpen ? (
         <SearchPalette

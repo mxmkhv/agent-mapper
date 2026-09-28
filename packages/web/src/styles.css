@@ -537,6 +537,13 @@ summary:focus-visible {
 .state-badge.shadowed {
   color: #956a39;
 }
+.state-badge.finding-problem {
+  color: var(--danger);
+}
+.state-badge.finding-information,
+.state-badge.finding-coverage {
+  color: var(--muted);
+}
 .state-badge.only-main,
 .state-badge.only-here,
 .state-badge.different-content,
@@ -651,6 +658,9 @@ summary:focus-visible {
 .detail-section .source-path {
   overflow-wrap: anywhere;
   color: var(--foreground);
+}
+.finding-source + .finding-source {
+  margin-top: 16px;
 }
 .detail-actions {
   display: flex;

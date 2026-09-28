@@ -127,6 +127,9 @@ function filterSnapshot(snapshot: InventorySnapshot, tools: ToolId[]) {
   const context = Object.fromEntries(
     tools.map((tool) => [tool, snapshot.context[tool]])
   );
+  const findings = snapshot.findings.filter((finding) =>
+    tools.includes(finding.tool)
+  );
   return {
     items,
     plugins,
@@ -135,7 +138,8 @@ function filterSnapshot(snapshot: InventorySnapshot, tools: ToolId[]) {
     agents,
     comparison,
     memories,
-    context
+    context,
+    findings
   };
 }
 
@@ -165,6 +169,14 @@ async function explain(options: ExplanationOptions): Promise<void> {
   printMcp(filtered.mcpServers);
   printMemory(filtered.memories);
   printAgents(filtered.agents);
+  for (const finding of filtered.findings) {
+    console.log(
+      `${finding.tool} ${finding.level} ${finding.title}: ${finding.reason}`
+    );
+    for (const source of finding.sources) {
+      console.log(`  ${source.path}`);
+    }
+  }
   for (const note of snapshot.coverage) {
     console.log(`Coverage: ${note}`);
   }

@@ -11,8 +11,9 @@ export function WorkspaceSummary({
       {snapshot.hooks.length} hooks · {snapshot.plugins.length} plugins ·{" "}
       {snapshot.mcpServers.length} MCP servers · {snapshot.agents.length} agents
       · {snapshot.memories.length} memory files ·{" "}
-      {snapshot.worktrees.filter((item) => !item.isMain).length} worktrees ·
-      Scanned {new Date(snapshot.scannedAt).toLocaleTimeString()}
+      {snapshot.worktrees.filter((item) => !item.isMain).length} worktrees ·{" "}
+      {snapshot.findings.length} findings · Scanned{" "}
+      {new Date(snapshot.scannedAt).toLocaleTimeString()}
     </div>
   );
 }

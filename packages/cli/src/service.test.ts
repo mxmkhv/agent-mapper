@@ -57,6 +57,29 @@ it("adds approximate context figures to the shared snapshot without exposing tex
   expect(JSON.stringify(snapshot)).not.toContain("Private skill body");
 });
 
+it("applies project instructions stored under .claude to the selected folder", async () => {
+  const home = realpathSync(
+    mkdtempSync(join(tmpdir(), "agent-mapper-claude-folder-"))
+  );
+  roots.push(home);
+  const project = join(home, "app");
+  mkdirSync(join(project, ".claude"), { recursive: true });
+  writeFileSync(join(project, ".claude", "CLAUDE.md"), "Project guidance");
+  writeFileSync(join(project, "AGENTS.md"), "Fallback guidance");
+  const snapshot = await buildSnapshot(project, {
+    home,
+    codexHome: join(home, ".codex")
+  });
+  const claude = snapshot.items.filter(({ entry }) => entry.tool === "claude");
+  expect(
+    claude.map(({ entry, resolution }) => [entry.path, resolution.availability])
+  ).toContainEqual([join(project, ".claude", "CLAUDE.md"), "expected"]);
+  expect(
+    claude.find(({ entry }) => entry.path === join(project, "AGENTS.md"))
+      ?.resolution.availability
+  ).toBe("shadowed");
+});
+
 it("requires the session token for local inventory access", async () => {
   const home = mkdtempSync(join(tmpdir(), "agent-mapper-server-"));
   roots.push(home);

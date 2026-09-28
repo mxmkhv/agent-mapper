@@ -3,7 +3,7 @@ import type { Tab } from "./workspace-tabs";
 
 export interface SearchItem {
   id: string;
-  tab: Exclude<Tab, "worktree">;
+  tab: Exclude<Tab, "worktree" | "finding">;
   tool: ToolId | "unknown";
   title: string;
   path: string;

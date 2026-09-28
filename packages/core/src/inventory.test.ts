@@ -89,6 +89,25 @@ it("shows Codex's same-folder override as the winner", () => {
   expect(results[0]?.resolution.reason).toContain("AGENTS.override.md");
 });
 
+it("skips empty Codex instruction files without letting an empty override win", () => {
+  const results = resolveInventory(
+    [
+      entry({ id: "normal", characters: 20 }),
+      entry({
+        id: "override",
+        name: "AGENTS.override.md",
+        path: "/work/AGENTS.override.md",
+        characters: 0
+      })
+    ],
+    { workingDirectory: "/work", tool: "codex" }
+  );
+  expect(results.map(({ resolution }) => resolution.availability)).toEqual([
+    "expected",
+    "not-applicable"
+  ]);
+});
+
 it("uses Claude's project AGENTS fallback only without a project CLAUDE file", () => {
   const agent = entry({ id: "claude-agent", tool: "claude", characters: 20 });
   const claude = entry({

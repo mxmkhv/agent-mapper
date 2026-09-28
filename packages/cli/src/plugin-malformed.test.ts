@@ -118,6 +118,9 @@ it("keeps a broken cached version visible", async () => {
     state: "missing",
     reason: "Installation path is missing or unreadable."
   });
+  expect(snapshot.findings).toContainEqual(
+    expect.objectContaining({ code: "missing-plugin", level: "problem" })
+  );
 });
 
 it("keeps an inline Claude command's file provenance", async () => {

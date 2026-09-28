@@ -1,6 +1,6 @@
 # agent-mapper
 
-A local, read-only view of Claude Code and Codex configuration. The current build inventories instruction files, skills, and plugin copies in a local web UI.
+A local, read-only view of Claude Code and Codex configuration. The current build inventories local instructions, skills, agents, hooks, plugins, MCP declarations, memory files, and linked worktrees.
 
 ## Start
 
@@ -18,6 +18,8 @@ A local, read-only view of Claude Code and Codex configuration. The current buil
 | `node packages/cli/dist/index.js --json .`      | Export the same resolved inventory as JSON                            |
 
 Press `⌘K` or click Search to find inventory items by name or source path across tabs. The context cards separate approximate startup text, skill metadata text, and available on-demand text for each tool.
+
+The Findings tab reports broken source links, unreadable files, shadowed instructions, missing plugin files, long instructions, and exact repeated paragraphs in expected startup sources. Findings link to their sources. The 200-line threshold is a review prompt, not a tool limit; repeated paragraph text stays out of JSON and the browser response.
 
 The UI accepts an explicit folder path, including folders outside home. Select an instruction, skill, agent, hook, plugin, MCP server, or memory file to inspect its source and expected state, then Open or Reveal it in macOS. Hooks are grouped by lifecycle area and show the event, matcher, handler type, source locator, flags, and applicability. Handler commands, URLs, and prompts stay in the source file. Plugin detail lists discovered skills, commands, agents, hooks, and MCP declarations. Selected plugin skills, agents, hooks, and MCP declarations link to their inventory views and back. Installation, enablement, cached copies, and unknown version selection have separate states. Counts describe discovered declarations, not runtime capabilities.
 
@@ -45,4 +47,4 @@ After `bun run build`, run `node packages/cli/dist/index.js --help` to see CLI u
 
 Claude Code registration is in `.claude/settings.json`; Codex registration is in `.codex/hooks.json`. Both call the same scripts. Restart/reload the harness as needed. In Codex, trust the project and review the definitions in `/hooks`. `AGENTS.md` links to `CLAUDE.md` so both read the same instructions.
 
-[Quality gates and limitations](docs/quality-gates.md) · [Product brief](docs/mvp-v2.md)
+[Quality gates and limitations](docs/quality-gates.md) · [Provider verification](docs/provider-verification.md) · [Product brief](docs/mvp-v2.md)

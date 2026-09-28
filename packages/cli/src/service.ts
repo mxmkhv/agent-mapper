@@ -9,6 +9,7 @@ import {
 } from "@agent-mapper/core";
 import { scanInventory, type ScanOptions } from "./inventory";
 import { scanWorktrees } from "./worktree-compare";
+import { buildFindings } from "./findings";
 export { createAppServer } from "./server";
 
 function coverage(errors: string[]): string[] {
@@ -20,6 +21,7 @@ function coverage(errors: string[]): string[] {
     "Agent coverage includes local Claude Markdown and Codex TOML files, plus Claude plugin agent files. Managed and session agents, unsupported declarations, project trust, and live use are not verified. Agent prompts stay in source files.",
     "Worktree comparison checks common local configuration files by relative path and content. Generated folders and inherited global files are excluded. A changed settings file does not identify which declaration changed inside it.",
     "Context figures approximate known file text at four characters per token. Skill listing budgets, memory loading, settings effects, and other runtime content are not estimated.",
+    "Instruction resolution models default Claude Code and Codex file rules. Custom instruction file settings, trust decisions, and runtime overrides are not inspected.",
     "This view models a fresh local CLI session. Runtime flags, account-managed settings, and live session state are not inspected."
   ];
 }
@@ -53,6 +55,7 @@ export async function buildSnapshot(
   const scan = await scanInventory({ ...options, workingDirectory: path });
   const worktree = await scanWorktrees(path);
   const items = resolveItems(scan.entries, path);
+  const findings = await buildFindings(items, scan.plugins);
   return {
     workingDirectory: path,
     scannedAt: new Date().toISOString(),
@@ -70,7 +73,8 @@ export async function buildSnapshot(
     worktrees: worktree.worktrees,
     comparison: worktree.comparison,
     items,
-    coverage: coverage([...scan.errors, ...worktree.errors])
+    findings: findings.findings,
+    coverage: coverage([...scan.errors, ...worktree.errors, ...findings.errors])
   };
 }
 
@@ -83,10 +87,14 @@ export async function buildGlobalSnapshot(
   const memories = snapshot.memories.filter(
     (memory) => memory.scope !== "project"
   );
+  const plugins = snapshot.plugins.filter(
+    (plugin) => plugin.scope !== "project"
+  );
+  const findings = await buildFindings(items, plugins);
   return {
     ...snapshot,
     items,
-    plugins: snapshot.plugins.filter((plugin) => plugin.scope !== "project"),
+    plugins,
     hooks: snapshot.hooks.filter((hook) => hook.scope !== "project"),
     mcpServers: snapshot.mcpServers.filter(
       (server) => server.scope !== "project"
@@ -94,6 +102,7 @@ export async function buildGlobalSnapshot(
     memories,
     agents,
     context: summarizeContext({ items, agents, memories }),
+    findings: findings.findings,
     worktrees: [],
     comparison: undefined
   };

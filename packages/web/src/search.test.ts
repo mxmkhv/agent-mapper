@@ -55,6 +55,7 @@ const snapshot: InventorySnapshot = {
     codex: { startup: 0, skillMetadata: 0, onDemand: 0, unaccountedSources: 0 }
   },
   worktrees: [],
+  findings: [],
   coverage: []
 };
 
