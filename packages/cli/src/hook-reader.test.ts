@@ -144,6 +144,49 @@ it("marks Claude hook declarations disabled when settings disable hooks", async 
   expect(JSON.stringify(snapshot)).not.toContain("private-value");
 });
 
+it("lets project settings override a user-level hook disable", async () => {
+  const options = fixture();
+  mkdirSync(join(options.home, ".claude"));
+  mkdirSync(join(options.project, ".claude"));
+  writeFileSync(
+    join(options.home, ".claude", "settings.json"),
+    JSON.stringify({
+      disableAllHooks: true,
+      hooks: { Stop: [{ hooks: [{ type: "command" }] }] }
+    })
+  );
+  writeFileSync(
+    join(options.project, ".claude", "settings.json"),
+    JSON.stringify({ disableAllHooks: false })
+  );
+  const snapshot = await buildSnapshot(options.project, options);
+  expect(snapshot.hooks[0]).toMatchObject({
+    event: "Stop",
+    availability: "configured"
+  });
+});
+
+it("lets local project settings override a project-level hook enable", async () => {
+  const options = fixture();
+  mkdirSync(join(options.project, ".claude"));
+  writeFileSync(
+    join(options.project, ".claude", "settings.json"),
+    JSON.stringify({
+      disableAllHooks: false,
+      hooks: { Stop: [{ hooks: [{ type: "command" }] }] }
+    })
+  );
+  writeFileSync(
+    join(options.project, ".claude", "settings.local.json"),
+    JSON.stringify({ disableAllHooks: true })
+  );
+  const snapshot = await buildSnapshot(options.project, options);
+  expect(snapshot.hooks[0]).toMatchObject({
+    event: "Stop",
+    availability: "disabled"
+  });
+});
+
 it("marks Codex hooks disabled when the user feature flag is off", async () => {
   const options = fixture();
   mkdirSync(options.codexHome);

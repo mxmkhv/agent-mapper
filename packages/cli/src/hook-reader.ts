@@ -99,14 +99,17 @@ async function applyClaudeDisabled(
   hooks: HookRecord[],
   sources: HookSource[]
 ): Promise<void> {
+  let disabled: boolean | undefined;
   for (const source of sources.filter((item) => item.tool === "claude")) {
     const settings = await json(source.path, []);
-    if (settings?.disableAllHooks === true) {
-      for (const hook of hooks.filter((item) => item.tool === "claude")) {
-        hook.availability = "disabled";
-        hook.reason = "Claude settings disable hooks for this context.";
-      }
-      return;
+    if (typeof settings?.disableAllHooks === "boolean") {
+      disabled = settings.disableAllHooks;
+    }
+  }
+  if (disabled) {
+    for (const hook of hooks.filter((item) => item.tool === "claude")) {
+      hook.availability = "disabled";
+      hook.reason = "Claude settings disable hooks for this context.";
     }
   }
 }
