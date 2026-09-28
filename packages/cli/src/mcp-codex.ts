@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
-import { join, relative, sep } from "node:path";
+import { join } from "node:path";
 import type { McpRecord } from "@agent-mapper/core";
+import { codexProjectConfigPaths } from "./codex-config-paths";
 import { add, type Source } from "./mcp-record";
 import type { JsonMap } from "./plugin-reader-common";
 
@@ -81,20 +82,6 @@ async function addToml(
   finish();
 }
 
-function projectPaths(root: string, selected: string): string[] {
-  const paths = [join(root, ".codex", "config.toml")];
-  const difference = relative(root, selected);
-  if (difference === ".." || difference.startsWith(`..${sep}`)) {
-    return paths;
-  }
-  let directory = root;
-  for (const part of difference.split(sep).filter(Boolean)) {
-    directory = join(directory, part);
-    paths.push(join(directory, ".codex", "config.toml"));
-  }
-  return paths;
-}
-
 function markCollisions(records: McpRecord[]): void {
   const selected = new Map<string, McpRecord>();
   for (const record of records) {
@@ -122,7 +109,10 @@ export async function addCodexMcp(
     source: { path: userPath, tool: "codex", scope: "global" },
     errors: options.errors
   });
-  for (const path of projectPaths(options.root, options.workingDirectory)) {
+  for (const path of codexProjectConfigPaths(
+    options.root,
+    options.workingDirectory
+  )) {
     if (path === userPath) {
       continue;
     }

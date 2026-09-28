@@ -7,11 +7,12 @@ import type {
 } from "@agent-mapper/core";
 import { findGitRoot } from "./discovery";
 import { addGroups, type HookSource } from "./hook-record";
-import { addToml, codexHooksDisabled } from "./hook-toml";
+import { addToml, codexHooksSetting } from "./hook-toml";
 import { json, object, type JsonMap } from "./plugin-reader-common";
 import { addFrontmatterHooks } from "./hook-frontmatter";
 import { addManagedHooks, markManagedHookRestrictions } from "./hook-managed";
 import type { ManagedSettingsFile } from "./managed-claude-reader";
+import { codexProjectConfigPaths } from "./codex-config-paths";
 
 function hookMaps(data: JsonMap): { events: JsonMap; prefix: string }[] {
   const extension = object(object(data.extensions)?.["com.openai"]);
@@ -126,14 +127,39 @@ async function applyClaudeDisabled(
 
 async function applyCodexDisabled(
   hooks: HookRecord[],
-  codexHome: string
-): Promise<void> {
-  if (!(await codexHooksDisabled(join(codexHome, "config.toml")))) {
-    return;
+  options: {
+    codexHome: string;
+    root: string;
+    workingDirectory: string;
+    errors: string[];
   }
+): Promise<void> {
+  const userPath = join(options.codexHome, "config.toml");
+  const user = await codexHooksSetting(userPath, options.errors);
+  let project: boolean | undefined;
+  for (const path of codexProjectConfigPaths(
+    options.root,
+    options.workingDirectory
+  )) {
+    if (path === userPath) {
+      continue;
+    }
+    const value = await codexHooksSetting(path, options.errors);
+    if (value !== undefined) {
+      project = value;
+    }
+  }
+  const disabled = user === false && project !== true;
+  const uncertain = project === false || (user === false && project === true);
   for (const hook of hooks.filter((item) => item.tool === "codex")) {
-    hook.availability = "disabled";
-    hook.reason = "Codex user configuration disables hooks.";
+    if (disabled) {
+      hook.availability = "disabled";
+      hook.reason = "Codex user configuration disables hooks.";
+    } else if (uncertain) {
+      hook.availability = "unknown";
+      hook.reason =
+        "A project feature setting may change Codex hook enablement if the project is trusted.";
+    }
   }
 }
 
@@ -141,28 +167,27 @@ async function addCodexTomlHooks(
   hooks: HookRecord[],
   options: {
     root: string;
+    workingDirectory: string;
     codexHome: string;
     seen: Set<string>;
     errors: string[];
   }
 ): Promise<void> {
-  for (const source of [
-    {
-      path: join(options.codexHome, "config.toml"),
-      tool: "codex" as const,
-      scope: "global" as const
-    },
-    {
-      path: join(options.root, ".codex", "config.toml"),
-      tool: "codex" as const,
-      scope: "project" as const
-    }
-  ]) {
+  const paths = [
+    { path: join(options.codexHome, "config.toml"), scope: "global" as const },
+    ...codexProjectConfigPaths(options.root, options.workingDirectory).map(
+      (path) => ({ path, scope: "project" as const })
+    )
+  ];
+  for (const source of paths) {
     if (options.seen.has(source.path)) {
       continue;
     }
     options.seen.add(source.path);
-    await addToml(hooks, { source, errors: options.errors });
+    await addToml(hooks, {
+      source: { ...source, tool: "codex" },
+      errors: options.errors
+    });
   }
 }
 
@@ -191,6 +216,7 @@ export async function scanHooks(options: {
   }
   await addCodexTomlHooks(hooks, {
     root,
+    workingDirectory: options.workingDirectory,
     codexHome: options.codexHome,
     seen,
     errors
@@ -205,6 +231,11 @@ export async function scanHooks(options: {
   });
   await applyClaudeDisabled(hooks, direct);
   markManagedHookRestrictions(hooks, options.managedSettings);
-  await applyCodexDisabled(hooks, options.codexHome);
+  await applyCodexDisabled(hooks, {
+    codexHome: options.codexHome,
+    root,
+    workingDirectory: options.workingDirectory,
+    errors
+  });
   return { hooks, errors };
 }

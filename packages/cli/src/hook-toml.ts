@@ -148,23 +148,31 @@ export async function addToml(
   parseToml(hooks, { source: options.source, content });
 }
 
-export async function codexHooksDisabled(path: string): Promise<boolean> {
+export async function codexHooksSetting(
+  path: string,
+  errors: string[]
+): Promise<boolean | undefined> {
   let content: string;
   try {
     content = await readFile(path, "utf8");
-  } catch {
-    return false;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      errors.push(`${path}: Could not read Codex hook feature setting.`);
+    }
+    return undefined;
   }
   let inFeatures = false;
+  let setting: boolean | undefined;
   for (const line of content.split(/\r?\n/)) {
     if (/^\s*\[/.test(line)) {
       inFeatures = /^\s*\[features\]\s*(?:#.*)?$/.test(line);
-    } else if (
-      inFeatures &&
-      /^\s*(?:hooks|codex_hooks)\s*=\s*false\s*(?:#.*)?$/.test(line)
-    ) {
-      return true;
+    } else if (inFeatures) {
+      const match =
+        /^\s*(?:hooks|codex_hooks)\s*=\s*(true|false)\s*(?:#.*)?$/.exec(line);
+      if (match) {
+        setting = match[1] === "true";
+      }
     }
   }
-  return false;
+  return setting;
 }

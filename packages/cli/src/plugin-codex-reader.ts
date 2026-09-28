@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { PluginRecord, PluginState } from "@agent-mapper/core";
 import { findGitRoot } from "./discovery";
+import { codexProjectConfigPaths } from "./codex-config-paths";
 import {
   cache,
   plugin,
@@ -61,15 +62,18 @@ async function appliedSettings(
     project: false,
     errors
   });
-  if (join(root, ".codex") === options.codexHome) {
-    return result;
-  }
-  for (const [key, value] of await settings({
-    path: join(root, ".codex", "config.toml"),
-    project: true,
-    errors
-  })) {
-    result.set(key, value);
+  const userPath = join(options.codexHome, "config.toml");
+  for (const path of codexProjectConfigPaths(root, options.workingDirectory)) {
+    if (path === userPath) {
+      continue;
+    }
+    for (const [key, value] of await settings({
+      path,
+      project: true,
+      errors
+    })) {
+      result.set(key, value);
+    }
   }
   return result;
 }
@@ -82,12 +86,12 @@ function state(
     return "cached";
   }
   if (!setting.enabled) {
-    return "disabled";
+    return setting.project ? "unknown" : "disabled";
   }
   return setting.project || versions > 1 ? "unknown" : "selected";
 }
 
-function reason(value: PluginState): string {
+function reason(value: PluginState, setting?: PluginSetting): string {
   if (value === "selected") {
     return "One cached version matches an enabled user setting.";
   }
@@ -96,6 +100,9 @@ function reason(value: PluginState): string {
   }
   if (value === "cached") {
     return "Files are cached; no enablement setting was found.";
+  }
+  if (setting?.project && !setting.enabled) {
+    return "Project setting disables this plugin if trusted; project trust is not verified.";
   }
   return "Version selection or project trust cannot be confirmed from local settings.";
 }
@@ -121,7 +128,7 @@ function cachedRecord(options: {
     installPath: entry.path,
     sourcePath: entry.path,
     settingsEvidence: setting?.path,
-    reason: reason(value)
+    reason: reason(value, setting)
   });
 }
 
