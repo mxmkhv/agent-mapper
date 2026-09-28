@@ -2,7 +2,6 @@ import { join } from "node:path";
 import type { PluginRecord, PluginState } from "@agent-mapper/core";
 import { findGitRoot } from "./discovery";
 import {
-  cache,
   json,
   object,
   plugin,
@@ -11,6 +10,11 @@ import {
   type PluginReaderOptions,
   type PluginSetting
 } from "./plugin-reader-common";
+import {
+  cachePathMatches,
+  cachedClaudeRecords,
+  unmatchedClaudeSettings
+} from "./plugin-claude-cache";
 
 const installedRecordVersion = 2;
 
@@ -61,25 +65,36 @@ async function appliedSettings(
   return result;
 }
 
-function state(setting: PluginSetting | undefined): PluginState {
+function state(
+  setting: PluginSetting | undefined,
+  scope: PluginRecord["scope"]
+): PluginState {
   if (!setting) {
     return "unknown";
   }
   if (!setting.enabled) {
     return "disabled";
   }
-  return setting.project ? "unknown" : "selected";
+  return setting.project || scope !== "global" ? "unknown" : "selected";
 }
 
-function reason(value: PluginState, projectSetting: boolean): string {
+function reason(options: {
+  value: PluginState;
+  projectSetting: boolean;
+  scope: PluginRecord["scope"];
+}): string {
+  const { value, projectSetting, scope } = options;
   if (value === "selected") {
     return "Installation record and user setting select this version.";
   }
   if (value === "disabled") {
     return "Installation record exists; settings disable this plugin.";
   }
-  if (projectSetting) {
-    return "Project setting found; folder trust and runtime selection are not verified.";
+  if (projectSetting || scope === "project") {
+    return "Project plugin selection depends on folder trust, which is not verified.";
+  }
+  if (scope === "unknown") {
+    return "Installation scope is unknown; plugin selection cannot be confirmed.";
   }
   return "Installation is recorded, but enablement is not established.";
 }
@@ -88,19 +103,33 @@ function installation(options: {
   key: string;
   data: JsonMap;
   installedPath: string;
+  cacheRoot: string;
   setting?: PluginSetting;
 }): PluginRecord | undefined {
-  const { key, data, installedPath, setting } = options;
+  const { key, data, installedPath, cacheRoot, setting } = options;
   if (typeof data.installPath !== "string") {
     return undefined;
   }
   let scope: PluginRecord["scope"] = "unknown";
-  if (data.scope === "project") {
+  if (data.scope === "project" || data.scope === "local") {
     scope = "project";
   } else if (data.scope === "user") {
     scope = "global";
   }
-  const value = state(setting);
+  let value = state(setting, scope);
+  let explanation = reason({
+    value,
+    projectSetting: setting?.project ?? false,
+    scope
+  });
+  if (
+    value !== "disabled" &&
+    !cachePathMatches({ installPath: data.installPath, key, cacheRoot })
+  ) {
+    value = "unknown";
+    explanation =
+      "Installation path does not match this plugin's cache key; selection cannot be confirmed.";
+  }
   return plugin({
     tool: "claude",
     key,
@@ -114,12 +143,15 @@ function installation(options: {
       typeof data.projectPath === "string" ? data.projectPath : undefined,
     installationEvidence: installedPath,
     settingsEvidence: setting?.path,
-    reason: reason(value, setting?.project ?? false)
+    reason: explanation
   });
 }
 
 function applies(data: JsonMap, directory: string): boolean {
-  if (data.scope !== "project" || typeof data.projectPath !== "string") {
+  if (
+    (data.scope !== "project" && data.scope !== "local") ||
+    typeof data.projectPath !== "string"
+  ) {
     return true;
   }
   return (
@@ -132,6 +164,7 @@ function installedRecords(options: {
   records?: JsonMap;
   directory: string;
   installedPath: string;
+  cacheRoot: string;
   settings: Map<string, PluginSetting>;
 }): PluginRecord[] {
   const result: PluginRecord[] = [];
@@ -148,65 +181,13 @@ function installedRecords(options: {
         key,
         data,
         installedPath: options.installedPath,
+        cacheRoot: options.cacheRoot,
         setting: options.settings.get(key)
       });
       if (record) {
         result.push(record);
       }
     }
-  }
-  return result;
-}
-
-async function cachedRecords(
-  root: string,
-  installed: PluginRecord[]
-): Promise<PluginRecord[]> {
-  const result: PluginRecord[] = [];
-  for (const entry of await cache(join(root, "cache"))) {
-    if (installed.some((record) => record.installPath === entry.path)) {
-      continue;
-    }
-    result.push(
-      plugin({
-        tool: "claude",
-        key: entry.key,
-        name: entry.name,
-        marketplace: entry.marketplace,
-        version: entry.version,
-        scope: "global",
-        state: "cached",
-        installPath: entry.path,
-        sourcePath: entry.path,
-        reason: "Files are cached; no matching installation record was found."
-      })
-    );
-  }
-  return result;
-}
-
-function missingRecords(
-  settingsMap: Map<string, PluginSetting>,
-  found: PluginRecord[]
-): PluginRecord[] {
-  const result: PluginRecord[] = [];
-  for (const [key, setting] of settingsMap) {
-    if (found.some((record) => record.key === key)) {
-      continue;
-    }
-    result.push(
-      plugin({
-        tool: "claude",
-        key,
-        ...splitKey(key),
-        scope: setting.project ? "project" : "global",
-        state: "missing",
-        sourcePath: setting.path,
-        settingsEvidence: setting.path,
-        reason:
-          "Settings mention this plugin, but no installation record or cached files were found."
-      })
-    );
   }
   return result;
 }
@@ -229,6 +210,7 @@ export async function readClaudePlugins(
         : undefined,
     directory: options.workingDirectory,
     installedPath,
+    cacheRoot: join(root, "cache"),
     settings: applied
   });
   for (const record of known) {
@@ -241,6 +223,13 @@ export async function readClaudePlugins(
         "Several installation records match this plugin; the selected version is unknown.";
     }
   }
-  const found = [...known, ...(await cachedRecords(root, known))];
-  return [...found, ...missingRecords(applied, found)];
+  const found = [
+    ...known,
+    ...(await cachedClaudeRecords({
+      root,
+      installed: known,
+      settings: applied
+    }))
+  ];
+  return [...found, ...unmatchedClaudeSettings(applied, found)];
 }
