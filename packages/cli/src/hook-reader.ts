@@ -1,9 +1,15 @@
 import { join } from "node:path";
-import type { HookRecord, PluginRecord } from "@agent-mapper/core";
+import type {
+  AgentRecord,
+  HookRecord,
+  InventoryEntry,
+  PluginRecord
+} from "@agent-mapper/core";
 import { findGitRoot } from "./discovery";
 import { addGroups, type HookSource } from "./hook-record";
 import { addToml, codexHooksDisabled } from "./hook-toml";
 import { json, object, type JsonMap } from "./plugin-reader-common";
+import { addFrontmatterHooks } from "./hook-frontmatter";
 
 function hookMaps(data: JsonMap): { events: JsonMap; prefix: string }[] {
   const extension = object(object(data.extensions)?.["com.openai"]);
@@ -127,11 +133,42 @@ async function applyCodexDisabled(
   }
 }
 
+async function addCodexTomlHooks(
+  hooks: HookRecord[],
+  options: {
+    root: string;
+    codexHome: string;
+    seen: Set<string>;
+    errors: string[];
+  }
+): Promise<void> {
+  for (const source of [
+    {
+      path: join(options.codexHome, "config.toml"),
+      tool: "codex" as const,
+      scope: "global" as const
+    },
+    {
+      path: join(options.root, ".codex", "config.toml"),
+      tool: "codex" as const,
+      scope: "project" as const
+    }
+  ]) {
+    if (options.seen.has(source.path)) {
+      continue;
+    }
+    options.seen.add(source.path);
+    await addToml(hooks, { source, errors: options.errors });
+  }
+}
+
 export async function scanHooks(options: {
   claudeConfigDir: string;
   codexHome: string;
   workingDirectory: string;
   plugins: PluginRecord[];
+  entries: InventoryEntry[];
+  agents: AgentRecord[];
 }): Promise<{ hooks: HookRecord[]; errors: string[] }> {
   const hooks: HookRecord[] = [];
   const errors: string[] = [];
@@ -147,25 +184,19 @@ export async function scanHooks(options: {
     seen.add(source.path);
     await addJson(hooks, { source, errors });
   }
-  for (const source of [
-    {
-      path: join(options.codexHome, "config.toml"),
-      tool: "codex" as const,
-      scope: "global" as const
-    },
-    {
-      path: join(root, ".codex", "config.toml"),
-      tool: "codex" as const,
-      scope: "project" as const
-    }
-  ]) {
-    if (seen.has(source.path)) {
-      continue;
-    }
-    seen.add(source.path);
-    await addToml(hooks, { source, errors });
-  }
+  await addCodexTomlHooks(hooks, {
+    root,
+    codexHome: options.codexHome,
+    seen,
+    errors
+  });
   await addPluginHooks(hooks, { plugins: options.plugins, errors });
+  await addFrontmatterHooks(hooks, {
+    entries: options.entries,
+    agents: options.agents,
+    plugins: options.plugins,
+    errors
+  });
   await applyClaudeDisabled(hooks, direct);
   await applyCodexDisabled(hooks, options.codexHome);
   return { hooks, errors };

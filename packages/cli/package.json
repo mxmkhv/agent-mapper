@@ -13,6 +13,7 @@
     "build": "bun build src/index.ts --target=node --outfile=dist/index.js && bun ../../scripts/copy-web.ts"
   },
   "dependencies": {
-    "@agent-mapper/core": "workspace:*"
+    "@agent-mapper/core": "workspace:*",
+    "yaml": "2.9.1"
   }
 }

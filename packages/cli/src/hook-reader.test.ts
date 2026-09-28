@@ -1,4 +1,10 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  realpathSync,
+  rmSync,
+  writeFileSync
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -6,7 +12,7 @@ import { buildGlobalSnapshot, buildSnapshot } from "./service";
 
 const roots: string[] = [];
 function fixture() {
-  const home = mkdtempSync(join(tmpdir(), "agent-mapper-hooks-"));
+  const home = realpathSync(mkdtempSync(join(tmpdir(), "agent-mapper-hooks-")));
   roots.push(home);
   const project = join(home, "app");
   mkdirSync(join(project, ".git"), { recursive: true });

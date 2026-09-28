@@ -46,6 +46,8 @@ async function scanRelated(options: {
   claudeConfigDir: string;
   claudeStatePath: string;
   plugins: PluginRecord[];
+  entries: InventoryEntry[];
+  agents: AgentRecord[];
 }) {
   const hooks = await scanHooks(options);
   const mcp = await scanMcp(options);
@@ -224,13 +226,6 @@ export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
     codexHome: roots.codex,
     collector
   });
-  const { hooks, mcp } = await scanRelated({
-    workingDirectory,
-    claudeConfigDir: roots.claude,
-    claudeStatePath,
-    codexHome: roots.codex,
-    plugins: plugins.plugins
-  });
   const memory = await scanMemory({
     workingDirectory,
     home,
@@ -243,6 +238,15 @@ export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
     claudeConfigDir: roots.claude,
     codexHome: roots.codex,
     plugins: plugins.plugins
+  });
+  const { hooks, mcp } = await scanRelated({
+    workingDirectory,
+    claudeConfigDir: roots.claude,
+    claudeStatePath,
+    codexHome: roots.codex,
+    plugins: plugins.plugins,
+    entries: collector.entries,
+    agents: agents.agents
   });
   return {
     entries: collector.entries,

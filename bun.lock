@@ -24,6 +24,7 @@
       },
       "dependencies": {
         "@agent-mapper/core": "workspace:*",
+        "yaml": "2.9.1",
       },
     },
     "packages/core": {

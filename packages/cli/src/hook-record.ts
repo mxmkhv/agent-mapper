@@ -14,6 +14,7 @@ export interface HookSource {
   plugin?: PluginRecord;
   condition?: string;
   disabled?: boolean;
+  unknownReason?: string;
   locatorPrefix?: string;
 }
 
@@ -92,6 +93,9 @@ function availability(
       reason:
         "Codex hook trust and active session flags are not verified. Review in /hooks."
     };
+  }
+  if (source.unknownReason) {
+    return { availability: "unknown", reason: source.unknownReason };
   }
   if (source.condition) {
     return { availability: "conditional", reason: source.condition };
