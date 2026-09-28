@@ -51,13 +51,16 @@ function useSelection(
   useSearchShortcut(setSearchOpen);
   const selected = records.find((record) => record.id === selectedId);
 
-  /** Selecting from a link, search, or finding may cross tools or reveal an inactive item. */
-  function select(id: string) {
+  /**
+   * Selecting from a link, search, or finding may cross tools or reveal an inactive item.
+   * Views that already show the row (Reach) pass `reveal: false` so the list does not reflow.
+   */
+  function select(id: string, { reveal = true }: { reveal?: boolean } = {}) {
     const record = records.find((item) => item.id === id);
     if (record && record.tool !== "unknown" && record.tool !== tool) {
       onTool(record.tool);
     }
-    if (record?.tier === "inactive") {
+    if (reveal && record?.tier === "inactive") {
       setShowInactive(true);
     }
     setSelectedId(id);

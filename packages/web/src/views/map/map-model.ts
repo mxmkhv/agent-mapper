@@ -44,7 +44,7 @@ function kindGroups(records: InventoryRecord[]): KindGroup[] {
  * A plugin version is a candidate, not a contribution, when it is inactive or when its selection is
  * unknown while another version of the same plugin is selected.
  */
-function isBackgroundVersion(
+export function isBackgroundVersion(
   plugin: InventoryRecord,
   plugins: readonly InventoryRecord[]
 ): boolean {

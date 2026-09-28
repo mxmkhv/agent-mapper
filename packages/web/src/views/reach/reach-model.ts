@@ -1,6 +1,7 @@
 import { isInside } from "../../model/paths";
 import type { InventoryRecord, RecordKind } from "../../model/record-types";
 import { kindOrder } from "../../ui/kind-icon";
+import { isBackgroundVersion } from "../map/map-model";
 
 export interface ReachProject {
   name: string;
@@ -73,13 +74,31 @@ function outsideSources(
   return [...seen.values()];
 }
 
+/**
+ * Section kinds only, with plugin contributions folded into their plugin, and the same background
+ * plugin versions the Map hides (cached, disabled, unconfirmed duplicates) hidden until asked for.
+ */
+function visibleSources(records: InventoryRecord[], showInactive: boolean) {
+  const inSections = records.filter(
+    (record) => sectionKinds.includes(record.kind) && !record.plugin
+  );
+  const plugins = inSections.filter((record) => record.kind === "plugin");
+  return inSections.filter(
+    (record) =>
+      showInactive ||
+      record.kind !== "plugin" ||
+      !isBackgroundVersion(record, plugins)
+  );
+}
+
 export function buildReach(
   globalRecords: readonly InventoryRecord[],
   scope: { projects: readonly ReachProject[]; showInactive: boolean }
 ): ReachSection[] {
   const { projects, showInactive } = scope;
-  const sources = outsideSources(globalRecords, projects).filter(
-    (record) => sectionKinds.includes(record.kind) && !record.plugin
+  const sources = visibleSources(
+    outsideSources(globalRecords, projects),
+    showInactive
   );
   return sectionKinds
     .map((kind) => {

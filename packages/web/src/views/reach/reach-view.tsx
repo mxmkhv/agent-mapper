@@ -3,38 +3,52 @@ import { Folder } from "lucide-react";
 import { KindIcon, kindLabel } from "../../ui/kind-icon";
 import { StateMarker, toolName } from "../../ui/marks";
 import { tildePath } from "../../model/paths";
-import { buildReach, projectOwn, skillReach } from "./reach-model";
-import { SectionRows, type ReachViewProps } from "./reach-rows";
+import {
+  buildReach,
+  projectOwn,
+  skillReach,
+  type ReachProject
+} from "./reach-model";
+import {
+  ScanCell,
+  SectionRows,
+  stickySource,
+  type ReachViewProps
+} from "./reach-rows";
 
 function CountRow({
   label,
   icon,
   counts,
-  keys,
+  projects,
   total
 }: {
   label: string;
   icon: ReactNode;
   counts: number[];
-  keys: string[];
+  projects: ReachProject[];
   total?: number;
 }) {
   return (
     <tr>
-      <td className="px-3">
+      <td className={`${stickySource} bg-surface`}>
         <span className="flex items-center gap-2 font-semibold">
           {icon}
           {label}
         </span>
       </td>
-      {counts.map((count, index) => (
-        <td
-          className={`text-center text-label tabular-nums ${count ? "" : "text-ink-faint"}`}
-          key={keys[index]}
-        >
-          {total === undefined ? count || "–" : `${count}/${total}`}
-        </td>
-      ))}
+      {projects.map((project, index) => {
+        const count = counts[index] ?? 0;
+        return (
+          <ScanCell key={project.path} project={project}>
+            <span
+              className={`text-label tabular-nums ${count ? "" : "text-ink-faint"}`}
+            >
+              {total === undefined ? count || "–" : `${count}/${total}`}
+            </span>
+          </ScanCell>
+        );
+      })}
     </tr>
   );
 }
@@ -54,7 +68,6 @@ export function ReachView(props: ReachViewProps) {
     (project) => !project.records && !project.error
   ).length;
   const columns = props.projects.length + 1;
-  const keys = props.projects.map((project) => project.path);
   return (
     <div className="px-5 pt-4 pb-10">
       <p className="mt-0 mb-3.5 max-w-[720px] text-ink-muted">
@@ -64,7 +77,8 @@ export function ReachView(props: ReachViewProps) {
           ? ` Scanning ${scanning} ${scanning === 1 ? "project" : "projects"}…`
           : ""}
       </p>
-      <div className="overflow-x-auto rounded-card border border-hairline bg-surface">
+      {/* The table scrolls in both directions itself so the header and source column can stay pinned. */}
+      <div className="max-h-[calc(100vh-220px)] overflow-auto rounded-card border border-hairline bg-surface">
         <table
           className="w-full table-fixed border-separate border-spacing-0 [&_td]:h-[34px] [&_td]:border-b [&_td]:border-wash"
           style={{
@@ -79,7 +93,7 @@ export function ReachView(props: ReachViewProps) {
           </colgroup>
           <thead>
             <tr>
-              <th className="sticky top-0 z-10 h-11 border-b border-hairline bg-surface px-3 text-left text-label font-semibold">
+              <th className="sticky top-0 left-0 z-20 h-11 border-b border-hairline bg-surface px-3 text-left text-label font-semibold shadow-[1px_0_0_var(--am-hairline)]">
                 Source
               </th>
               {props.projects.map((project) => (
@@ -109,13 +123,13 @@ export function ReachView(props: ReachViewProps) {
                     className="h-[30px] px-3 text-caption font-semibold text-ink-muted"
                     colSpan={columns}
                   >
-                    Global skills
+                    <span className="sticky left-3">Global skills</span>
                   </td>
                 </tr>
                 <CountRow
                   counts={skills.counts}
-                  keys={keys}
                   icon={<KindIcon kind="skill" small />}
+                  projects={props.projects}
                   label={`${skills.total} skills`}
                   total={skills.total}
                 />
@@ -126,7 +140,7 @@ export function ReachView(props: ReachViewProps) {
                 className="h-[30px] px-3 text-caption font-semibold text-ink-muted"
                 colSpan={columns}
               >
-                <span className="inline-flex items-center gap-1.5">
+                <span className="sticky left-3 inline-flex items-center gap-1.5">
                   <Folder
                     aria-hidden="true"
                     className="size-3.5"
@@ -139,10 +153,10 @@ export function ReachView(props: ReachViewProps) {
             {own.map((row) => (
               <CountRow
                 counts={row.counts}
-                keys={keys}
                 icon={<KindIcon kind={row.kind} small />}
                 key={row.kind}
                 label={kindLabel[row.kind]}
+                projects={props.projects}
               />
             ))}
           </tbody>

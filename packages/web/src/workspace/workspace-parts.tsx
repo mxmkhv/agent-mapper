@@ -115,7 +115,9 @@ export function Content({ props, state, reach }: PartsProps) {
         {...common}
         globalRecords={state.toolRecords}
         onOpenProject={(path) => props.onSelectPath(path)}
-        onSelect={(record: InventoryRecord) => state.select(record.id)}
+        onSelect={(record: InventoryRecord) =>
+          state.select(record.id, { reveal: false })
+        }
         projects={reach}
         showInactive={state.showInactive}
         tool={props.tool}

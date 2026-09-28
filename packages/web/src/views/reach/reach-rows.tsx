@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { ToolId } from "@agent-mapper/core";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { isLink } from "../../model/links";
@@ -24,12 +24,13 @@ export interface ReachViewProps {
   onOpenProject(path: string): void;
 }
 
-function Cell({
-  record,
-  project
+/** Column cells never claim a result for a project that is still scanning or failed to scan. */
+export function ScanCell({
+  project,
+  children
 }: {
-  record?: InventoryRecord;
   project: ReachProject;
+  children: ReactNode;
 }) {
   if (project.error) {
     return (
@@ -42,10 +43,28 @@ function Cell({
     );
   }
   if (!project.records) {
-    return <td className="text-center text-caption text-ink-faint">…</td>;
+    return (
+      <td className="text-center text-caption text-ink-faint" title="Scanning">
+        …
+      </td>
+    );
   }
+  return <td className="text-center">{children}</td>;
+}
+
+/** The source column stays pinned while project columns scroll sideways. */
+export const stickySource =
+  "sticky left-0 z-[1] px-3 shadow-[1px_0_0_var(--am-hairline)]";
+
+function Cell({
+  record,
+  project
+}: {
+  record?: InventoryRecord;
+  project: ReachProject;
+}) {
   return (
-    <td className="text-center">
+    <ScanCell project={project}>
       {record ? (
         <span
           className="inline-grid size-[22px] place-items-center"
@@ -60,7 +79,7 @@ function Cell({
           title="Does not reach this project"
         />
       )}
-    </td>
+    </ScanCell>
   );
 }
 
@@ -69,10 +88,12 @@ function SourceRow({ row, props }: { row: ReachRow; props: ReachViewProps }) {
   const selected = record.id === props.selectedId;
   return (
     <tr
-      className={`cursor-pointer ${selected ? "bg-selected" : "hover:bg-hover"}`}
+      className={`group cursor-pointer ${selected ? "bg-selected" : "hover:bg-hover"}`}
       onClick={() => props.onSelect(record)}
     >
-      <td className="px-3">
+      <td
+        className={`${stickySource} ${selected ? "bg-selected" : "bg-surface group-hover:bg-hover"}`}
+      >
         <span className="flex min-w-0 items-center gap-2">
           <span
             className={`font-semibold whitespace-nowrap ${record.tier === "inactive" ? "text-ink-muted" : ""}`}
@@ -121,7 +142,7 @@ export function SectionRows({
           className="h-[30px] px-3 text-caption font-semibold text-ink-muted"
           colSpan={props.projects.length + 1}
         >
-          <span className="inline-flex items-center gap-1.5">
+          <span className="sticky left-3 inline-flex items-center gap-1.5">
             <KindIcon kind={section.kind} small />
             {kindLabel[section.kind]} ·{" "}
             {section.varying.length + section.uniform.length}
@@ -133,10 +154,10 @@ export function SectionRows({
       ))}
       {section.uniform.length ? (
         <tr
-          className="cursor-pointer text-ink-muted hover:bg-hover"
+          className="group cursor-pointer text-ink-muted hover:bg-hover"
           onClick={() => setOpen(!open)}
         >
-          <td className="px-3">
+          <td className={`${stickySource} bg-surface group-hover:bg-hover`}>
             <span className="flex min-w-0 items-center gap-2">
               <Chevron
                 aria-hidden="true"
@@ -155,9 +176,9 @@ export function SectionRows({
             </span>
           </td>
           {props.projects.map((project) => (
-            <td className="text-center" key={project.path}>
+            <ScanCell key={project.path} project={project}>
               <StateMarker large tier="active" />
-            </td>
+            </ScanCell>
           ))}
         </tr>
       ) : null}
