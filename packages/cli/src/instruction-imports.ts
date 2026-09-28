@@ -207,6 +207,7 @@ export async function scanInstructionImports(options: {
     if (
       root.entry.tool !== "claude" ||
       root.entry.kind !== "instruction" ||
+      root.entry.inlineContent ||
       root.resolution.availability !== "expected" ||
       root.entry.readState !== "readable"
     ) {

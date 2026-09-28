@@ -143,6 +143,71 @@ it("keeps the global view limited to global sources", async () => {
   ]);
 });
 
+it("includes both local managed Claude instruction sources without exposing their text", async () => {
+  const home = mkdtempSync(join(tmpdir(), "agent-mapper-managed-"));
+  roots.push(home);
+  const project = join(home, "app");
+  const managedClaudeDir = join(home, "managed");
+  const split = join(managedClaudeDir, "managed-settings.d");
+  mkdirSync(project);
+  mkdirSync(split, { recursive: true });
+  writeFileSync(join(managedClaudeDir, "CLAUDE.md"), "Managed file secret");
+  writeFileSync(
+    join(managedClaudeDir, "managed-settings.json"),
+    JSON.stringify({ claudeMd: "Earlier inline secret" })
+  );
+  writeFileSync(
+    join(split, "20-instructions.json"),
+    JSON.stringify({ claudeMd: "Final inline secret" })
+  );
+  const options = { home, managedClaudeDir };
+  const snapshot = await buildSnapshot(project, options);
+  const managed = snapshot.items.filter(
+    ({ entry }) => entry.scope === "managed"
+  );
+  expect(managed).toMatchObject([
+    {
+      entry: { name: "CLAUDE.md", characters: "Managed file secret".length },
+      resolution: { availability: "expected", loading: "startup" }
+    },
+    {
+      entry: {
+        name: "claudeMd",
+        locator: "claudeMd",
+        inlineContent: true,
+        path: join(split, "20-instructions.json"),
+        characters: "Final inline secret".length
+      },
+      resolution: { availability: "expected", loading: "startup" }
+    }
+  ]);
+  expect(snapshot.context.claude.startup).toBe(
+    Math.round("Managed file secret".length / 4) +
+      Math.round("Final inline secret".length / 4)
+  );
+  expect(JSON.stringify(snapshot)).not.toContain("secret");
+  const global = await buildGlobalSnapshot(options);
+  expect(
+    global.items.filter(({ entry }) => entry.scope === "managed")
+  ).toHaveLength(2);
+});
+
+it("reports malformed managed settings without treating them as empty policy", async () => {
+  const home = mkdtempSync(join(tmpdir(), "agent-mapper-managed-error-"));
+  roots.push(home);
+  const managedClaudeDir = join(home, "managed");
+  mkdirSync(managedClaudeDir);
+  writeFileSync(join(managedClaudeDir, "managed-settings.json"), "{");
+
+  const snapshot = await buildSnapshot(home, { home, managedClaudeDir });
+  expect(snapshot.coverage).toContain(
+    `${join(managedClaudeDir, "managed-settings.json")}: Managed settings JSON could not be parsed.`
+  );
+  expect(snapshot.items.some(({ entry }) => entry.name === "claudeMd")).toBe(
+    false
+  );
+});
+
 it("explains how to recover from a missing folder", async () => {
   const home = mkdtempSync(join(tmpdir(), "agent-mapper-missing-"));
   roots.push(home);

@@ -13,7 +13,7 @@ function entryApplies(
   entry: InventoryEntry,
   workingDirectory: string
 ): boolean {
-  if (entry.scope === "global") {
+  if (entry.scope === "global" || entry.scope === "managed") {
     return true;
   }
   if (entry.scope === "unknown") {

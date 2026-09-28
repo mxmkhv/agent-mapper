@@ -12,6 +12,9 @@ function reason(entry: InventoryEntry): string {
   if (entry.kind === "skill") {
     return "Skill is discoverable for this folder; its body loads when selected.";
   }
+  if (entry.scope === "managed") {
+    return "Local managed Claude instructions are in the expected startup path; a higher-priority remote or device policy may change which settings apply.";
+  }
   return "Instruction is in the selected folder's expected startup path.";
 }
 

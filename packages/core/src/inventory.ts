@@ -1,6 +1,7 @@
 export type ToolId = "claude" | "codex";
 type EntryKind = "instruction" | "skill" | "command";
 type Scope = "global" | "project" | "unknown";
+type EntryScope = Scope | "managed";
 type ReadState = "readable" | "missing" | "unreadable";
 
 export interface InventoryEntry {
@@ -12,7 +13,7 @@ export interface InventoryEntry {
   path: string;
   realPath?: string;
   projectPath?: string;
-  scope: Scope;
+  scope: EntryScope;
   readState: ReadState;
   isSymlink: boolean;
   characters?: number;
@@ -23,6 +24,7 @@ export interface InventoryEntry {
   pluginId?: string;
   locator?: string;
   declarationOnly?: boolean;
+  inlineContent?: boolean;
 }
 
 export type PluginState =

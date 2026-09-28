@@ -15,6 +15,7 @@ import { scanHooks } from "./hook-reader";
 import { scanMcp } from "./mcp-reader";
 import { scanMemory } from "./memory-reader";
 import { scanAgents } from "./agent-reader";
+import { scanManagedClaude } from "./managed-claude-reader";
 export { discoverProjects, type DiscoveryResult } from "./discovery";
 
 export interface ScanOptions {
@@ -22,6 +23,7 @@ export interface ScanOptions {
   home?: string;
   codexHome?: string;
   claudeConfigDir?: string;
+  managedClaudeDir?: string;
 }
 export interface ScanResult {
   entries: InventoryEntry[];
@@ -195,10 +197,23 @@ function configRoots(options: ScanOptions, home: string) {
   return { roots, claudeStatePath };
 }
 
+function managedClaudeDirectory(options: ScanOptions): string {
+  if (options.managedClaudeDir) {
+    return options.managedClaudeDir;
+  }
+  if (process.platform === "win32") {
+    return join(process.env.ProgramFiles ?? "C:\\Program Files", "ClaudeCode");
+  }
+  return process.platform === "darwin"
+    ? "/Library/Application Support/ClaudeCode"
+    : "/etc/claude-code";
+}
+
 export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
   const home = resolve(options.home ?? homedir());
   const { roots, claudeStatePath } = configRoots(options, home);
   const collector = new SourceCollector();
+  await scanManagedClaude(collector, managedClaudeDirectory(options));
   await scanGlobal(collector, { home, ...roots });
   const workingDirectory = resolve(options.workingDirectory);
   await scanProjectSources(collector, workingDirectory);

@@ -148,6 +148,28 @@ export class SourceCollector {
     this.entries.push(await makeEntry({ candidate, source, key }));
   }
 
+  addInline(candidate: Candidate, content: string): void {
+    const key = `${candidate.tool}:${candidate.kind}:${candidate.path}:${candidate.locator ?? candidate.name ?? ""}`;
+    if (this.seen.has(key)) {
+      return;
+    }
+    this.seen.add(key);
+    this.entries.push({
+      id: createHash("sha256").update(key).digest("hex").slice(0, idLength),
+      tool: candidate.tool,
+      kind: candidate.kind,
+      name: candidate.name ?? basename(candidate.path),
+      path: candidate.path,
+      scope: candidate.scope,
+      readState: "readable",
+      isSymlink: false,
+      locator: candidate.locator,
+      inlineContent: true,
+      characters: content.length,
+      lineCount: lineCount(content)
+    });
+  }
+
   async addSkills(
     candidate: Omit<Candidate, "path" | "kind"> & { directory: string }
   ): Promise<void> {

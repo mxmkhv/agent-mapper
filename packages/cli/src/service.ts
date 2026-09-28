@@ -24,6 +24,7 @@ function coverage(errors: string[]): string[] {
     "Context figures approximate known file text at four characters per token. Imported instruction content, skill listing budgets, memory loading, settings effects, and other runtime content are not estimated.",
     "Instruction resolution models default Claude Code and Codex file rules. Custom instruction file settings, trust decisions, and runtime overrides are not inspected.",
     "Claude user configuration follows CLAUDE_CONFIG_DIR in this process. An existing Claude session may use a different environment.",
+    "Local managed Claude instructions are scanned when readable. Remote, MDM, registry, and host policy are not inspected; they may replace or combine with local managed settings.",
     "This view models a fresh local CLI session. Runtime flags, account-managed settings, and live session state are not inspected."
   ];
 }
@@ -118,7 +119,9 @@ export async function buildGlobalSnapshot(
   options: Omit<ScanOptions, "workingDirectory"> = {}
 ): Promise<InventorySnapshot> {
   const snapshot = await buildSnapshot(options.home ?? homedir(), options);
-  const items = snapshot.items.filter(({ entry }) => entry.scope === "global");
+  const items = snapshot.items.filter(
+    ({ entry }) => entry.scope === "global" || entry.scope === "managed"
+  );
   const agents = snapshot.agents.filter((agent) => agent.scope !== "project");
   const memories = snapshot.memories.filter(
     (memory) => memory.scope !== "project"

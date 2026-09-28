@@ -158,6 +158,7 @@ async function repeatedFindings(
   const candidates = items.filter(
     ({ entry, resolution }) =>
       entry.kind === "instruction" &&
+      !entry.inlineContent &&
       entry.readState === "readable" &&
       resolution.availability === "expected" &&
       resolution.loading === "startup"
