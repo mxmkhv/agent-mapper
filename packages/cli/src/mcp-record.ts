@@ -9,6 +9,7 @@ export interface Source {
   tool: ToolId;
   scope: Scope;
   plugin?: PluginRecord;
+  managedKind?: "exclusive" | "provided";
 }
 
 function names(value: unknown): string[] {
@@ -42,6 +43,9 @@ function destination(
 }
 
 function transport(value: JsonMap): McpRecord["transport"] {
+  if (value.type === "streamable-http") {
+    return "http";
+  }
   if (["stdio", "http", "sse", "ws"].includes(String(value.type))) {
     return value.type as McpRecord["transport"];
   }
@@ -59,6 +63,15 @@ function configuredState(options: {
   kind: McpRecord["transport"];
 }): Pick<McpRecord, "availability" | "reason"> {
   const { source, value, kind } = options;
+  if (source.managedKind) {
+    return {
+      availability: "unknown",
+      reason:
+        source.managedKind === "exclusive"
+          ? "Declared in local managed-mcp.json; runtime filters and connection state are not verified."
+          : "Provided by a local managed setting; higher-priority policy selection and connection state are not verified."
+    };
+  }
   if (value?.enabled === false || source.plugin?.state === "disabled") {
     return {
       availability: "disabled",

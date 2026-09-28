@@ -54,6 +54,7 @@ async function scanRelated(options: {
   entries: InventoryEntry[];
   agents: AgentRecord[];
   managedSettings: ManagedSettingsFile[];
+  managedClaudeDir: string;
 }) {
   const hooks = await scanHooks(options);
   const mcp = await scanMcp(options);
@@ -210,10 +211,8 @@ export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
   const home = resolve(options.home ?? homedir());
   const { roots, claudeStatePath } = configRoots(options, home);
   const collector = new SourceCollector();
-  const managedSettings = await scanManagedClaude(
-    collector,
-    managedClaudeDirectory(options)
-  );
+  const managedClaudeDir = managedClaudeDirectory(options);
+  const managedSettings = await scanManagedClaude(collector, managedClaudeDir);
   await scanGlobal(collector, { home, ...roots });
   const workingDirectory = resolve(options.workingDirectory);
   await scanProjectSources(collector, workingDirectory);
@@ -240,7 +239,8 @@ export async function scanInventory(options: ScanOptions): Promise<ScanResult> {
     plugins: plugins.plugins,
     entries: collector.entries,
     agents: agents.agents,
-    managedSettings
+    managedSettings,
+    managedClaudeDir
   });
   return {
     entries: collector.entries,

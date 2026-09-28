@@ -4,7 +4,7 @@ export interface McpRecord {
   id: string;
   tool: ToolId;
   name: string;
-  scope: "global" | "project" | "unknown";
+  scope: "managed" | "global" | "project" | "unknown";
   sourcePath: string;
   locator: string;
   transport: "stdio" | "http" | "sse" | "ws" | "unknown";

@@ -3,6 +3,8 @@ import { join } from "node:path";
 import type { McpRecord, PluginRecord } from "@agent-mapper/core";
 import { findGitRoot } from "./discovery";
 import { add, type Source } from "./mcp-record";
+import { addManagedMcp } from "./mcp-managed";
+import type { ManagedSettingsFile } from "./managed-claude-reader";
 import { json, object, type JsonMap } from "./plugin-reader-common";
 
 function addMap(
@@ -197,17 +199,21 @@ function markClaudeShadowing(records: McpRecord[], projectPath: string): void {
   }
 }
 
+async function projectRoot(workingDirectory: string): Promise<string> {
+  return (await findGitRoot(workingDirectory, "/")) ?? workingDirectory;
+}
+
 export async function scanMcp(options: {
   workingDirectory: string;
   claudeStatePath: string;
   codexHome: string;
   plugins: PluginRecord[];
+  managedClaudeDir: string;
+  managedSettings: ManagedSettingsFile[];
 }): Promise<{ mcpServers: McpRecord[]; errors: string[] }> {
   const mcpServers: McpRecord[] = [];
   const errors: string[] = [];
-  const root =
-    (await findGitRoot(options.workingDirectory, "/")) ??
-    options.workingDirectory;
+  const root = await projectRoot(options.workingDirectory);
   const claudePath = options.claudeStatePath;
   await addJson(mcpServers, {
     source: { path: claudePath, tool: "claude", scope: "global" },
@@ -240,5 +246,10 @@ export async function scanMcp(options: {
   });
   await addPlugins(mcpServers, { plugins: options.plugins, errors });
   markClaudeShadowing(mcpServers, join(root, ".mcp.json"));
+  await addManagedMcp(mcpServers, {
+    directory: options.managedClaudeDir,
+    settings: options.managedSettings,
+    errors
+  });
   return { mcpServers, errors };
 }

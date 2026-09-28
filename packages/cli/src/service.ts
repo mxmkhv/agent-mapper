@@ -17,7 +17,7 @@ function coverage(errors: string[]): string[] {
   return [
     ...errors,
     "Hook coverage includes local managed files and skill and agent frontmatter. Agent Stop hooks become SubagentStop while running as subagents. Remote and device policy selection, activation, project trust, and unsupported TOML forms are not verified.",
-    "MCP coverage excludes account and session connections, managed sources, approval state, and unsupported TOML forms. Servers are not contacted.",
+    "MCP coverage includes readable local managed files. Remote and device policy selection, runtime filters, account and session connections, approval state, and unsupported TOML forms are not verified. Servers are not contacted.",
     "Memory coverage includes local Markdown files only. Claude encoded folder names are candidates, not verified project matches; custom memory locations and live use are not resolved.",
     "Agent coverage includes local Claude Markdown and Codex TOML files, plus Claude plugin agent files. Managed and session agents, unsupported declarations, project trust, and live use are not verified. Agent prompts stay in source files.",
     "Worktree comparison checks common local configuration files by relative path and content. Generated folders and inherited global files are excluded. A changed settings file does not identify which declaration changed inside it.",
