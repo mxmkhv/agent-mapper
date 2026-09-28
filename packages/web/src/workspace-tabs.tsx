@@ -44,7 +44,11 @@ export function WorkspaceTabs({ tab, snapshot, onSelect }: TabsProps) {
       >
         Skills{" "}
         <span>
-          {snapshot.items.filter(({ entry }) => entry.kind === "skill").length}
+          {
+            snapshot.items.filter(
+              ({ entry }) => entry.kind === "skill" || entry.kind === "command"
+            ).length
+          }
         </span>
       </button>
       <button

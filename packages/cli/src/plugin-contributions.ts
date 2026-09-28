@@ -10,6 +10,7 @@ import {
   skillFiles
 } from "./plugin-contribution-utils";
 import { SourceCollector } from "./source-reader";
+import { addPluginCommands } from "./plugin-command-contributions";
 
 async function addSkills(
   record: PluginRecord,
@@ -61,17 +62,16 @@ async function addSkills(
   }
 }
 
-async function addMarkdown(
+async function addAgents(
   record: PluginRecord,
-  options: { manifest: JsonMap; kind: "command" | "agent" }
+  manifest: JsonMap
 ): Promise<void> {
   const root = record.installPath;
   if (!root) {
     return;
   }
-  const field = options.kind === "command" ? "commands" : "agents";
-  const declared = options.manifest[field];
-  const locations = declared === undefined ? [`./${field}`] : paths(declared);
+  const declared = manifest.agents;
+  const locations = declared === undefined ? ["./agents"] : paths(declared);
   for (const relative of locations) {
     const path = await safePath(root, relative);
     if (!path) {
@@ -80,7 +80,7 @@ async function addMarkdown(
     const files = extname(path) === ".md" ? [path] : await markdownFiles(path);
     for (const file of files) {
       addContribution(record.contributions, {
-        kind: options.kind,
+        kind: "agent",
         name:
           extname(path) === ".md"
             ? basename(file, ".md")
@@ -96,7 +96,7 @@ async function addMarkdown(
       const sourcePath =
         typeof source === "string" ? await safePath(root, source) : undefined;
       addContribution(record.contributions, {
-        kind: options.kind,
+        kind: "agent",
         name,
         sourcePath: sourcePath ?? record.sourcePath
       });
@@ -221,14 +221,11 @@ export async function inspectPlugin(
     collector: options.collector
   });
   if (record.tool === "claude") {
-    await addMarkdown(record, {
+    await addPluginCommands(record, {
       manifest: manifests.components,
-      kind: "command"
+      collector: options.collector
     });
-    await addMarkdown(record, {
-      manifest: manifests.components,
-      kind: "agent"
-    });
+    await addAgents(record, manifests.components);
   }
   const defaultHooks = join(root, "hooks", "hooks.json");
   if (

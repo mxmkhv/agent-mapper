@@ -85,6 +85,32 @@ it("reads ancestor instructions and project skills for both tools", async () => 
   expect(review?.characters).toBeGreaterThan(review?.metadataCharacters ?? 0);
 });
 
+it("finds global and nested Claude commands with their invocation names", async () => {
+  const home = fixture();
+  const project = join(home, "app");
+  mkdirSync(join(home, ".claude", "commands"), { recursive: true });
+  mkdirSync(join(project, ".claude", "commands", "frontend"), {
+    recursive: true
+  });
+  writeFileSync(
+    join(home, ".claude", "commands", "review.md"),
+    "Global command"
+  );
+  writeFileSync(
+    join(project, ".claude", "commands", "frontend", "component.md"),
+    "Project command"
+  );
+  const result = await scanInventory({ workingDirectory: project, home });
+  expect(
+    result.entries
+      .filter((entry) => entry.kind === "command")
+      .map(({ name, scope }) => [name, scope])
+  ).toEqual([
+    ["review", "global"],
+    ["frontend:component", "project"]
+  ]);
+});
+
 it("shows a broken symlink instead of dropping it", async () => {
   const home = fixture();
   const project = join(home, "app");

@@ -109,3 +109,28 @@ it.each(["claude", "codex"] as const)(
     );
   }
 );
+
+it("shows commands in Skills with a visible Command badge", () => {
+  const command: ResolvedEntry = {
+    ...skill("claude"),
+    entry: {
+      ...skill("claude").entry,
+      id: "claude-command",
+      kind: "command",
+      name: "frontend:component"
+    }
+  };
+  const html = renderToStaticMarkup(
+    createElement(Workspace, {
+      snapshot: { ...snapshot, items: [command, ...snapshot.items] },
+      globalView: false,
+      initialTool: "claude",
+      initialTab: "skill",
+      onRescan: () => undefined,
+      onSelectPath: () => undefined
+    })
+  );
+  expect(html).toContain("Skills <span>2</span>");
+  expect(html).toContain("frontend:component");
+  expect(html).toContain('command-badge">Command</span>');
+});

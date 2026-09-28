@@ -46,7 +46,13 @@ export function Workspace({
   const [searchOpen, setSearchOpen] = useState(false);
   useSearchShortcut(setSearchOpen);
   const visible = filterWorkspace(snapshot, tool);
-  const items = visible.items.filter(({ entry }) => entry.kind === tab);
+  const items = visible.items.filter(
+    ({ entry }) =>
+      entry.kind === tab || (tab === "skill" && entry.kind === "command")
+  );
+  if (tab === "skill") {
+    items.sort((a, b) => a.entry.name.localeCompare(b.entry.name));
+  }
   const { plugins, hooks, mcpServers, memories, agents } = visible;
   const selected =
     items.find(({ entry }) => entry.id === selectedId) ?? items[0];

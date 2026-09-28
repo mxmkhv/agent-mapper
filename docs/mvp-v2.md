@@ -17,7 +17,7 @@ The first release covers instructions, skills, commands, agents, hooks, memory, 
 - Which hooks and MCP servers are configured here?
 - Which files are duplicated, shadowed, broken, or worth reviewing?
 
-The app is read-only with respect to agent configuration. Files stay where they are. Actions are Open in editor, Reveal in Finder, navigation, filtering, and rescanning. The app may save its own preferences and derived usage counts.
+The app is read-only with respect to agent configuration. Files stay where they are. Actions are Open in editor, Reveal in Finder, navigation, filtering, and rescanning. The app may save its own preferences.
 
 ## Scope
 
@@ -34,18 +34,15 @@ The app is read-only with respect to agent configuration. Files stay where they 
 | Approximate startup and on-demand context volume         | Billing estimates                                   |
 | Local web UI, CLI explanation, JSON export               | Desktop wrapper                                     |
 
-Usage evidence is a follow-up within the MVP effort if the log format can be validated. It must not delay the inventory or hide hooks that have no usage evidence.
-
 ## What the map can claim
 
 Keep these separate throughout the CLI, UI, and API:
 
-| Claim                | Evidence                                                                         |
-| -------------------- | -------------------------------------------------------------------------------- |
-| Found                | A file, config declaration, or installation record exists                        |
-| Expected to apply    | A supported resolver evaluated the selected tool, project, settings, and version |
-| Observed in sessions | A recognized log event can be attributed to the item                             |
-| Unknown              | The relevant format, setting, version, or runtime input cannot be resolved       |
+| Claim             | Evidence                                                                         |
+| ----------------- | -------------------------------------------------------------------------------- |
+| Found             | A file, config declaration, or installation record exists                        |
+| Expected to apply | A supported resolver evaluated the selected tool, project, settings, and version |
+| Unknown           | The relevant format, setting, version, or runtime input cannot be resolved       |
 
 Location matching finds candidates. It does not prove that an item loads or runs. Every resolved state includes its reason and source. Unknown entries remain visible.
 
@@ -120,7 +117,7 @@ Start with characters divided by four, rounded and labeled approximate. Separate
 
 ### Skills and agents
 
-Skills are sorted by name and show description, scope, origin, tool, and expected availability. Commands share the list with a Command badge. Preserve tool-specific names and plugin namespaces when comparing names or joining usage evidence.
+Skills are sorted by name and show description, scope, origin, tool, and expected availability. Commands share the list with a Command badge. Preserve tool-specific names and plugin namespaces when comparing names.
 
 Preview `SKILL.md` and list supporting files. Link plugin-provided entries back to the plugin. Name collisions are resolved per tool and context; equal names across different tools are not automatically a problem.
 
@@ -128,7 +125,7 @@ Agents use the same browsing pattern, with readers for supported Markdown/frontm
 
 ### Hooks
 
-Hook visibility is required for MVP, even when execution, trust, deduplication, or usage cannot be assessed.
+Hook visibility is required for MVP, even when execution, trust, or deduplication cannot be assessed.
 
 Read supported settings, standalone hook files, plugin hook declarations, and skill/agent frontmatter. Include configured, disabled, conditional, and unknown hooks. A hook tied to a skill or agent is labeled with that condition rather than presented as a general session hook.
 
@@ -175,14 +172,6 @@ List known memory files by tool and project with path, size, line count, and mod
 
 Memory may be agent-written or manually maintained. Age alone is not a finding. Unknown writer and Unmatched project are valid states; do not infer a unique project solely by reversing a lossy encoded directory name. Memory loading contributes to estimates only where its rules are supported.
 
-### Usage evidence
-
-Start with validated Claude Code log events; Codex coverage follows only after its format and attribution rules are verified. Read locally and retain only identifiers, counts, and dates needed for aggregation, not message contents.
-
-Attach evidence per tool, project, and identifiable item. Distinguish an invocation from a recorded completion or success. Ambiguous names or historical plugin versions stay unattributed rather than being assigned to today's matching row.
-
-Show Recorded invocations: N and Last recorded, with session count and date coverage. Use No recorded use only when a supported reader covers that item and scope. Otherwise show No usage coverage. Never infer non-use across tools from one tool's logs. Instruction loading is not inferred from the absence of tool-call events.
-
 ## Findings
 
 | Level                  | Examples                                                                                                         |
@@ -190,11 +179,11 @@ Show Recorded invocations: N and Last recorded, with session count and date cove
 | Problem                | Broken symlink, missing explicit import, malformed supported config, configured plugin files missing             |
 | Resolution information | Shadowed source, disabled declaration, trust requirement, inherited home instructions                            |
 | Review suggestion      | Repeated substantive paragraphs in one expected load stack, long instruction file, multiple same-name candidates |
-| Coverage gap           | Unsupported version or format, unreadable source, unknown plugin selection, unavailable usage evidence           |
+| Coverage gap           | Unsupported version or format, unreadable source, unknown plugin selection                                       |
 
 Exact paragraph comparison normalizes whitespace and ignores trivial headings or tiny fragments. Show both sources and whether they can apply together. Hook duplicate findings require matching execution conditions and known deduplication rules; otherwise show similar declarations without claiming duplicate execution.
 
-The 200-line instruction threshold is a review heuristic, not a universal tool limit. Actual size limits are tool-specific and must be distinguished from it. No automatic recommendation to delete an item based solely on length, age, or missing usage evidence.
+The 200-line instruction threshold is a review heuristic, not a universal tool limit. Actual size limits are tool-specific and must be distinguished from it. No automatic recommendation to delete an item based solely on length or age.
 
 Similarity scoring, stale prose paths, missing package scripts in prose, generic-advice detection, and growth history are deferred until the deterministic findings are useful and trusted.
 
@@ -265,15 +254,6 @@ interface Resolution {
   evidence: string[];
   estimatedTokens?: { startup: number; onDemand: number };
 }
-
-interface UsageEvidence {
-  entryId: string;
-  contextId: string;
-  eventType: "invocation" | "completion";
-  count: number;
-  lastRecorded?: string;
-  coverage: { sessions: number; from: string; to: string };
-}
 ```
 
 These are shared contracts, not complete payload definitions. Kind-specific parsers produce typed details for hooks, plugins, and MCP declarations. Raw secrets never enter the public API payload. Multiple declarations in one file receive different IDs. Preserve entry paths and plugin ownership even when physical content is shared.
@@ -331,7 +311,7 @@ Treat previews as untrusted text. Redact sensitive config before preview, export
 5. Deliver Hooks and MCP views, preserving unknown and disabled declarations.
 6. Add agents, memory, worktree comparisons, context estimates, and cross-view search.
 7. Validate deterministic findings and critical resolver behavior against fixtures and real tools.
-8. Add validated usage evidence if available, then use the app for real configuration audits.
+8. Use the app for real configuration audits.
 
 Hooks, plugins, and MCP visibility are release requirements. Incomplete assessments do not postpone their inventories.
 
@@ -340,7 +320,7 @@ Hooks, plugins, and MCP visibility are release requirements. Incomplete assessme
 - A developer can find the source of a surprising instruction or capability and open it from the map.
 - Both tools show global and project sources with reasons for expected, skipped, or unknown applicability.
 - A plugin's discovered contributions can be inspected from the plugin and traced back from each item.
-- Hooks remain visible without execution or usage evidence, including unknown events and conditional hooks.
+- Hooks remain visible without execution evidence, including unknown events and conditional hooks.
 - MCP declarations show configuration and provenance without claiming connectivity or exposing credentials.
 - Worktree differences, symlink entry paths, inaccessible sources, and unsupported formats are visible.
 - CLI and UI use the same resolution results; JSON export observes the same redaction rules.
@@ -352,7 +332,7 @@ Success means users can explain their setup and make a useful review or cleanup 
 
 - Validate plugin installation-record schemas, selection rules, and contribution formats for both target versions.
 - Verify project-root boundaries, instruction fallbacks, custom roots, and hook trust behavior using controlled tool runs.
-- Establish which memory and log records can be attributed to a project without guessing.
+- Establish which memory records can be attributed to a project without guessing.
 - Identify account-managed configuration that cannot be inventoried locally and document that coverage clearly.
 - Review parser dependencies, exact runtime minimum, package-name availability, and the existing license before release.
 

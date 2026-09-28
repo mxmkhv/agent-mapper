@@ -29,7 +29,12 @@ export function SourceList({ items, selectedId, onSelect }: SourceListProps) {
         >
           <span className={`tool-dot ${entry.tool}`} aria-hidden="true" />
           <span className="source-main">
-            <strong>{entry.name}</strong>
+            <span className="source-title">
+              <strong>{entry.name}</strong>
+              {entry.kind === "command" ? (
+                <span className="command-badge">Command</span>
+              ) : null}
+            </span>
             <small>{entry.path}</small>
           </span>
           <span className={`state-badge ${resolution.availability}`}>
@@ -95,6 +100,7 @@ export function Detail({
       <section className="detail-section">
         <h3>Source</h3>
         <p className="source-path">{entry.path}</p>
+        {entry.locator ? <p>Declaration: {entry.locator}</p> : null}
         {entry.pluginId ? (
           <button
             className="source-link"

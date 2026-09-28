@@ -8,13 +8,15 @@ export interface SearchItem {
   title: string;
   path: string;
   state: string;
+  kind?: string;
 }
 const resultLimit = 50;
 
 function sourceItems(snapshot: InventorySnapshot): SearchItem[] {
   return snapshot.items.map(({ entry, resolution }) => ({
     id: entry.id,
-    tab: entry.kind,
+    tab: entry.kind === "command" ? "skill" : entry.kind,
+    kind: entry.kind,
     tool: entry.tool,
     title: entry.name,
     path: entry.path,

@@ -493,11 +493,27 @@ summary:focus-visible {
   flex-direction: column;
   gap: 4px;
 }
+.source-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
 .source-main strong {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
+  font-weight: 650;
+}
+.command-badge {
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 5px;
+  color: var(--muted);
+  font-size: 9px;
   font-weight: 650;
 }
 .source-main small {

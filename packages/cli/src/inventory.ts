@@ -103,6 +103,12 @@ async function scanDirectory(
       projectPath: directory
     });
   }
+  await collector.addCommands({
+    tool: "claude",
+    directory: join(directory, ".claude", "commands"),
+    scope: "project",
+    projectPath: directory
+  });
 }
 
 interface GlobalRoots {
@@ -136,6 +142,11 @@ async function scanGlobal(
   await collector.addSkills({
     tool: "claude",
     directory: join(roots.claude, "skills"),
+    scope: "global"
+  });
+  await collector.addCommands({
+    tool: "claude",
+    directory: join(roots.claude, "commands"),
     scope: "global"
   });
   await collector.addSkills({

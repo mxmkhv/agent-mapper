@@ -68,7 +68,9 @@ export function SearchPalette({ snapshot, tool, onOpen, onClose }: Props) {
                   <strong>{item.title}</strong>
                   <small>{item.path}</small>
                 </span>
-                <span className="search-result-kind">{item.tab}</span>
+                <span className="search-result-kind">
+                  {item.kind ?? item.tab}
+                </span>
               </button>
             ))}
           </div>

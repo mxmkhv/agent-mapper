@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { lstat, readFile, readdir, realpath } from "node:fs/promises";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, relative, sep } from "node:path";
 import type { InventoryEntry, ToolId } from "@agent-mapper/core";
 
 const frontmatterStart = 4;
@@ -25,6 +25,9 @@ interface Candidate {
   scope: InventoryEntry["scope"];
   projectPath?: string;
   pluginId?: string;
+  name?: string;
+  locator?: string;
+  declarationOnly?: boolean;
 }
 
 interface SourceRead {
@@ -88,13 +91,49 @@ async function readSource(path: string): Promise<SourceRead | undefined> {
   }
 }
 
+async function makeEntry(options: {
+  candidate: Candidate;
+  source: SourceRead;
+  key: string;
+}): Promise<InventoryEntry> {
+  const { candidate, source, key } = options;
+  const details =
+    !candidate.declarationOnly &&
+    (candidate.kind === "skill" || candidate.kind === "command")
+      ? skillMetadata(source.content)
+      : {};
+  const readable = source.state === "readable" && !candidate.declarationOnly;
+  return {
+    id: createHash("sha256").update(key).digest("hex").slice(0, idLength),
+    tool: candidate.tool,
+    kind: candidate.kind,
+    name:
+      candidate.kind === "skill"
+        ? (details.name ?? basename(dirname(candidate.path)))
+        : (candidate.name ?? basename(candidate.path)),
+    path: candidate.path,
+    scope: candidate.scope,
+    readState: source.state,
+    isSymlink: await isSymlink(candidate.path),
+    realPath: source.realPath,
+    projectPath: candidate.projectPath,
+    pluginId: candidate.pluginId,
+    locator: candidate.locator,
+    declarationOnly: candidate.declarationOnly,
+    characters: readable ? source.content.length : undefined,
+    lineCount: readable ? lineCount(source.content) : undefined,
+    metadataCharacters: readable ? details.characters : undefined,
+    error: source.error
+  };
+}
+
 export class SourceCollector {
   readonly entries: InventoryEntry[] = [];
   readonly errors: string[] = [];
   private readonly seen = new Set<string>();
 
   async add(candidate: Candidate): Promise<void> {
-    const key = `${candidate.tool}:${candidate.kind}:${candidate.path}`;
+    const key = `${candidate.tool}:${candidate.kind}:${candidate.path}:${candidate.locator ?? candidate.name ?? ""}`;
     if (this.seen.has(key)) {
       return;
     }
@@ -106,41 +145,7 @@ export class SourceCollector {
     if (source.error) {
       this.errors.push(`${candidate.path}: ${source.error}`);
     }
-    const details =
-      candidate.kind === "skill" ? skillMetadata(source.content) : {};
-    const item: InventoryEntry = {
-      id: createHash("sha256").update(key).digest("hex").slice(0, idLength),
-      tool: candidate.tool,
-      kind: candidate.kind,
-      name:
-        candidate.kind === "skill"
-          ? (details.name ?? basename(dirname(candidate.path)))
-          : basename(candidate.path),
-      path: candidate.path,
-      scope: candidate.scope,
-      readState: source.state,
-      isSymlink: await isSymlink(candidate.path)
-    };
-    if (source.realPath) {
-      item.realPath = source.realPath;
-    }
-    if (candidate.projectPath) {
-      item.projectPath = candidate.projectPath;
-    }
-    if (candidate.pluginId) {
-      item.pluginId = candidate.pluginId;
-    }
-    if (source.state === "readable") {
-      item.characters = source.content.length;
-      item.lineCount = lineCount(source.content);
-      if (details.characters !== undefined) {
-        item.metadataCharacters = details.characters;
-      }
-    }
-    if (source.error) {
-      item.error = source.error;
-    }
-    this.entries.push(item);
+    this.entries.push(await makeEntry({ candidate, source, key }));
   }
 
   async addSkills(
@@ -164,6 +169,47 @@ export class SourceCollector {
           kind: "skill",
           path: join(candidate.directory, child.name, "SKILL.md")
         });
+      }
+    }
+  }
+
+  async addCommands(
+    candidate: Omit<Candidate, "path" | "kind" | "name"> & {
+      directory: string;
+    }
+  ): Promise<void> {
+    const pending = [candidate.directory];
+    while (pending.length) {
+      const directory = pending.pop()!;
+      let children;
+      try {
+        children = await readdir(directory, { withFileTypes: true });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+          this.errors.push(
+            `${directory}: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+        continue;
+      }
+      for (const child of children) {
+        const path = join(directory, child.name);
+        if (child.isDirectory()) {
+          pending.push(path);
+        } else if (
+          child.name.endsWith(".md") &&
+          (child.isFile() || child.isSymbolicLink())
+        ) {
+          await this.add({
+            ...candidate,
+            kind: "command",
+            path,
+            name: relative(candidate.directory, path)
+              .slice(0, -".md".length)
+              .split(sep)
+              .join(":")
+          });
+        }
       }
     }
   }

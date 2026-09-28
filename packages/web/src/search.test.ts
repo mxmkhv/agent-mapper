@@ -81,3 +81,23 @@ it("applies the tool filter across all result kinds", () => {
     searchItems(snapshot, { query: "", tool: "claude" }).map((item) => item.id)
   ).toEqual(["skill"]);
 });
+
+it("opens commands in the Skills tab while keeping their kind", () => {
+  const command = {
+    ...snapshot.items[0]!,
+    entry: {
+      ...snapshot.items[0]!.entry,
+      id: "command",
+      kind: "command" as const,
+      name: "frontend:component",
+      path: "/app/.claude/commands/frontend/component.md"
+    }
+  };
+  const results = searchItems(
+    { ...snapshot, items: [command] },
+    { query: "frontend:component", tool: "all" }
+  );
+  expect(results).toMatchObject([
+    { id: "command", tab: "skill", kind: "command" }
+  ]);
+});

@@ -1,5 +1,5 @@
 export type ToolId = "claude" | "codex";
-type EntryKind = "instruction" | "skill";
+type EntryKind = "instruction" | "skill" | "command";
 type Scope = "global" | "project" | "unknown";
 type ReadState = "readable" | "missing" | "unreadable";
 
@@ -21,6 +21,8 @@ export interface InventoryEntry {
   error?: string;
   preview?: string;
   pluginId?: string;
+  locator?: string;
+  declarationOnly?: boolean;
 }
 
 export type PluginState =

@@ -32,7 +32,7 @@ export function ContextSummaryPanel({ context, tool }: Props) {
                   <dd>{estimate(row.startup)}</dd>
                 </div>
                 <div>
-                  <dt>Skill metadata text</dt>
+                  <dt>Skill and command metadata</dt>
                   <dd>{estimate(row.skillMetadata)}</dd>
                 </div>
                 <div>
@@ -50,8 +50,8 @@ export function ContextSummaryPanel({ context, tool }: Props) {
       </div>
       <p className="context-caption">
         Startup covers resolved instruction files. On demand covers available
-        skill bodies and configured agent files. Skill metadata is file text;
-        listing budgets and other runtime content are not estimated.
+        skill and command bodies and configured agent files. Metadata is file
+        text; listing budgets and other runtime content are not estimated.
       </p>
     </section>
   );

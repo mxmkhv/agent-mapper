@@ -37,9 +37,14 @@ function addEntry(
   if (resolution.availability === "unknown") {
     total.unaccountedSources += 1;
   } else if (resolution.availability === "expected") {
-    if (entry.kind === "instruction" && resolution.loading === "startup") {
+    if (entry.declarationOnly) {
+      total.unaccountedSources += 1;
+    } else if (
+      entry.kind === "instruction" &&
+      resolution.loading === "startup"
+    ) {
       total.startup += entry.characters ?? 0;
-    } else if (entry.kind === "skill") {
+    } else if (entry.kind === "skill" || entry.kind === "command") {
       const metadata = entry.metadataCharacters ?? 0;
       total.skillMetadata += metadata;
       total.onDemand += Math.max(0, (entry.characters ?? 0) - metadata);

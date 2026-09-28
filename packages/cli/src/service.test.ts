@@ -57,6 +57,27 @@ it("adds approximate context figures to the shared snapshot without exposing tex
   expect(JSON.stringify(snapshot)).not.toContain("Private skill body");
 });
 
+it("resolves a Claude command as on-demand content without exporting its body", async () => {
+  const home = realpathSync(
+    mkdtempSync(join(tmpdir(), "agent-mapper-command-"))
+  );
+  roots.push(home);
+  const project = join(home, "app");
+  const command = join(project, ".claude", "commands", "review.md");
+  mkdirSync(join(project, ".claude", "commands"), { recursive: true });
+  writeFileSync(command, "Private command body");
+  const snapshot = await buildSnapshot(project, { home });
+  expect(
+    snapshot.items.find(({ entry }) => entry.path === command)
+  ).toMatchObject({
+    entry: { kind: "command", name: "review" },
+    resolution: { availability: "expected", loading: "agent-selected" }
+  });
+  expect(snapshot.context.claude.onDemand).toBeGreaterThan(0);
+  expect(snapshot.context.claude.startup).toBe(0);
+  expect(JSON.stringify(snapshot)).not.toContain("Private command body");
+});
+
 it("applies project instructions stored under .claude to the selected folder", async () => {
   const home = realpathSync(
     mkdtempSync(join(tmpdir(), "agent-mapper-claude-folder-"))
