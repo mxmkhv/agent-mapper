@@ -10,6 +10,9 @@ interface WorkspaceInput {
   snapshot: InventorySnapshot;
   isProject: boolean;
   tool: ToolId;
+  /** Records from other folders (Global reach), so links and rows from them can be inspected. */
+  extraRecords: InventoryRecord[];
+  initialSelectedId?: string;
   onTool(tool: ToolId): void;
 }
 
@@ -35,9 +38,13 @@ function forTool(
 /** Selection, inspector mode, and the search palette move together. */
 function useSelection(
   records: InventoryRecord[],
-  { tool, onTool }: Pick<WorkspaceInput, "tool" | "onTool">
+  {
+    tool,
+    onTool,
+    initialSelectedId
+  }: Pick<WorkspaceInput, "tool" | "onTool" | "initialSelectedId">
 ) {
-  const [selectedId, setSelectedId] = useState<string>();
+  const [selectedId, setSelectedId] = useState(initialSelectedId);
   const [showInactive, setShowInactive] = useState(false);
   const [showCoverage, setShowCoverage] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -73,14 +80,18 @@ function useSelection(
 /** All per-folder UI state: view, filters, selection, and the records the views render. */
 export function useWorkspace(input: WorkspaceInput) {
   const { snapshot, isProject, tool } = input;
-  const [view, setView] = useState<View>(isProject ? "map" : "inventory");
+  const [view, setView] = useState<View>(isProject ? "map" : "reach");
   const [kind, setKind] = useState<RecordKind | "all">("all");
   const records = useMemo(() => buildRecords(snapshot), [snapshot]);
   const context = useMemo(
     () => pathContext(snapshot, isProject),
     [snapshot, isProject]
   );
-  const selection = useSelection(records, input);
+  const lookup = useMemo(
+    () => [...records, ...input.extraRecords],
+    [records, input.extraRecords]
+  );
+  const selection = useSelection(lookup, input);
   return {
     ...selection,
     view,
@@ -91,6 +102,7 @@ export function useWorkspace(input: WorkspaceInput) {
       setView("inventory");
     },
     records,
+    lookup,
     ...forTool(records, { tool, showInactive: selection.showInactive }),
     findings: snapshot.findings.filter((finding) => finding.tool === tool),
     context

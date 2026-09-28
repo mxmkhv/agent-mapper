@@ -13,12 +13,15 @@ export function App() {
     () => window.localStorage.getItem(folderKey) ?? ""
   );
   const [refresh, setRefresh] = useState(0);
+  const [pendingSelection, setPendingSelection] = useState<string>();
   const [theme, setTheme] = useTheme();
   const [tool, setTool] = useTool();
   const projects = useProjects();
   const inventory = useInventory(selectedPath, refresh);
   const rescan = () => setRefresh((value) => value + 1);
-  function selectPath(path: string) {
+  /** Opening a project from Global reach can carry the item to select there. */
+  function selectPath(path: string, selectId?: string) {
+    setPendingSelection(selectId);
     setSelectedPath(path);
     window.localStorage.setItem(folderKey, path);
   }
@@ -36,6 +39,7 @@ export function App() {
       <main className="grid min-h-0 min-w-0">
         {inventory.value ? (
           <Workspace
+            initialSelectedId={pendingSelection}
             isProject={Boolean(selectedPath)}
             key={selectedPath || "global"}
             notice={
@@ -46,6 +50,10 @@ export function App() {
             onRescan={rescan}
             onSelectPath={selectPath}
             onTool={setTool}
+            projectPaths={
+              projects.value?.projects.map((project) => project.path) ?? []
+            }
+            refreshKey={refresh}
             refreshing={inventory.loading}
             snapshot={inventory.value}
             tool={tool}
