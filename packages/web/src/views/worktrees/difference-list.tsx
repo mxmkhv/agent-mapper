@@ -138,7 +138,7 @@ export function DifferenceList({ rows, selectedId, onSelect }: ListProps) {
           <span className="flex min-w-0 items-baseline gap-2">
             <PathLine path={group.label} />
             <span className="shrink-0 text-caption text-ink-faint tabular-nums">
-              {group.rows.length} files
+              {group.rows.length} {group.rows.length === 1 ? "file" : "files"}
             </span>
           </span>
           <span />
