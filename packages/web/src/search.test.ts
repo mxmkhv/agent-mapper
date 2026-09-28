@@ -25,6 +25,7 @@ const snapshot: InventorySnapshot = {
       }
     }
   ],
+  imports: [],
   plugins: [],
   hooks: [],
   mcpServers: [

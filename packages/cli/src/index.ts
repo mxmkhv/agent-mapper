@@ -130,6 +130,7 @@ function filterSnapshot(snapshot: InventorySnapshot, tools: ToolId[]) {
   const findings = snapshot.findings.filter((finding) =>
     tools.includes(finding.tool)
   );
+  const imports = tools.includes("claude") ? snapshot.imports : [];
   return {
     items,
     plugins,
@@ -139,7 +140,8 @@ function filterSnapshot(snapshot: InventorySnapshot, tools: ToolId[]) {
     comparison,
     memories,
     context,
-    findings
+    findings,
+    imports
   };
 }
 

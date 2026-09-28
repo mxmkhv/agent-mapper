@@ -7,9 +7,10 @@ import {
   type InventoryEntry,
   type InventorySnapshot
 } from "@agent-mapper/core";
-import { scanInventory, type ScanOptions } from "./inventory";
+import { scanInventory, type ScanOptions, type ScanResult } from "./inventory";
 import { scanWorktrees } from "./worktree-compare";
 import { buildFindings } from "./findings";
+import { scanInstructionImports } from "./instruction-imports";
 export { createAppServer } from "./server";
 
 function coverage(errors: string[]): string[] {
@@ -20,7 +21,7 @@ function coverage(errors: string[]): string[] {
     "Memory coverage includes local Markdown files only. Claude encoded folder names are candidates, not verified project matches; custom memory locations and live use are not resolved.",
     "Agent coverage includes local Claude Markdown and Codex TOML files, plus Claude plugin agent files. Managed and session agents, unsupported declarations, project trust, and live use are not verified. Agent prompts stay in source files.",
     "Worktree comparison checks common local configuration files by relative path and content. Generated folders and inherited global files are excluded. A changed settings file does not identify which declaration changed inside it.",
-    "Context figures approximate known file text at four characters per token. Skill listing budgets, memory loading, settings effects, and other runtime content are not estimated.",
+    "Context figures approximate known file text at four characters per token. Imported instruction content, skill listing budgets, memory loading, settings effects, and other runtime content are not estimated.",
     "Instruction resolution models default Claude Code and Codex file rules. Custom instruction file settings, trust decisions, and runtime overrides are not inspected.",
     "This view models a fresh local CLI session. Runtime flags, account-managed settings, and live session state are not inspected."
   ];
@@ -33,10 +34,27 @@ function resolveItems(entries: InventoryEntry[], path: string) {
   ];
 }
 
-export async function buildSnapshot(
-  workingDirectory: string,
-  options: Omit<ScanOptions, "workingDirectory"> = {}
-): Promise<InventorySnapshot> {
+async function analyzeSources(options: {
+  scan: ScanResult;
+  path: string;
+  home: string;
+}) {
+  const { scan, path, home } = options;
+  const items = resolveItems(scan.entries, path);
+  const imports = await scanInstructionImports({
+    items,
+    home,
+    workingDirectory: path
+  });
+  const findings = await buildFindings({
+    items,
+    plugins: scan.plugins,
+    imports: imports.imports
+  });
+  return { items, imports, findings };
+}
+
+async function validatedDirectory(workingDirectory: string): Promise<string> {
   const requestedPath = resolve(workingDirectory);
   let path: string;
   try {
@@ -52,10 +70,21 @@ export async function buildSnapshot(
   if (!(await stat(path)).isDirectory()) {
     throw new Error(`${path} is not a folder. Choose an existing folder.`);
   }
+  return path;
+}
+
+export async function buildSnapshot(
+  workingDirectory: string,
+  options: Omit<ScanOptions, "workingDirectory"> = {}
+): Promise<InventorySnapshot> {
+  const path = await validatedDirectory(workingDirectory);
   const scan = await scanInventory({ ...options, workingDirectory: path });
   const worktree = await scanWorktrees(path);
-  const items = resolveItems(scan.entries, path);
-  const findings = await buildFindings(items, scan.plugins);
+  const { items, imports, findings } = await analyzeSources({
+    scan,
+    path,
+    home: resolve(options.home ?? homedir())
+  });
   return {
     workingDirectory: path,
     scannedAt: new Date().toISOString(),
@@ -73,8 +102,14 @@ export async function buildSnapshot(
     worktrees: worktree.worktrees,
     comparison: worktree.comparison,
     items,
+    imports: imports.imports,
     findings: findings.findings,
-    coverage: coverage([...scan.errors, ...worktree.errors, ...findings.errors])
+    coverage: coverage([
+      ...scan.errors,
+      ...worktree.errors,
+      ...imports.errors,
+      ...findings.errors
+    ])
   };
 }
 
@@ -90,10 +125,14 @@ export async function buildGlobalSnapshot(
   const plugins = snapshot.plugins.filter(
     (plugin) => plugin.scope !== "project"
   );
-  const findings = await buildFindings(items, plugins);
+  const imports = snapshot.imports.filter((item) =>
+    items.some(({ entry }) => entry.id === item.sourceEntryId)
+  );
+  const findings = await buildFindings({ items, plugins, imports });
   return {
     ...snapshot,
     items,
+    imports,
     plugins,
     hooks: snapshot.hooks.filter((hook) => hook.scope !== "project"),
     mcpServers: snapshot.mcpServers.filter(

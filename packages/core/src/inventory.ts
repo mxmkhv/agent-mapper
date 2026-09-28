@@ -108,11 +108,22 @@ export interface ResolvedEntry {
   resolution: EntryResolution;
 }
 
+export interface InstructionImport {
+  id: string;
+  sourceEntryId: string;
+  sourcePath: string;
+  targetPath: string;
+  depth: number;
+  state: "readable" | "missing" | "unreadable" | "approval-unknown";
+  reason: string;
+}
+
 export interface InventorySnapshot {
   workingDirectory: string;
   scannedAt: string;
   roots: { claude: string; codex: string };
   items: ResolvedEntry[];
+  imports: InstructionImport[];
   plugins: PluginRecord[];
   hooks: HookRecord[];
   mcpServers: McpRecord[];

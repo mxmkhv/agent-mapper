@@ -6,6 +6,7 @@ export type FindingCode =
   | "shadowed-source"
   | "long-instruction"
   | "repeated-instruction"
+  | "missing-import"
   | "missing-plugin";
 
 export interface FindingSource {

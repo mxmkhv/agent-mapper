@@ -65,6 +65,7 @@ const snapshot: InventorySnapshot = {
   scannedAt: "2026-01-01T00:00:00.000Z",
   roots: { claude: "/home/.claude", codex: "/home/.codex" },
   items: [skill("claude"), skill("codex")],
+  imports: [],
   plugins: [plugin("claude"), plugin("codex")],
   hooks: [],
   mcpServers: [],

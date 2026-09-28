@@ -4,6 +4,7 @@ import type {
   Finding,
   FindingCode,
   FindingSource,
+  InstructionImport,
   PluginRecord,
   ResolvedEntry,
   ToolId
@@ -20,17 +21,22 @@ interface FindingInput {
   title: string;
   reason: string;
   sources: FindingSource[];
+  identity?: string;
 }
 
 function finding(input: FindingInput): Finding {
   const sources = [...input.sources].sort((a, b) =>
     a.path.localeCompare(b.path)
   );
-  const key = [input.tool, input.code, ...sources.map(({ id }) => id)].join(
-    ":"
-  );
+  const key = [
+    input.tool,
+    input.code,
+    ...sources.map(({ id }) => id),
+    input.identity ?? ""
+  ].join(":");
+  const { identity: _identity, ...record } = input;
   return {
-    ...input,
+    ...record,
     id: createHash("sha256").update(key).digest("hex").slice(0, idLength),
     sources
   };
@@ -119,6 +125,22 @@ function pluginFindings(plugin: PluginRecord): Finding[] {
   ];
 }
 
+function importFindings(imports: InstructionImport[]): Finding[] {
+  return imports
+    .filter((item) => item.state === "missing")
+    .map((item) =>
+      finding({
+        tool: "claude",
+        code: "missing-import",
+        level: "problem",
+        title: "Imported file is missing",
+        reason: `The explicit import target is missing: ${item.targetPath}`,
+        identity: item.id,
+        sources: [{ id: item.sourceEntryId, path: item.sourcePath }]
+      })
+    );
+}
+
 function paragraphs(content: string): Set<string> {
   return new Set(
     content
@@ -186,14 +208,17 @@ function pairFindings(seen: Map<string, ResolvedEntry[]>): Finding[] {
   );
 }
 
-export async function buildFindings(
-  items: ResolvedEntry[],
-  plugins: PluginRecord[]
-): Promise<{ findings: Finding[]; errors: string[] }> {
+export async function buildFindings(options: {
+  items: ResolvedEntry[];
+  plugins: PluginRecord[];
+  imports: InstructionImport[];
+}): Promise<{ findings: Finding[]; errors: string[] }> {
+  const { items, plugins, imports } = options;
   const repeated = await repeatedFindings(items);
   const findings = [
     ...items.flatMap(entryFindings),
     ...plugins.flatMap(pluginFindings),
+    ...importFindings(imports),
     ...repeated.findings
   ];
   findings.sort(
