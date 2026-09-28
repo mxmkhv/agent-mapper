@@ -114,7 +114,12 @@ export interface InstructionImport {
   sourcePath: string;
   targetPath: string;
   depth: number;
-  state: "readable" | "missing" | "unreadable" | "approval-unknown";
+  state:
+    | "readable"
+    | "missing"
+    | "unreadable"
+    | "approval-unknown"
+    | "syntax-unknown";
   reason: string;
 }
 

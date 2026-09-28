@@ -48,7 +48,7 @@ function importPaths(content: string): string[] {
     }
     const visible = withoutInlineCode(line, inline);
     for (const match of visible.matchAll(/(^|[\s([{])@([^\s`<>()[\]{}"']+)/g)) {
-      const path = match[2]?.replace(/[.,;:!?]+$/, "");
+      const path = match[2];
       if (path) {
         paths.push(path);
       }
@@ -131,15 +131,27 @@ async function recordImport(options: VisitOptions, path: string) {
     return undefined;
   }
   seen.add(id);
+  const base = {
+    id,
+    sourceEntryId: root.entry.id,
+    sourcePath,
+    targetPath: target,
+    depth
+  };
+  if (/[.,;:!?]$/.test(path)) {
+    imports.push({
+      ...base,
+      state: "syntax-unknown",
+      reason:
+        "The @path token ends in punctuation. Claude Code 2.1.283 did not load this form in a controlled run."
+    });
+    return undefined;
+  }
   const result = await readTarget(target);
   if ("error" in result) {
     const missing = (result.error as NodeJS.ErrnoException).code === "ENOENT";
     imports.push({
-      id,
-      sourceEntryId: root.entry.id,
-      sourcePath,
-      targetPath: target,
-      depth,
+      ...base,
       state: missing ? "missing" : "unreadable",
       reason: missing
         ? "The explicit import target does not exist."
@@ -152,11 +164,7 @@ async function recordImport(options: VisitOptions, path: string) {
     (outsideWorkingDirectory(target, options.workingDirectory) ||
       outsideWorkingDirectory(result.physicalPath, options.workingDirectory));
   imports.push({
-    id,
-    sourceEntryId: root.entry.id,
-    sourcePath,
-    targetPath: target,
-    depth,
+    ...base,
     state: external ? "approval-unknown" : "readable",
     reason: external
       ? "Claude Code may require project approval for this external import; approval was not inspected."

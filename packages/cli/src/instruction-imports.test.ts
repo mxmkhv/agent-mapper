@@ -34,7 +34,7 @@ it("tracks nested imports, skips code, and reports only explicit missing targets
   writeFileSync(
     join(project, "CLAUDE.md"),
     [
-      "Read @docs/guide.md and @missing.md.",
+      "Read @docs/guide.md and @missing.md",
       "`@inline.md`",
       "```md",
       "@fenced.md",
@@ -43,7 +43,7 @@ it("tracks nested imports, skips code, and reports only explicit missing targets
   );
   writeFileSync(
     join(project, "docs", "guide.md"),
-    "Read @../more.md. Private guide text."
+    "Read @../more.md\nPrivate guide text."
   );
   writeFileSync(join(project, "more.md"), "Private imported text.");
 
@@ -119,4 +119,21 @@ it("stops at four import hops and keeps missing findings distinct", async () => 
   );
   expect(missing).toHaveLength(2);
   expect(new Set(missing.map(({ id }) => id)).size).toBe(2);
+});
+
+it("does not claim a punctuation-ended import loaded or is missing", async () => {
+  const { home, project } = fixture();
+  writeFileSync(join(project, "AGENTS.md"), "Read @guide.md.");
+  writeFileSync(join(project, "guide.md"), "This is not the named target.");
+
+  const snapshot = await buildSnapshot(project, { home });
+  expect(snapshot.imports).toMatchObject([
+    {
+      targetPath: join(project, "guide.md."),
+      state: "syntax-unknown"
+    }
+  ]);
+  expect(snapshot.findings.some(({ code }) => code === "missing-import")).toBe(
+    false
+  );
 });
