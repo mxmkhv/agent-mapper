@@ -6,8 +6,8 @@ colors:
   surface: "#ffffff"
   sidebar: "#f4f4f2"
   ink: "#1c1c1a"
-  ink-muted: "#6b6b66"
-  ink-faint: "#a3a39d"
+  ink-muted: "#5c5c57"
+  ink-faint: "#73736d"
   hairline: "#e7e7e3"
   hairline-strong: "#d6d6d1"
   wash: "#f2f2ef"
@@ -25,8 +25,8 @@ colors:
   surface-dark: "#191918"
   sidebar-dark: "#151514"
   ink-dark: "#ecece8"
-  ink-muted-dark: "#a1a19b"
-  ink-faint-dark: "#6c6c67"
+  ink-muted-dark: "#b4b4ae"
+  ink-faint-dark: "#8d8d87"
   hairline-dark: "#282826"
   hairline-strong-dark: "#363633"
   wash-dark: "#20201e"
@@ -228,7 +228,7 @@ Warm neutral grays carry the whole interface. Saturated color is reserved for to
 - **Sheet White** (`surface`): cards, rows, the inspector, buttons, and the selected toggle segment.
 - **Sidebar Stone** (`sidebar`): sidebar background.
 - **Muted Ink** (`ink-muted`): secondary text, icons, and state labels.
-- **Faint Ink** (`ink-faint`): tertiary text, counts, path prefixes, and captions.
+- **Faint Ink** (`ink-faint`): tertiary text, counts, path prefixes, and captions. Still meets WCAG AA (4.5:1) on canvas and surface; never go lighter.
 - **Hairline** (`hairline`, `hairline-strong`): borders and dividers. The strong variant is used for hover borders and absent-cell dashes.
 - **Wash** (`wash`): chip fill, provenance breadcrumb, matrix section rows, and toggle track.
 - **Hover / Selected** (`hover`, `selected`): row and nav states.

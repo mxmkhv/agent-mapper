@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Tokens come from DESIGN.md. The theme hook resolves Auto to light or dark on <html data-theme>. */
+/* Tokens come from DESIGN.md. Muted and faint ink meet WCAG AA (4.5:1) on canvas and surface in both themes. The theme hook resolves Auto to light or dark on <html data-theme>. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
@@ -9,8 +9,8 @@
   --am-surface: #ffffff;
   --am-sidebar: #f4f4f2;
   --am-ink: #1c1c1a;
-  --am-ink-muted: #6b6b66;
-  --am-ink-faint: #a3a39d;
+  --am-ink-muted: #5c5c57;
+  --am-ink-faint: #73736d;
   --am-hairline: #e7e7e3;
   --am-hairline-strong: #d6d6d1;
   --am-wash: #f2f2ef;
@@ -33,8 +33,8 @@
   --am-surface: #191918;
   --am-sidebar: #151514;
   --am-ink: #ecece8;
-  --am-ink-muted: #a1a19b;
-  --am-ink-faint: #6c6c67;
+  --am-ink-muted: #b4b4ae;
+  --am-ink-faint: #8d8d87;
   --am-hairline: #282826;
   --am-hairline-strong: #363633;
   --am-wash: #20201e;
