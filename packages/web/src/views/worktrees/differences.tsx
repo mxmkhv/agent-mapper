@@ -10,7 +10,8 @@ import { StateMarker } from "../../ui/marks";
 import { relevantDifferences } from "./difference-groups";
 import { DifferenceList, differenceInfo } from "./difference-list";
 import { PathText } from "../../ui/path-text";
-import { DetailPane, EmptyState, ListPane } from "./panes";
+import { EmptyState } from "../../ui/empty-state";
+import { DetailPane, ListPane } from "./panes";
 
 function Side({
   label,

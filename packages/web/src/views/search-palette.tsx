@@ -57,7 +57,7 @@ export function SearchPalette({
         <input
           aria-label={`Search ${toolName} inventory`}
           autoFocus
-          className="h-12 w-full border-0 border-b border-hairline bg-transparent px-4 text-[15px] text-ink outline-none"
+          className="h-12 w-full border-0 border-b border-hairline bg-transparent px-4 text-large text-ink outline-none"
           onChange={(event) => {
             setQuery(event.target.value);
             setIndex(0);

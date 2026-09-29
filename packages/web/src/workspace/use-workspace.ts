@@ -75,6 +75,10 @@ function useSelection(
     toggleInactive: () => setShowInactive((value) => !value),
     showCoverage,
     toggleCoverage: () => setShowCoverage((value) => !value),
+    closeInspector() {
+      setSelectedId(undefined);
+      setShowCoverage(false);
+    },
     searchOpen,
     setSearchOpen
   };

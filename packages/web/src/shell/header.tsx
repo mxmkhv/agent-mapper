@@ -68,13 +68,16 @@ export function Header(props: HeaderProps) {
           <span className="truncate text-ink-muted">{title.subtitle}</span>
         ) : null}
         {title.branch ? (
-          <span className="inline-flex min-w-0 items-center gap-1 truncate text-label whitespace-nowrap text-ink-muted">
+          <span
+            className="inline-flex min-w-0 items-center gap-1 text-label text-ink-muted"
+            title={title.branch}
+          >
             <GitBranch
               aria-hidden="true"
-              className="size-3.5"
+              className="size-3.5 shrink-0"
               strokeWidth={1.6}
             />
-            {title.branch}
+            <span className="truncate">{title.branch}</span>
           </span>
         ) : null}
       </div>

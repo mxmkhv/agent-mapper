@@ -140,7 +140,7 @@ export function Contributions({
           key={kind}
           onClick={() => onKind(kind)}
         >
-          <strong className="block text-[15px] tabular-nums">{count}</strong>
+          <strong className="block text-large tabular-nums">{count}</strong>
           <span className="text-caption text-ink-muted">{kindLabel[kind]}</span>
         </button>
       ))}

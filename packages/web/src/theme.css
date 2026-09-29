@@ -84,8 +84,12 @@
   --text-mono--line-height: 1.4;
   --text-label: 12px;
   --text-label--line-height: 1.4;
+  --text-glyph: 9px;
+  --text-glyph--line-height: 1;
   --text-body: 13px;
   --text-body--line-height: 1.45;
+  --text-large: 15px;
+  --text-large--line-height: 1.35;
   --text-title: 17px;
   --text-title--line-height: 1.3;
   --text-headline: 18px;
@@ -121,5 +125,12 @@
   :focus-visible {
     outline: 2px solid var(--am-focus);
     outline-offset: 1px;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--am-focus) 24%, transparent);
+  }
+  * {
+    scrollbar-color: var(--am-hairline-strong) transparent;
+    scrollbar-width: thin;
   }
 }

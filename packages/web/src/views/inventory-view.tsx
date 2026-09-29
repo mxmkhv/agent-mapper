@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Layers, Plug } from "lucide-react";
 import type { PathContext } from "../model/paths";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
+import { HintText } from "../ui/hint-text";
 import { KindIcon, kindLabel } from "../ui/kind-icon";
 import {
   groupRecords,
@@ -58,11 +59,7 @@ function GroupHead({ group, hint }: { group: InventoryGroup; hint?: string }) {
       <span className="font-medium text-ink-faint tabular-nums">
         {group.records.length}
       </span>
-      {hint ? (
-        <span className="font-mono text-caption font-normal text-ink-faint">
-          {hint}
-        </span>
-      ) : null}
+      {hint ? <HintText hint={hint} /> : null}
     </div>
   );
 }

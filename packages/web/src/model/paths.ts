@@ -49,6 +49,9 @@ export function splitPath(path: string) {
   return { directory: path.slice(0, cut + 1), file: path.slice(cut + 1) };
 }
 
+/** Hints mix paths (`~/.claude`) with prose ("In this repo"); only paths read as machine text. */
+export const isPathLike = (text: string) => /^[~/.*]\S*$/.test(text);
+
 export function isInside(path: string, root: string): boolean {
   return path.startsWith(`${root}/`);
 }

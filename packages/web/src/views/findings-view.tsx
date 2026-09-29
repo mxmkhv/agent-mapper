@@ -1,6 +1,7 @@
 import type { Finding } from "@agent-mapper/core";
 import { ArrowRight, Info, TriangleAlert } from "lucide-react";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
+import { EmptyState } from "../ui/empty-state";
 
 const levelRank = {
   problem: 0,
@@ -24,9 +25,9 @@ export function FindingsView({
 }: FindingsViewProps) {
   if (!findings.length) {
     return (
-      <p className="py-16 text-center text-ink-faint">
-        No findings for {toolName}. Rescan after changing local configuration.
-      </p>
+      <EmptyState title={`No findings for ${toolName}`}>
+        Rescan after changing local configuration.
+      </EmptyState>
     );
   }
   const sorted = [...findings].sort(

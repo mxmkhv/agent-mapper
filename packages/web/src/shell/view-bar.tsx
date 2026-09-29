@@ -46,13 +46,17 @@ export function ViewBar(props: ViewBarProps) {
       <span className="flex-1" />
       <button
         aria-pressed={props.showInactive}
-        className="mr-2 inline-flex items-center gap-2 text-label text-ink-muted hover:text-ink"
+        className="mr-2 inline-flex shrink-0 items-center gap-2 text-label whitespace-nowrap text-ink-muted hover:text-ink"
         onClick={props.onToggleInactive}
       >
         <span
           className={`relative h-4 w-[26px] rounded-full transition-colors after:absolute after:top-0.5 after:left-0.5 after:size-3 after:rounded-full after:bg-surface after:transition-transform ${props.showInactive ? "bg-ink after:translate-x-2.5" : "bg-hairline-strong"}`}
         />
-        Show inactive ({props.inactiveCount})
+        <span>
+          <span className="lg:hidden">Inactive</span>
+          <span className="max-lg:hidden">Show inactive</span> (
+          {props.inactiveCount})
+        </span>
       </button>
       <button
         className="inline-flex h-[26px] items-center gap-1.5 rounded-control px-1.5 text-label text-ink-muted hover:bg-hover hover:text-ink"
