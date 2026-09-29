@@ -36,7 +36,7 @@ The app is read-only with respect to agent configuration. Files stay where they 
 
 ## What the map can claim
 
-Keep these separate throughout the CLI, UI, and API:
+Keep these separate throughout the UI and API:
 
 | Claim             | Evidence                                                                         |
 | ----------------- | -------------------------------------------------------------------------------- |
@@ -160,7 +160,7 @@ Claude Code sources include user and project-local records in `~/.claude.json`, 
 
 Use Configured, Disabled, Shadowed, Approval required, or Unknown as justified by local evidence. Never label a server Connected, Healthy, or Authenticated based on configuration alone. Do not start servers, probe endpoints, run credential helpers, enumerate live tools, or initiate authentication.
 
-Show environment variable and header names without their secret values. Redact credentials from URLs, arguments, previews, exports, and logs before sending data to the browser. If a free-form value cannot be safely displayed, hide it and offer Open in editor. Apply the same handling to hooks and plugin settings.
+Show environment variable and header names without their secret values. Redact credentials from URLs, arguments, previews, and logs before sending data to the browser. If a free-form value cannot be safely displayed, hide it and offer Open in editor. Apply the same handling to hooks and plugin settings.
 
 Cloud/account connectors and session-only declarations that are unavailable locally appear as coverage limitations. An empty local inventory does not prove the tool has no connections.
 
@@ -298,7 +298,7 @@ Establish gates during scaffolding, before feature work. Per-edit and shell hook
 
 Bind only to `127.0.0.1`. Use a random session token, validate Host and Origin, and authenticate API and event-stream access. Open/Reveal accepts mapped source IDs, resolves them server-side, and invokes executables with argument arrays rather than interpolated shell commands.
 
-Treat previews as untrusted text. Redact sensitive config before preview, export, or logging. Do not execute scanned content or fetch remote configuration. Watch selected sources and resolved targets, not the entire home directory; explicit Rescan remains available.
+Treat previews as untrusted text. Redact sensitive config before preview or logging. Do not execute scanned content or fetch remote configuration. Watch selected sources and resolved targets, not the entire home directory; explicit Rescan remains available.
 
 ## Build order
 

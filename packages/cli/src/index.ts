@@ -58,7 +58,9 @@ async function main(): Promise<void> {
     return;
   }
   if (positionals.length > 0) {
-    throw new Error(`Unknown command ${positionals[0]}. Run --help for usage.`);
+    throw new Error(
+      `Unknown command "${positionals[0]}". Run --help for usage.`
+    );
   }
   await launchUi(selectedTools(values.tools));
 }
