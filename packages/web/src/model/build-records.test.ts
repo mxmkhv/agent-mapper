@@ -97,7 +97,8 @@ it("assigns layers, including personal .local files", () => {
         entry({ id: "project", path: `${repo}/CLAUDE.md` }),
         entry({ id: "local", path: `${repo}/CLAUDE.local.md` })
       ]
-    })
+    }),
+    "project"
   );
   expect(records.map((record) => record.layer)).toEqual([
     "global",
@@ -115,7 +116,8 @@ it("marks everything from a cached plugin version as inactive", () => {
     pluginId: "old"
   });
   const [record, pluginRecord] = buildRecords(
-    snapshot({ items: [skill], plugins: [plugin("old", "cached")] })
+    snapshot({ items: [skill], plugins: [plugin("old", "cached")] }),
+    "global"
   );
   expect(record).toMatchObject({
     tier: "inactive",
@@ -136,7 +138,8 @@ it("keeps active records quiet and names shadowed ones plainly", () => {
   const [active, inactive] = buildRecords(
     snapshot({
       items: [entry({ id: "claude", path: `${repo}/CLAUDE.md` }), shadowed]
-    })
+    }),
+    "project"
   );
   expect(active && stateLabel(active)).toBeUndefined();
   expect(active && stateText(active)).toBe("Loads at startup");
@@ -160,7 +163,8 @@ it("links symlinks and their sources in both directions", () => {
           scope: "global"
         })
       ]
-    })
+    }),
+    "global"
   );
   const [source, link] = records;
   expect(source && isLink(source)).toBe(false);
@@ -179,7 +183,7 @@ it("summarizes a folder of linked skills once", () => {
       realPath: `${repo}/.agents/skills/${name}/SKILL.md`
     })
   );
-  const records = buildRecords(snapshot({ items: linked }));
+  const records = buildRecords(snapshot({ items: linked }), "project");
   expect(sharedLinkFolder(records)).toEqual({
     folder: `${repo}/.agents/skills`,
     count: 3
@@ -199,7 +203,7 @@ it("describes where each layer lives for the selected tool", () => {
     ]
   });
   const context = pathContext(data, true);
-  const records = buildRecords(data);
+  const records = buildRecords(data, "project");
   expect(layerHint("global", { records, context, tool: "codex" })).toBe(
     "~/.agents"
   );
@@ -212,4 +216,26 @@ it("describes where each layer lives for the selected tool", () => {
   expect(shortPath(`${home}/.claude/CLAUDE.md`, context)).toBe(
     "~/.claude/CLAUDE.md"
   );
+});
+
+it("attaches the owning scan to file-backed instructions and skills only", () => {
+  const records = buildRecords(
+    snapshot({
+      items: [
+        entry({ id: "file", path: `${repo}/CLAUDE.md` }),
+        entry({
+          id: "inline",
+          path: `${repo}/settings.json`,
+          inlineContent: true
+        }),
+        entry({ id: "command", kind: "command", path: `${repo}/c.md` })
+      ]
+    }),
+    "project"
+  );
+  expect(records.map((record) => record.sourceRef)).toEqual([
+    { scope: "project", workingDirectory: repo, entryId: "file" },
+    undefined,
+    undefined
+  ]);
 });

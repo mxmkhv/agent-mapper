@@ -19,7 +19,7 @@ interface ActionRequest {
 type ApiPayload =
   ProjectList | InventorySnapshot | { ok: true } | { error: string };
 
-function sessionToken(): string {
+export function sessionToken(): string {
   const token = window.location.hash.slice(1);
   if (!token) {
     throw new Error(

@@ -1,4 +1,8 @@
-import type { InventorySnapshot, PluginRecord } from "@agent-mapper/core";
+import type {
+  InventorySnapshot,
+  PluginRecord,
+  SourceScope
+} from "@agent-mapper/core";
 import { layerOf } from "./layers";
 import type { InventoryRecord } from "./record-types";
 import {
@@ -58,10 +62,42 @@ function finish(
   return record;
 }
 
-/** One uniform list for every view: each record knows its layer, state tier and provenance. */
-export function buildRecords(snapshot: InventorySnapshot): InventoryRecord[] {
+/** Instruction and skill entries backed by a file of their own, which can be opened as documents. */
+function documentIds(snapshot: InventorySnapshot): Set<string> {
+  return new Set(
+    snapshot.items
+      .filter(
+        ({ entry }) =>
+          (entry.kind === "instruction" || entry.kind === "skill") &&
+          !entry.inlineContent &&
+          !entry.declarationOnly
+      )
+      .map(({ entry }) => entry.id)
+  );
+}
+
+/**
+ * One uniform list for every view: each record knows its layer, state tier and provenance.
+ * `scope` names the scan that produced the snapshot, so a record shown elsewhere (Global reach)
+ * still opens through its own project.
+ */
+export function buildRecords(
+  snapshot: InventorySnapshot,
+  scope: SourceScope
+): InventoryRecord[] {
   const plugins = new Map(
     snapshot.plugins.map((plugin) => [plugin.id, plugin])
   );
-  return drafts(snapshot).map((draft) => finish(draft, plugins));
+  const documents = documentIds(snapshot);
+  return drafts(snapshot).map((draft) => {
+    const record = finish(draft, plugins);
+    if (documents.has(record.id)) {
+      record.sourceRef = {
+        scope,
+        workingDirectory: snapshot.workingDirectory,
+        entryId: record.id
+      };
+    }
+    return record;
+  });
 }

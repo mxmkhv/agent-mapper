@@ -1,5 +1,4 @@
 import { randomBytes } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import {
   createServer,
   type IncomingMessage,
@@ -8,10 +7,14 @@ import {
 } from "node:http";
 import type { AddressInfo } from "node:net";
 import { homedir } from "node:os";
-import { extname, resolve, sep } from "node:path";
 import type { InventorySnapshot } from "@agent-mapper/core";
 import { discoverProjects, type DiscoveryResult } from "./inventory";
+import { managedClaudeDirectory } from "./managed-claude-reader";
 import { buildGlobalSnapshot, buildSnapshot } from "./service";
+import { serveAsset } from "./server-assets";
+import { defaultHistoryRoot } from "./source-document-history-folder";
+import { handleDocumentRoute, isDocumentRoute } from "./source-document-routes";
+import { SourceDocumentService } from "./source-document-service";
 import {
   performSourceAction,
   sourcePathIndex,
@@ -22,6 +25,9 @@ export interface AppServerOptions {
   home?: string;
   codexHome?: string;
   webRoot: string;
+  managedClaudeDir?: string;
+  /** Private revision snapshots; defaults to the platform data folder. */
+  historyRoot?: string;
   launchSource?: (args: string[]) => Promise<void>;
 }
 export interface AppServer {
@@ -37,6 +43,7 @@ interface RequestContext {
   token: string;
   options: AppServerOptions;
   sourcePaths: SourcePathStore;
+  documents: SourceDocumentService;
 }
 
 type ApiPayload =
@@ -52,17 +59,9 @@ const status = {
   badRequest: 400,
   unauthorized: 401,
   forbidden: 403,
-  missing: 404,
-  method: 405
+  missing: 404
 } as const;
 const tokenBytes = 32;
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png"
-} as const;
 
 function sendJson(reply: JsonReply): void {
   reply.response.writeHead(reply.status, {
@@ -79,7 +78,8 @@ async function inventoryPayload(
   const path = url.searchParams.get("path");
   const scanOptions = {
     home: context.options.home,
-    codexHome: context.options.codexHome
+    codexHome: context.options.codexHome,
+    managedClaudeDir: context.options.managedClaudeDir
   };
   if (!path && url.searchParams.get("scope") !== "global") {
     throw new Error("Choose a folder to scan.");
@@ -95,6 +95,7 @@ async function inventoryPayload(
     ...previous,
     [scope]: sourcePathIndex(payload)
   });
+  context.documents.register(scope, payload);
   return payload;
 }
 
@@ -127,6 +128,10 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
     });
     return;
   }
+  if (isDocumentRoute(url.pathname)) {
+    await handleDocumentRoute(context.documents, { request, response, url });
+    return;
+  }
   if (request.method === "POST" && url.pathname === "/api/source-action") {
     await performSourceAction({
       request,
@@ -141,52 +146,6 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
     status: status.missing,
     payload: { error: "Unknown API route." }
   });
-}
-
-async function serveAsset(context: RequestContext, url: URL): Promise<void> {
-  const { request, response } = context;
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    sendJson({
-      response,
-      status: status.method,
-      payload: { error: "Only GET and HEAD are supported here." }
-    });
-    return;
-  }
-  const root = resolve(context.options.webRoot);
-  const relative = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
-  const asset = resolve(root, relative);
-  if (asset !== root && !asset.startsWith(`${root}${sep}`)) {
-    sendJson({
-      response,
-      status: status.forbidden,
-      payload: { error: "Asset path is outside the app." }
-    });
-    return;
-  }
-  let bytes;
-  try {
-    bytes = await readFile(asset);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      throw error;
-    }
-    sendJson({
-      response,
-      status: status.missing,
-      payload: { error: "App asset is missing. Rebuild the workspace." }
-    });
-    return;
-  }
-  response.writeHead(status.ok, {
-    "content-type":
-      mimeTypes[extname(asset) as keyof typeof mimeTypes] ??
-      "application/octet-stream",
-    "content-security-policy":
-      "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'",
-    "x-content-type-options": "nosniff"
-  });
-  response.end(request.method === "HEAD" ? undefined : bytes);
 }
 
 async function handleRequest(context: RequestContext): Promise<void> {
@@ -215,13 +174,21 @@ async function handleRequest(context: RequestContext): Promise<void> {
   if (url.pathname.startsWith("/api/")) {
     await handleApi(context, url);
   } else {
-    await serveAsset(context, url);
+    await serveAsset(
+      { request, response: context.response, url },
+      context.options.webRoot
+    );
   }
 }
 
 export function createAppServer(options: AppServerOptions): AppServer {
   const token = randomBytes(tokenBytes).toString("hex");
   const sourcePaths: SourcePathStore = new Map();
+  const documents = new SourceDocumentService({
+    managedRoot: managedClaudeDirectory(options),
+    historyRoot:
+      options.historyRoot ?? defaultHistoryRoot(options.home ?? homedir())
+  });
   const server = createServer((request, response) => {
     void handleRequest({
       request,
@@ -229,7 +196,8 @@ export function createAppServer(options: AppServerOptions): AppServer {
       server,
       token,
       options,
-      sourcePaths
+      sourcePaths,
+      documents
     }).catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       sendJson({

@@ -41,7 +41,8 @@ export function useProjectSnapshots(
     }
     for (const path of list) {
       getInventory(path, controller.signal).then(
-        (snapshot) => update(path, { records: buildRecords(snapshot) }),
+        (snapshot) =>
+          update(path, { records: buildRecords(snapshot, "project") }),
         (error: unknown) => {
           if (!controller.signal.aborted) {
             update(path, {
