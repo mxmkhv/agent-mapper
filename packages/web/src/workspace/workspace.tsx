@@ -65,7 +65,8 @@ export function Workspace(props: WorkspaceProps) {
       <div
         className={`grid min-h-0 ${withInspector ? "grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_380px]" : "grid-cols-1"}`}
       >
-        <div className="min-h-0 overflow-auto">
+        {/* Keyed by view so switching views starts at the top instead of the previous view's scroll offset. */}
+        <div className="min-h-0 overflow-auto" key={state.view}>
           <Content {...parts} />
         </div>
         {withInspector ? (

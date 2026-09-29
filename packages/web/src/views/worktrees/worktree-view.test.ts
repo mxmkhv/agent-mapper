@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it } from "vitest";
 import type { WorktreeComparison, WorktreeRecord } from "@agent-mapper/core";
-import { WorktreePanel } from "./worktree-panel";
+import { WorktreeView } from "./worktree-view";
 
 const worktrees: WorktreeRecord[] = [
   { path: "/app", isMain: true, state: "available", branch: "main" },
@@ -51,9 +51,10 @@ const comparison: WorktreeComparison = {
 
 it("shows linked checkouts from the main view, including stale registrations", () => {
   const html = renderToStaticMarkup(
-    createElement(WorktreePanel, {
+    createElement(WorktreeView, {
       worktrees,
       workingDirectory: "/app",
+      tool: "claude",
       onSelectPath: () => undefined
     })
   );
@@ -64,9 +65,10 @@ it("shows linked checkouts from the main view, including stale registrations", (
 
 it("explains when the selected folder is outside Git", () => {
   const html = renderToStaticMarkup(
-    createElement(WorktreePanel, {
+    createElement(WorktreeView, {
       worktrees: [],
       workingDirectory: "/plain",
+      tool: "claude",
       onSelectPath: () => undefined
     })
   );
@@ -75,10 +77,11 @@ it("explains when the selected folder is outside Git", () => {
 
 it("labels differences and tracking without showing configuration content", () => {
   const html = renderToStaticMarkup(
-    createElement(WorktreePanel, {
+    createElement(WorktreeView, {
       worktrees,
       comparison,
       workingDirectory: "/linked",
+      tool: "claude",
       onSelectPath: () => undefined
     })
   );
@@ -110,7 +113,7 @@ it("keeps shared differences but hides Claude files under the Codex filter", () 
     ]
   };
   const html = renderToStaticMarkup(
-    createElement(WorktreePanel, {
+    createElement(WorktreeView, {
       worktrees,
       comparison,
       workingDirectory: "/linked",
