@@ -35,7 +35,7 @@ export function DetailPane({
   return (
     <aside
       aria-label="Details"
-      className="min-h-0 overflow-auto border-l border-hairline bg-surface px-5 pt-4.5 pb-7"
+      className="min-h-0 overflow-auto border-hairline bg-surface px-5 pt-4.5 pb-7 max-lg:border-t lg:border-l"
     >
       <div className="text-label text-ink-muted">{eyebrow}</div>
       <h2 className="mt-1.5 mb-1 text-headline font-semibold tracking-tight break-words">
@@ -43,22 +43,5 @@ export function DetailPane({
       </h2>
       {children}
     </aside>
-  );
-}
-
-export function EmptyState({
-  title,
-  children
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="col-span-full grid place-items-center p-16 text-center">
-      <div>
-        <h3 className="m-0 font-semibold">{title}</h3>
-        <p className="mt-1 text-ink-muted">{children}</p>
-      </div>
-    </div>
   );
 }

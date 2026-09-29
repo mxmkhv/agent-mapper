@@ -50,6 +50,11 @@ typography:
     fontWeight: 650
     lineHeight: 1.3
     letterSpacing: "-0.015em"
+  large:
+    fontFamily: "Inter, ui-sans-serif, -apple-system, system-ui, sans-serif"
+    fontSize: "15px"
+    fontWeight: 550
+    lineHeight: 1.35
   body:
     fontFamily: "Inter, ui-sans-serif, -apple-system, system-ui, sans-serif"
     fontSize: "13px"
@@ -76,6 +81,11 @@ typography:
     fontSize: "11.5px"
     fontWeight: 400
     lineHeight: 1.4
+  glyph:
+    fontFamily: "Inter, ui-sans-serif, -apple-system, system-ui, sans-serif"
+    fontSize: "9px"
+    fontWeight: 700
+    lineHeight: 1
 rounded:
   glyph: "4px"
   control: "6px"
@@ -255,11 +265,13 @@ Every neutral and signal token has a `-dark` twin in the frontmatter. Dark mode 
 
 - **Headline** (650, 18px, 1.3, -0.015em): the name of the selected item at the top of the inspector.
 - **Title** (650, 17px, 1.3, -0.015em): the page title in the header (project name or "Global").
+- **Large** (550–650, 15px, 1.35): the search input, the tool header above the Map, and contribution counts in the inspector.
 - **Body** (400, 13px, 1.45): default UI text, reasons, and descriptions.
 - **Body Strong** (550, 13px): item names in rows, the Map load list, and the matrix.
 - **Label** (550, 12px): buttons, chips, facets, and kind titles on the Map ("Skills 12").
 - **Caption** (500, 11px): counts, state labels, badges, and inspector section headings (650 weight, faint).
-- **Mono** (400, 11.5–12px): paths, versions, locators, matchers, and layer location hints.
+- **Mono** (400, 11.5–12px): paths, versions, locators, matchers, and layer location hints that are paths (`~/.claude`). Prose hints such as "In this repo" stay in sans.
+- **Glyph** (700, 9px): the letter inside a tool glyph, and nothing else.
 
 ### Named Rules
 
@@ -271,14 +283,16 @@ Every neutral and signal token has a `-dark` twin in the frontmatter. Dark mode 
 
 ## Layout
 
-- **Shell:** a full-viewport grid with a 232px sidebar and a flexible main area. The document never scrolls; regions do.
+- **Shell:** a full-viewport grid with a 232px sidebar (200px below 1024px) and a flexible main area. The document never scrolls; regions do.
+- **Narrow windows (below 1024px):** the inspector leaves the grid and floats over the content from the right, only while something is selected or coverage notes are open, with a close button. Worktrees stack the detail pane under the list. The Show inactive switch shortens to "Inactive (N)".
 - **Main area:**
   - A 56px header: title, path, and branch on the left; tool toggle, Search ⌘K, scan time, and Rescan on the right.
   - A 36px view bar: view tabs (Map or Reach, Inventory, Findings) on the left; the Show inactive switch and the coverage notes link on the right.
   - Content and a 380px inspector in two columns, each scrolling independently.
 - **Map:** a 92px layer-label column followed by one layer card per layer, capped at 860px wide. Layer rows run Global → Plugins → Project → User, with Managed at the top only when present. A tool header with the startup budget sits above the layers.
 - **Inventory:** filter chips (facets) stick to the top of the pane. Groups follow the same layer order: Global, installed plugins, each plugin's contributions, Project, User. Rows are 36px in one bordered card per group.
-- **Reach (the Global view):** a fixed-layout table with a flexible source column and 132px project columns. The header stays pinned while the body scrolls.
+- **Reach (the Global view):** a fixed-layout table with a flexible source column and 104px project columns. The header and source column stay pinned while the table scrolls. When project columns are out of view, a surface-colored fade on the right edge says so, because macOS hides scrollbars until you scroll.
+- **Browser surfaces:** text selection uses Focus Blue at 24%; scrollbars are thin and use `hairline-strong` on a transparent track.
 - **Spacing rhythm:** 4 / 6 / 8 / 12 / 16 / 20px. Content gutters are 20px; card interiors are 4–12px.
 
 ## Elevation & Depth
@@ -288,7 +302,7 @@ The system is flat. Depth comes from tonal layering (canvas → sheet → wash) 
 ### Shadow Vocabulary
 
 - **Raised control** (`box-shadow: 0 1px 2px #0000000a, 0 4px 16px #00000008`; dark: `0 1px 2px #00000040, 0 8px 24px #00000040`): the selected segment of the tool toggle and theme switch.
-- **Floating dialog** (`box-shadow: 0 24px 60px #00000030`): the search palette only, over a `#0000002e` backdrop.
+- **Floating dialog** (`box-shadow: 0 24px 60px #00000030`): the search palette, over a `#0000002e` backdrop, and the floating inspector in narrow windows.
 
 ### Named Rules
 

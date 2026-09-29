@@ -54,6 +54,7 @@ it("shows linked checkouts from the main view, including stale registrations", (
     createElement(WorktreeView, {
       worktrees,
       workingDirectory: "/app",
+      context: {},
       tool: "claude",
       onSelectPath: () => undefined
     })
@@ -68,6 +69,7 @@ it("explains when the selected folder is outside Git", () => {
     createElement(WorktreeView, {
       worktrees: [],
       workingDirectory: "/plain",
+      context: {},
       tool: "claude",
       onSelectPath: () => undefined
     })
@@ -81,6 +83,7 @@ it("labels differences and tracking without showing configuration content", () =
       worktrees,
       comparison,
       workingDirectory: "/linked",
+      context: {},
       tool: "claude",
       onSelectPath: () => undefined
     })
@@ -117,10 +120,33 @@ it("keeps shared differences but hides Claude files under the Codex filter", () 
       worktrees,
       comparison,
       workingDirectory: "/linked",
+      context: {},
       tool: "codex",
       onSelectPath: () => undefined
     })
   );
   expect(html).toContain("AGENTS.md");
   expect(html).not.toContain("settings.json");
+});
+
+it("shows checkout paths under home with ~", () => {
+  const html = renderToStaticMarkup(
+    createElement(WorktreeView, {
+      worktrees: [
+        { path: "/Users/me/app", isMain: true, state: "available" },
+        {
+          path: "/Users/me/trees/feature",
+          isMain: false,
+          state: "available",
+          branch: "feat/x"
+        }
+      ],
+      workingDirectory: "/Users/me/app",
+      context: { home: "/Users/me" },
+      tool: "claude",
+      onSelectPath: () => undefined
+    })
+  );
+  expect(html).toContain("<span>~/<wbr/></span>");
+  expect(html).not.toContain("Users");
 });

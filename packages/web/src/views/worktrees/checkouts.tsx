@@ -3,18 +3,25 @@ import type { WorktreeRecord } from "@agent-mapper/core";
 import { GitBranch } from "lucide-react";
 import { Button } from "../../ui/button";
 import { StateLabel, StateMarker } from "../../ui/marks";
+import { tildePath, type PathContext } from "../../model/paths";
+import { EmptyState } from "../../ui/empty-state";
 import { PathText } from "../../ui/path-text";
-import { DetailPane, EmptyState, ListPane } from "./panes";
+import { DetailPane, ListPane } from "./panes";
 
 const folderName = (path: string) => path.split("/").at(-1) ?? path;
 
 interface CheckoutsProps {
   worktrees: WorktreeRecord[];
+  context: PathContext;
   onSelectPath(path: string): void;
 }
 
 /** From the main checkout: every linked worktree Git knows about, including stale registrations. */
-export function Checkouts({ worktrees, onSelectPath }: CheckoutsProps) {
+export function Checkouts({
+  worktrees,
+  context,
+  onSelectPath
+}: CheckoutsProps) {
   const linked = worktrees.filter((tree) => !tree.isMain);
   const [selectedPath, setSelectedPath] = useState<string>();
   const selected =
@@ -70,12 +77,16 @@ export function Checkouts({ worktrees, onSelectPath }: CheckoutsProps) {
             <dt className="text-ink-muted">Git state</dt>
             <dd className="m-0">{selected.state}</dd>
             <dt className="text-ink-muted">Branch</dt>
-            <dd className="m-0 font-mono text-mono">
-              {selected.branch ?? "detached or unavailable"}
-            </dd>
+            {selected.branch ? (
+              <dd className="m-0 font-mono text-mono break-words">
+                <PathText path={selected.branch} />
+              </dd>
+            ) : (
+              <dd className="m-0">detached or unavailable</dd>
+            )}
             <dt className="text-ink-muted">Path</dt>
             <dd className="m-0 font-mono text-mono break-words">
-              <PathText path={selected.path} />
+              <PathText path={tildePath(selected.path, context)} />
             </dd>
           </dl>
           {selected.state === "available" ? (

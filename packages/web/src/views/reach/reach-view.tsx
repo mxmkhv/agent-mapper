@@ -15,6 +15,7 @@ import {
   stickySource,
   type ReachViewProps
 } from "./reach-rows";
+import { useHiddenColumns } from "./use-hidden-columns";
 
 function CountRow({
   label,
@@ -67,7 +68,9 @@ export function ReachView(props: ReachViewProps) {
   const scanning = props.projects.filter(
     (project) => !project.records && !project.error
   ).length;
-  const columns = props.projects.length + 1;
+  const columnCount = props.projects.length + 1;
+  const { ref: tableRef, hidden: moreColumns } =
+    useHiddenColumns<HTMLDivElement>();
   return (
     <div className="px-5 pt-4 pb-10">
       <p className="mt-0 mb-3.5 max-w-[720px] text-ink-muted">
@@ -77,90 +80,106 @@ export function ReachView(props: ReachViewProps) {
           ? ` Scanning ${scanning} ${scanning === 1 ? "project" : "projects"}…`
           : ""}
       </p>
-      {/* The table scrolls in both directions itself so the header and source column can stay pinned. */}
-      <div className="max-h-[calc(100vh-220px)] overflow-auto rounded-card border border-hairline bg-surface">
-        <table
-          className="w-full table-fixed border-separate border-spacing-0 [&_td]:h-[34px] [&_td]:border-b [&_td]:border-wash"
-          style={{
-            minWidth: sourceWidth + props.projects.length * projectWidth
-          }}
+      <div className="relative">
+        {/* The table scrolls in both directions itself so the header and source column can stay pinned. */}
+        <div
+          className="max-h-[calc(100vh-220px)] overflow-auto rounded-card border border-hairline bg-surface"
+          ref={tableRef}
         >
-          <colgroup>
-            <col />
-            {props.projects.map((project) => (
-              <col key={project.path} style={{ width: projectWidth }} />
-            ))}
-          </colgroup>
-          <thead>
-            <tr>
-              <th className="sticky top-0 left-0 z-20 h-11 border-b border-hairline bg-surface px-3 text-left text-label font-semibold shadow-[1px_0_0_var(--am-hairline)]">
-                Source
-              </th>
+          <table
+            className="w-full table-fixed border-separate border-spacing-0 [&_td]:h-[34px] [&_td]:border-b [&_td]:border-wash"
+            style={{
+              minWidth: sourceWidth + props.projects.length * projectWidth
+            }}
+          >
+            <colgroup>
+              <col />
               {props.projects.map((project) => (
-                <th
-                  className="sticky top-0 z-10 h-11 truncate border-b border-hairline bg-surface px-2 text-label font-semibold"
-                  key={project.path}
-                  title={tildePath(project.path, props.context)}
-                >
-                  <button
-                    className="max-w-full truncate hover:underline"
-                    onClick={() => props.onOpenProject(project.path)}
-                  >
-                    {project.name}
-                  </button>
-                </th>
+                <col key={project.path} style={{ width: projectWidth }} />
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sections.map((section) => (
-              <SectionRows key={section.kind} props={props} section={section} />
-            ))}
-            {skills.total ? (
-              <>
-                <tr className="bg-wash">
-                  <td
-                    className="h-[30px] px-3 text-caption font-semibold text-ink-muted"
-                    colSpan={columns}
+            </colgroup>
+            <thead>
+              <tr>
+                <th className="sticky top-0 left-0 z-20 h-11 border-b border-hairline bg-surface px-3 text-left text-label font-semibold shadow-[1px_0_0_var(--am-hairline)]">
+                  Source
+                </th>
+                {props.projects.map((project) => (
+                  <th
+                    className="sticky top-0 z-10 h-11 truncate border-b border-hairline bg-surface px-2 text-label font-semibold"
+                    key={project.path}
+                    title={tildePath(project.path, props.context)}
                   >
-                    <span className="sticky left-3">Global skills</span>
-                  </td>
-                </tr>
-                <CountRow
-                  counts={skills.counts}
-                  icon={<KindIcon kind="skill" small />}
-                  projects={props.projects}
-                  label={`${skills.total} skills`}
-                  total={skills.total}
+                    <button
+                      className="max-w-full truncate hover:underline"
+                      onClick={() => props.onOpenProject(project.path)}
+                    >
+                      {project.name}
+                    </button>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sections.map((section) => (
+                <SectionRows
+                  key={section.kind}
+                  props={props}
+                  section={section}
                 />
-              </>
-            ) : null}
-            <tr className="bg-wash">
-              <td
-                className="h-[30px] px-3 text-caption font-semibold text-ink-muted"
-                colSpan={columns}
-              >
-                <span className="sticky left-3 inline-flex items-center gap-1.5">
-                  <Folder
-                    aria-hidden="true"
-                    className="size-3.5"
-                    strokeWidth={1.6}
+              ))}
+              {skills.total ? (
+                <>
+                  <tr className="bg-wash">
+                    <td
+                      className="h-[30px] px-3 text-caption font-semibold text-ink-muted"
+                      colSpan={columnCount}
+                    >
+                      <span className="sticky left-3 inline-flex items-center gap-1.5">
+                        <KindIcon kind="skill" small />
+                        Global skills
+                      </span>
+                    </td>
+                  </tr>
+                  <CountRow
+                    counts={skills.counts}
+                    icon={<KindIcon kind="skill" small />}
+                    projects={props.projects}
+                    label={`${skills.total} skills`}
+                    total={skills.total}
                   />
-                  Added by the project itself
-                </span>
-              </td>
-            </tr>
-            {own.map((row) => (
-              <CountRow
-                counts={row.counts}
-                icon={<KindIcon kind={row.kind} small />}
-                key={row.kind}
-                label={kindLabel[row.kind]}
-                projects={props.projects}
-              />
-            ))}
-          </tbody>
-        </table>
+                </>
+              ) : null}
+              <tr className="bg-wash">
+                <td
+                  className="h-[30px] px-3 text-caption font-semibold text-ink-muted"
+                  colSpan={columnCount}
+                >
+                  <span className="sticky left-3 inline-flex items-center gap-1.5">
+                    <Folder
+                      aria-hidden="true"
+                      className="size-3.5"
+                      strokeWidth={1.6}
+                    />
+                    Added by the project itself
+                  </span>
+                </td>
+              </tr>
+              {own.map((row) => (
+                <CountRow
+                  counts={row.counts}
+                  icon={<KindIcon kind={row.kind} small />}
+                  key={row.kind}
+                  label={kindLabel[row.kind]}
+                  projects={props.projects}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-y-px right-px w-12 rounded-r-card bg-linear-to-l from-surface to-transparent transition-opacity duration-200 ${moreColumns ? "opacity-100" : "opacity-0"}`}
+        />
       </div>
       <div className="mt-3 flex flex-wrap gap-5 text-label text-ink-muted">
         <span className="inline-flex items-center gap-1.5">

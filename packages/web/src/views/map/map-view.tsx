@@ -4,6 +4,7 @@ import type { PathContext } from "../../model/paths";
 import type { InventoryRecord, RecordKind } from "../../model/record-types";
 import { stateText } from "../../model/states";
 import { KindIcon, kindLabel, kindOrder } from "../../ui/kind-icon";
+import { HintText } from "../../ui/hint-text";
 import { StateMarker, ToolGlyph, toolName } from "../../ui/marks";
 import { chipClass, ChipRow, repeatedNames } from "./map-items";
 import { buildMap, loadOrder, type MapLayer } from "./map-model";
@@ -121,17 +122,10 @@ function LayerRow({
     // Each layer is its own row, so its sticky label scrolls away with the layer instead of stacking.
     <section className="grid grid-cols-[92px_minmax(0,1fr)] gap-x-3 border-t border-hairline">
       <div className="sticky top-0 self-start bg-canvas pt-3.5 pb-2">
-        <strong className="block text-label font-semibold">
+        <strong className="mb-0.5 block text-label font-semibold">
           {layerLabel[layer.layer]}
         </strong>
-        {hint.split(" · ").map((part) => (
-          <span
-            className="mt-0.5 block font-mono text-caption break-words text-ink-faint"
-            key={part}
-          >
-            {part}
-          </span>
-        ))}
+        <HintText hint={hint} stacked />
       </div>
       <div className="min-w-0 pt-2.5 pb-3.5">
         {empty ? (
@@ -167,7 +161,7 @@ export function MapView(props: MapViewProps) {
   return (
     <div className="px-5 pt-4 pb-10">
       <div className="ml-[104px] max-w-[860px] px-1 pb-3">
-        <div className="flex items-center gap-2 text-[14px] font-semibold">
+        <div className="flex items-center gap-2 text-large font-semibold">
           <ToolGlyph tool={props.tool} />
           {toolName[props.tool]}
         </div>

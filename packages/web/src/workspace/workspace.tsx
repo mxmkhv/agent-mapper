@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { X } from "lucide-react";
+import { Button } from "../ui/button";
 import { Header } from "../shell/header";
 import { ViewBar } from "../shell/view-bar";
 import { useProjectSnapshots } from "../state/use-project-snapshots";
@@ -31,6 +33,7 @@ export function Workspace(props: WorkspaceProps) {
   }));
   const parts = { props, state, reach };
   const withInspector = state.view !== "worktrees";
+  const detailOpen = Boolean(state.selected ?? state.showCoverage);
   return (
     <div className="grid min-h-0 min-w-0 grid-rows-[auto_auto_auto_minmax(0,1fr)]">
       <Header
@@ -63,17 +66,28 @@ export function Workspace(props: WorkspaceProps) {
         <span />
       )}
       <div
-        className={`grid min-h-0 ${withInspector ? "grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_380px]" : "grid-cols-1"}`}
+        className={`relative grid min-h-0 ${withInspector ? "lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_380px]" : ""}`}
       >
         {/* Keyed by view so switching views starts at the top instead of the previous view's scroll offset. */}
         <div className="min-h-0 overflow-auto" key={state.view}>
           <Content {...parts} />
         </div>
         {withInspector ? (
+          // Below 1024px the inspector floats over the content, and only while it has something to show.
           <aside
             aria-label="Inspector"
-            className="min-h-0 overflow-auto border-l border-hairline bg-surface"
+            className={`min-h-0 overflow-auto border-l border-hairline bg-surface max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:z-20 max-lg:w-[min(380px,calc(100%-40px))] max-lg:shadow-dialog ${detailOpen ? "" : "max-lg:hidden"}`}
           >
+            {detailOpen ? (
+              <Button
+                aria-label="Close inspector"
+                className="absolute top-3 right-3 lg:hidden"
+                onClick={state.closeInspector}
+                variant="icon"
+              >
+                <X aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+              </Button>
+            ) : null}
             <Inspector {...parts} />
           </aside>
         ) : null}

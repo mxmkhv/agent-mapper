@@ -135,6 +135,7 @@ export function Content({ props, state, reach }: PartsProps) {
     return (
       <WorktreeView
         comparison={props.snapshot.comparison}
+        context={state.context}
         onSelectPath={props.onSelectPath}
         tool={props.tool}
         workingDirectory={props.snapshot.workingDirectory}

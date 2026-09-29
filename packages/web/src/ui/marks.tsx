@@ -29,7 +29,7 @@ export function ToolGlyph({
 }) {
   return (
     <span
-      className={`inline-grid size-[15px] shrink-0 place-items-center rounded-glyph text-[9px] leading-none font-bold text-white ${muted ? "bg-ink-faint" : glyphColor[tool]}`}
+      className={`inline-grid size-[15px] shrink-0 place-items-center rounded-glyph text-glyph font-bold text-white ${muted ? "bg-ink-faint" : glyphColor[tool]}`}
       title={toolName[tool]}
     >
       {glyphLetter[tool]}

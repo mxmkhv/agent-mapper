@@ -26,7 +26,7 @@ export function App() {
     window.localStorage.setItem(folderKey, path);
   }
   return (
-    <div className="grid h-full grid-cols-[232px_minmax(0,1fr)] overflow-hidden">
+    <div className="grid h-full grid-cols-[200px_minmax(0,1fr)] overflow-hidden lg:grid-cols-[232px_minmax(0,1fr)]">
       <Sidebar
         error={projects.error}
         loading={projects.loading}
