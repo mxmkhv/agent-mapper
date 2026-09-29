@@ -1,6 +1,6 @@
 # agent-mapper
 
-A local, read-only view of Claude Code and Codex configuration. The current build inventories local instructions, skills, agents, hooks, plugins, MCP declarations, memory files, and linked worktrees.
+A local view of Claude Code and Codex configuration. The current build inventories local instructions, skills, agents, hooks, plugins, MCP declarations, memory files, and linked worktrees. Scans are read-only; the only writes are instruction and skill edits you review and save explicitly.
 
 ## Start
 
@@ -23,11 +23,26 @@ The Findings tab reports broken source links, unreadable files, shadowed instruc
 
 The UI accepts an explicit folder path, including folders outside home. Select an instruction, skill, agent, hook, plugin, MCP server, or memory file to inspect its source and expected state, then Open or Reveal it in macOS. Hooks are grouped by lifecycle area and show the event, matcher, handler type, source locator, flags, and applicability. Handler commands, URLs, and prompts stay in the source file. Plugin detail lists discovered skills, commands, agents, hooks, and MCP declarations. Selected plugin skills, agents, hooks, and MCP declarations link to their inventory views and back. Installation, enablement, cached copies, and unknown version selection have separate states. Counts describe discovered declarations, not runtime capabilities.
 
-Free-form file content stays out of the browser and JSON response; use Open for the full text. The model describes a fresh local CLI session and lists coverage gaps beside the inventory.
+Inventory responses, `why` and `--json` keep free-form file content out; use Open for the full text. The one exception is the instruction or skill you select: its full, unredacted text is sent to the local browser page so you can preview and edit it. The model describes a fresh local CLI session and lists coverage gaps beside the inventory.
 
 Hook readers cover local Claude and Codex settings, discovered plugin declarations, local managed Claude settings, and skill and agent frontmatter. Unsupported declaration shapes, hook trust decisions, remote policy, plugin marketplace entry overrides, and live session state remain unverified. MCP readers cover Claude user, project, plugin, and local managed declarations, plus Codex user, project, and plugin declarations. MCP credentials, arguments, and full URLs stay in source files; no server is contacted. Account and session connections, approval state, remote policy, and unsupported declaration fields remain outside local coverage.
 
 The Memory tab lists local Markdown files with size, line count, modified time, and read state. Claude project folder matches remain candidates because the encoded names can collide. Memory text stays in source files. The Agents tab lists local Claude Markdown and Codex TOML declarations and linked Claude plugin agents. It keeps agent instructions in source files; managed and session agents, unsupported declarations, Codex project trust, and live use remain outside local coverage. The Worktrees tab compares project configuration files in a linked checkout with the main checkout, shows Git tracking status when known, and leaves inherited global configuration out of the comparison. File contents stay local; a changed settings file does not identify which declaration inside it changed.
+
+## Editing instructions and skills
+
+Select an instruction (`CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md`, `AGENTS.override.md`) or a `SKILL.md` to preview it in the inspector. **Edit** opens the file in a full-width editor; **Review changes** (or `⌘S`) shows the exact diff, frontmatter checks, and the contexts this server has scanned that use the file. Only **Save changes** writes, and only the reviewed text.
+
+- **Editable:** existing, user-owned files discovered in global or project scope, up to 1 MiB, UTF-8 with one line-ending style. Plugin files, managed configuration, hard-linked files, files owned by another user, and files in unwritable folders open read-only with the reason.
+- **Symlinks:** saving writes the real file, so every path that links to it changes; the link itself stays a link. The review lists known aliases.
+- **Conflicts:** if the file changed on disk since you opened it, nothing is written. Your draft stays; compare it with the current file, then drop it or continue editing and review again. This is optimistic detection: an editor writing in the moment between the final check and the rename can still be overwritten.
+- **History:** before each save or restore, the replaced bytes are stored in `~/Library/Application Support/agent-mapper/revisions/` (Linux: `$XDG_DATA_HOME/agent-mapper/revisions` or `~/.local/share/agent-mapper/revisions`), private to your user and never pruned automatically. **History** restores any snapshot exactly and records the displaced version, so a restore can be undone. A version that was saved and then overwritten by another editor is not captured.
+- **Metadata:** a save replaces the file. Text, symlinks, and permission mode are kept; macOS extended attributes, ACLs, Finder tags, and the original creation date are not.
+- **Drafts:** unsaved edits survive switching views, tools, and projects (see **Drafts** in the header), but live only in the open tab. Reloading asks first; restarting the server ends the session, so copy a draft before reopening the new URL.
+- **Locks:** a save that finds `lock` in a file's history folder reports it as busy. If no agent-mapper server is running, delete that lock file.
+- Running Claude Code or Codex sessions may need a restart to pick up a saved file.
+
+This extends the read-only [product brief](docs/mvp-v2.md) with explicit writes, as agreed in [#10](https://github.com/mxmkhv/agent-mapper/issues/10).
 
 The `prepare` script changes only this repository's `core.hooksPath`. CI skips installation. Set `AGENT_MAPPER_SKIP_HOOK_INSTALL=1` only when an external system already manages Git hooks; it does not disable CI checks.
 

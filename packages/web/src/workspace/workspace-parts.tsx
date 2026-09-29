@@ -180,12 +180,14 @@ export function Inspector({ props, state, reach }: PartsProps) {
     records: state.lookup,
     imports: props.snapshot.imports,
     context: state.context,
-    workingDirectory: props.snapshot.workingDirectory
+    workingDirectory: props.snapshot.workingDirectory,
+    scannedAt: props.snapshot.scannedAt
   };
   return (
     <RecordInspector
       key={state.selected.id}
       onKind={state.filterKind}
+      onOpenDocument={state.openDocument}
       onSelect={state.select}
       reach={
         props.isProject

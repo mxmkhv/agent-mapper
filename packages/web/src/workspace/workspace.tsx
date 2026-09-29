@@ -1,5 +1,8 @@
 import { useMemo } from "react";
 import { X } from "lucide-react";
+import { DocumentWorkspace } from "../documents/document-workspace";
+import { DraftsMenu } from "../documents/drafts-menu";
+import type { ImpactCoverage } from "../documents/impact-summary";
 import { Button } from "../ui/button";
 import { Header } from "../shell/header";
 import { ViewBar } from "../shell/view-bar";
@@ -32,11 +35,26 @@ export function Workspace(props: WorkspaceProps) {
     )
   }));
   const parts = { props, state, reach };
+  const coverage: ImpactCoverage = props.isProject
+    ? { mode: "project", workingDirectory: props.snapshot.workingDirectory }
+    : {
+        mode: "global",
+        total: scanned.length,
+        scanned: scanned.filter((project) => project.records).length,
+        pending: scanned.filter((project) => !project.records && !project.error)
+          .length,
+        failed: scanned.filter((project) => project.error).length
+      };
   const withInspector = state.view !== "worktrees";
   const detailOpen = Boolean(state.selected ?? state.showCoverage);
   return (
     <div className="grid min-h-0 min-w-0 grid-rows-[auto_auto_auto_minmax(0,1fr)]">
       <Header
+        actions={
+          <DraftsMenu
+            onOpen={(sourceKey) => state.openDocument(sourceKey, "edit")}
+          />
+        }
         onRescan={props.onRescan}
         onSearch={() => state.setSearchOpen(true)}
         onTool={props.onTool}
@@ -65,31 +83,52 @@ export function Workspace(props: WorkspaceProps) {
       ) : (
         <span />
       )}
-      <div
-        className={`relative grid min-h-0 ${withInspector ? "lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_380px]" : ""}`}
-      >
-        {/* Keyed by view so switching views starts at the top instead of the previous view's scroll offset. */}
-        <div className="min-h-0 overflow-auto" key={state.view}>
-          <Content {...parts} />
+      <div className="relative grid min-h-0">
+        {/* While a document is open the browsing grid stays mounted, hidden and inert, keeping its scroll and selection. */}
+        <div
+          className={`relative grid min-h-0 ${withInspector ? "lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_380px]" : ""} ${state.documentView ? "invisible" : ""}`}
+          inert={Boolean(state.documentView)}
+        >
+          {/* Keyed by view so switching views starts at the top instead of the previous view's scroll offset. */}
+          <div className="min-h-0 overflow-auto" key={state.view}>
+            <Content {...parts} />
+          </div>
+          {withInspector ? (
+            // Below 1024px the inspector floats over the content, and only while it has something to show.
+            <aside
+              aria-label="Inspector"
+              className={`min-h-0 overflow-auto border-l border-hairline bg-surface max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:z-20 max-lg:w-[min(380px,calc(100%-40px))] max-lg:shadow-dialog ${detailOpen ? "" : "max-lg:hidden"}`}
+            >
+              {detailOpen ? (
+                <Button
+                  aria-label="Close inspector"
+                  className="absolute top-3 right-3 lg:hidden"
+                  onClick={state.closeInspector}
+                  variant="icon"
+                >
+                  <X
+                    aria-hidden="true"
+                    className="size-3.5"
+                    strokeWidth={1.8}
+                  />
+                </Button>
+              ) : null}
+              <Inspector {...parts} />
+            </aside>
+          ) : null}
         </div>
-        {withInspector ? (
-          // Below 1024px the inspector floats over the content, and only while it has something to show.
-          <aside
-            aria-label="Inspector"
-            className={`min-h-0 overflow-auto border-l border-hairline bg-surface max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:z-20 max-lg:w-[min(380px,calc(100%-40px))] max-lg:shadow-dialog ${detailOpen ? "" : "max-lg:hidden"}`}
-          >
-            {detailOpen ? (
-              <Button
-                aria-label="Close inspector"
-                className="absolute top-3 right-3 lg:hidden"
-                onClick={state.closeInspector}
-                variant="icon"
-              >
-                <X aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
-              </Button>
-            ) : null}
-            <Inspector {...parts} />
-          </aside>
+        {state.documentView ? (
+          <div className="absolute inset-0 z-30 min-h-0">
+            <DocumentWorkspace
+              coverage={coverage}
+              key={state.documentView.sourceKey}
+              mode={state.documentView.mode}
+              onBack={state.closeDocument}
+              onMode={state.setDocumentMode}
+              onOpen={(sourceKey) => state.openDocument(sourceKey, "edit")}
+              sourceKey={state.documentView.sourceKey}
+            />
+          </div>
         ) : null}
       </div>
       {state.searchOpen ? (

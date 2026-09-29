@@ -5,6 +5,7 @@ import { pathContext } from "../model/paths";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
 import type { View } from "../shell/view-bar";
 import { useSearchShortcut } from "../use-search-shortcut";
+import { useDocumentView } from "./use-document-view";
 
 interface WorkspaceInput {
   snapshot: InventorySnapshot;
@@ -89,7 +90,10 @@ export function useWorkspace(input: WorkspaceInput) {
   const { snapshot, isProject, tool } = input;
   const [view, setView] = useState<View>(isProject ? "map" : "reach");
   const [kind, setKind] = useState<RecordKind | "all">("all");
-  const records = useMemo(() => buildRecords(snapshot), [snapshot]);
+  const records = useMemo(
+    () => buildRecords(snapshot, isProject ? "project" : "global"),
+    [snapshot, isProject]
+  );
   const context = useMemo(
     () => pathContext(snapshot, isProject),
     [snapshot, isProject]
@@ -99,10 +103,18 @@ export function useWorkspace(input: WorkspaceInput) {
     [records, input.extraRecords]
   );
   const selection = useSelection(lookup, input);
+  const documents = useDocumentView();
   return {
     ...selection,
+    ...documents,
     view,
-    setView,
+    /** Choosing a view leaves any open document; its draft stays in the Drafts menu. */
+    setView(next: View) {
+      if (documents.documentView) {
+        documents.closeDocument();
+      }
+      setView(next);
+    },
     kind,
     filterKind(next: RecordKind | "all") {
       setKind(next);

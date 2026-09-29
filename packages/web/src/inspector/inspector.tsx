@@ -4,6 +4,10 @@ import { isLink, linkedFrom, linkTarget } from "../model/links";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
 import { stateText } from "../model/states";
+import {
+  SourceDocumentPanel,
+  type DocumentMode
+} from "../documents/source-document-panel";
 import { useSourceAction } from "../state/use-source-action";
 import { Button } from "../ui/button";
 import { PathText } from "../ui/path-text";
@@ -24,6 +28,7 @@ interface InspectorScope {
   imports: InstructionImport[];
   context: PathContext;
   workingDirectory: string;
+  scannedAt: string;
 }
 
 interface RecordInspectorProps {
@@ -31,6 +36,7 @@ interface RecordInspectorProps {
   scope: InspectorScope;
   onSelect(id: string): void;
   onKind(kind: RecordKind): void;
+  onOpenDocument(sourceKey: string, mode: DocumentMode): void;
   /** Present in the Global view: which projects this record reaches. */
   reach?: ReachScope;
 }
@@ -82,9 +88,13 @@ export function RecordInspector({
   scope,
   onSelect,
   onKind,
+  onOpenDocument,
   reach
 }: RecordInspectorProps) {
-  const action = useSourceAction(scope.workingDirectory);
+  // A record picked from Global reach belongs to its own project's scan.
+  const action = useSourceAction(
+    record.sourceRef?.workingDirectory ?? scope.workingDirectory
+  );
   const imports = scope.imports.filter(
     (item) => item.sourceEntryId === record.id
   );
@@ -121,6 +131,15 @@ export function RecordInspector({
         </p>
       ))}
       <Provenance context={scope.context} onSelect={onSelect} record={record} />
+      {record.sourceRef ? (
+        <Section title="Source">
+          <SourceDocumentPanel
+            onOpen={onOpenDocument}
+            scannedAt={scope.scannedAt}
+            sourceRef={record.sourceRef}
+          />
+        </Section>
+      ) : null}
       <Links onSelect={onSelect} record={record} scope={scope} />
       {record.kind === "plugin" ? (
         <Section title="Contributes">

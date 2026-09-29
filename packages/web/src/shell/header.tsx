@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { ToolId } from "@agent-mapper/core";
 import { GitBranch, RefreshCw, Search } from "lucide-react";
 import { Button } from "../ui/button";
@@ -18,6 +19,8 @@ interface HeaderProps {
   onTool(tool: ToolId): void;
   onSearch(): void;
   onRescan(): void;
+  /** Extra controls before Search, such as the Drafts menu. */
+  actions?: ReactNode;
 }
 
 const tools: ToolId[] = ["claude", "codex"];
@@ -83,6 +86,7 @@ export function Header(props: HeaderProps) {
       </div>
       <div className="flex items-center gap-2">
         <ToolToggle tool={props.tool} onTool={props.onTool} />
+        {props.actions}
         <Button onClick={props.onSearch}>
           <Search aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
           Search

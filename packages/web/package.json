@@ -10,8 +10,11 @@
   "dependencies": {
     "@agent-mapper/core": "workspace:*",
     "lucide-react": "1.48.0",
+    "monaco-editor": "0.57.0",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",

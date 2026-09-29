@@ -185,7 +185,7 @@ export function Sidebar(props: SidebarProps) {
         <ThemeSwitch theme={props.theme} onTheme={props.onTheme} />
         <div className="flex items-center gap-1.5 px-2 pt-2 text-caption text-ink-faint">
           <Lock aria-hidden="true" className="size-3" strokeWidth={1.6} />
-          Read-only · nothing is modified
+          Changes only files you save
         </div>
       </div>
     </aside>
