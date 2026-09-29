@@ -79,9 +79,10 @@ function statusText(draft: Draft): string {
   return draft.notice ?? "";
 }
 
-function StatusLine({ draft }: { draft: Draft }) {
+/** One row for errors, progress and the recheck note, so the body always gets the flexible last row. */
+function StatusLine({ draft, note }: { draft: Draft; note?: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 px-5 empty:hidden">
+    <div className="flex flex-wrap items-center gap-3 px-5">
       {draft.error ? (
         <p className="m-0 py-2 text-label text-problem" role="alert">
           {draft.error}
@@ -96,6 +97,9 @@ function StatusLine({ draft }: { draft: Draft }) {
       >
         {statusText(draft)}
       </output>
+      {note ? (
+        <output className="py-2 text-label text-ink-muted">{note}</output>
+      ) : null}
     </div>
   );
 }
@@ -165,7 +169,7 @@ export function DocumentWorkspace(props: DocumentWorkspaceProps) {
   return (
     <section
       aria-label={`${draft.document.source.name} document`}
-      className="grid h-full min-h-0 grid-rows-[auto_auto_auto_minmax(0,1fr)] bg-surface"
+      className="grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] bg-surface"
     >
       <DocumentToolbar
         draft={draft}
@@ -174,12 +178,7 @@ export function DocumentWorkspace(props: DocumentWorkspaceProps) {
         onMode={props.onMode}
         onOpen={props.onOpen}
       />
-      <StatusLine draft={draft} />
-      {recheckProblem ? (
-        <output className="block px-5 pb-2 text-label text-ink-muted">
-          {recheckProblem}
-        </output>
-      ) : null}
+      <StatusLine draft={draft} note={recheckProblem} />
       <div className="min-h-0 border-t border-hairline">
         <DocumentErrorBoundary
           fallback={(message) => (

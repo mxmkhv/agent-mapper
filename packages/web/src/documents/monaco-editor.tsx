@@ -3,7 +3,9 @@ import {
   applyTheme,
   disposeDraftModel,
   draftModel,
-  monaco
+  monaco,
+  restoreViewState,
+  saveViewState
 } from "./monaco-setup";
 
 const sharedOptions = {
@@ -63,6 +65,7 @@ export function SourceEditor(props: SourceEditorProps) {
       ariaLabel: label
     });
     editor.current = instance;
+    restoreViewState(sourceKey, instance);
     const subscription = model.onDidChangeContent(() =>
       change(model.getValue())
     );
@@ -72,6 +75,7 @@ export function SourceEditor(props: SourceEditorProps) {
     );
     instance.focus();
     return () => {
+      saveViewState(sourceKey, instance);
       subscription.dispose();
       instance.dispose();
       editor.current = undefined;

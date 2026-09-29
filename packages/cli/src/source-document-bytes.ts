@@ -8,6 +8,9 @@ const bom = Buffer.from("\uFEFF", "utf8");
 const versionLength = 32;
 const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
+export const unopenableText =
+  "This text contains NUL characters or invalid UTF-8, which agent-mapper could not reopen. Remove them and review again.";
+
 export interface DocumentFormat {
   bom: boolean;
   lineEnding: LineEnding;

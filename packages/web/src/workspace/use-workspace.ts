@@ -107,6 +107,13 @@ export function useWorkspace(input: WorkspaceInput) {
   return {
     ...selection,
     ...documents,
+    /** Picking a record (for example from search) shows it, leaving any open document; its draft stays. */
+    select(...args: Parameters<typeof selection.select>) {
+      if (documents.documentView) {
+        documents.closeDocument();
+      }
+      selection.select(...args);
+    },
     view,
     /** Choosing a view leaves any open document; its draft stays in the Drafts menu. */
     setView(next: View) {

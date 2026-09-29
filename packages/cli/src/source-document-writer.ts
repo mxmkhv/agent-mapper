@@ -6,7 +6,11 @@ import type {
   RevisionSummary,
   SourceDocument
 } from "@agent-mapper/core";
-import { maxDocumentBytes } from "./source-document-bytes";
+import {
+  decodeDocument,
+  maxDocumentBytes,
+  unopenableText
+} from "./source-document-bytes";
 import {
   DocumentApiError,
   documentError,
@@ -160,6 +164,10 @@ async function commitLocked(
       "too_large",
       "With its line endings applied this document is larger than 1 MiB. Shorten it or edit it in another editor."
     );
+  }
+  // Never write bytes the reader would refuse to open again (NUL characters, invalid UTF-8).
+  if (!decodeDocument(proposed)) {
+    throw documentError("invalid_encoding", unopenableText);
   }
   if (current.version !== plan.expectedVersion) {
     throw documentError(

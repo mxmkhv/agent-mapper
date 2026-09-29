@@ -21,7 +21,8 @@ import {
   decodeDocument,
   encodeDocument,
   hashBytes,
-  sourceKeyFor
+  sourceKeyFor,
+  unopenableText
 } from "./source-document-bytes";
 import { DocumentApiError, documentError } from "./source-document-errors";
 import { historyFolder } from "./source-document-history-folder";
@@ -116,9 +117,11 @@ export class SourceDocumentService {
   async validate(request: ContentRequest): Promise<ValidationResult> {
     const bound = await bindDocument(this.registry, request);
     const { target } = bound;
-    const unchanged = encodeDocument(request.content, target.decoded).equals(
-      target.bytes
-    );
+    const encoded = encodeDocument(request.content, target.decoded);
+    if (!decodeDocument(encoded)) {
+      throw documentError("invalid_encoding", unopenableText);
+    }
+    const unchanged = encoded.equals(target.bytes);
     if (!unchanged && target.version !== request.expectedVersion) {
       throw documentError(
         "conflict",

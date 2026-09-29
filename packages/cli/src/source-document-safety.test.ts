@@ -209,3 +209,21 @@ it("refuses requests for a source that left the scan or a mismatched file", asyn
   expect(gone.status).toBe(404);
   expect(gone.body.error?.code).toBe("unknown_source");
 });
+
+it("refuses to save text the reader could not open again", async () => {
+  const { fixture, server, project } = await setup();
+  const document = (await server.open("app/CLAUDE.md", project)).body;
+  const review = await server.post(
+    "validate",
+    saveBody(document, "new\0text\n")
+  );
+  expect(review.body.error?.code).toBe("invalid_encoding");
+  const reply = await server.post("save", saveBody(document, "new\0text\n"));
+  expect(reply.status).toBe(422);
+  expect(reply.body.error?.code).toBe("invalid_encoding");
+  expect(readFileSync(join(fixture.project, "CLAUDE.md"), "utf8")).toBe(
+    "# App\n\nUse bun.\n"
+  );
+  const reopened = await server.open("app/CLAUDE.md", project);
+  expect(reopened.status).toBe(200);
+});

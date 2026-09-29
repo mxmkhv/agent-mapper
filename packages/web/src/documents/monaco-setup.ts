@@ -76,6 +76,28 @@ export function applyTheme(): void {
 }
 
 const models = new Map<string, monaco.editor.ITextModel>();
+/** Cursor, selection, scroll and folding per draft, restored when its editor is shown again. */
+const viewStates = new Map<string, monaco.editor.ICodeEditorViewState>();
+
+export function saveViewState(
+  sourceKey: string,
+  editor: monaco.editor.IStandaloneCodeEditor
+): void {
+  const state = editor.saveViewState();
+  if (state) {
+    viewStates.set(sourceKey, state);
+  }
+}
+
+export function restoreViewState(
+  sourceKey: string,
+  editor: monaco.editor.IStandaloneCodeEditor
+): void {
+  const state = viewStates.get(sourceKey);
+  if (state) {
+    editor.restoreViewState(state);
+  }
+}
 
 /** One model per draft, so typing undo survives leaving and reopening the editor. */
 export function draftModel(
@@ -93,6 +115,7 @@ export function draftModel(
 export function disposeDraftModel(sourceKey: string): void {
   models.get(sourceKey)?.dispose();
   models.delete(sourceKey);
+  viewStates.delete(sourceKey);
 }
 
 export { monaco };
