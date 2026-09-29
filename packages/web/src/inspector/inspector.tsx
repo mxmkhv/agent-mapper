@@ -17,6 +17,7 @@ import {
   Provenance,
   Section
 } from "./inspector-sections";
+import { ReachSection, type ReachScope } from "./reach-section";
 
 interface InspectorScope {
   records: InventoryRecord[];
@@ -30,13 +31,15 @@ interface RecordInspectorProps {
   scope: InspectorScope;
   onSelect(id: string): void;
   onKind(kind: RecordKind): void;
+  /** Present in the Global view: which projects this record reaches. */
+  reach?: ReachScope;
 }
 
 function Links({
   record,
   scope,
   onSelect
-}: Omit<RecordInspectorProps, "onKind">) {
+}: Pick<RecordInspectorProps, "record" | "scope" | "onSelect">) {
   const target = isLink(record) ? linkTarget(record, scope.records) : undefined;
   const sources = linkedFrom(record, scope.records);
   return (
@@ -78,7 +81,8 @@ export function RecordInspector({
   record,
   scope,
   onSelect,
-  onKind
+  onKind,
+  reach
 }: RecordInspectorProps) {
   const action = useSourceAction(scope.workingDirectory);
   const imports = scope.imports.filter(
@@ -131,6 +135,7 @@ export function RecordInspector({
       <Section title="Details">
         <Details context={scope.context} record={record} />
       </Section>
+      {reach ? <ReachSection reach={reach} record={record} /> : null}
       <div className="mt-5.5 flex gap-2">
         <Button
           onClick={() => void action.run(record.id, "open")}
