@@ -32,7 +32,7 @@ The app is read-only with respect to agent configuration. Files stay where they 
 | Symlink provenance and worktree differences              | Cross-tool sync or conversion                       |
 | Exact duplicates, broken references, confirmed shadowing | Similar-content and stale-prose heuristics          |
 | Approximate startup and on-demand context volume         | Billing estimates                                   |
-| Local web UI, CLI explanation, JSON export               | Desktop wrapper                                     |
+| Local web UI launched from the CLI                       | Desktop wrapper                                     |
 
 ## What the map can claim
 
@@ -53,8 +53,6 @@ The default explanation models a fresh local CLI session launched in the selecte
 ```sh
 npx agent-mapper
 npx agent-mapper --tools claude,codex
-npx agent-mapper why .
-npx agent-mapper --json
 ```
 
 1. Detect Claude Code and Codex using configuration directories and binaries on PATH. Let the user choose either or both.
@@ -306,7 +304,7 @@ Treat previews as untrusted text. Redact sensitive config before preview, export
 
 1. Bootstrap the workspace and quality gates described above.
 2. Build source readers and contextual resolution contracts for both tools, including coverage reporting.
-3. Deliver a complete instructions-and-skills flow: select a repo, inspect sources and findings, explain with `why`, and Open/Reveal in the UI.
+3. Deliver a complete instructions-and-skills flow: select a repo, inspect sources and findings, and Open/Reveal in the UI.
 4. Add plugin inventory and contribution links, including selected versus cached versions.
 5. Deliver Hooks and MCP views, preserving unknown and disabled declarations.
 6. Add agents, memory, worktree comparisons, context estimates, and cross-view search.
@@ -323,7 +321,6 @@ Hooks, plugins, and MCP visibility are release requirements. Incomplete assessme
 - Hooks remain visible without execution evidence, including unknown events and conditional hooks.
 - MCP declarations show configuration and provenance without claiming connectivity or exposing credentials.
 - Worktree differences, symlink entry paths, inaccessible sources, and unsupported formats are visible.
-- CLI and UI use the same resolution results; JSON export observes the same redaction rules.
 - Every implemented screen is inspected through screenshots in light and dark mode, including empty, loading, error, and partial-coverage states.
 
 Success means users can explain their setup and make a useful review or cleanup decision. A weekly or monthly audit is enough; daily engagement is not a requirement.

@@ -31,7 +31,7 @@ agent-mapper resolves configuration per tool and per folder, with a reason for e
 
 ## Operating Context
 
-- Launched with `npx agent-mapper`. A local server binds to `127.0.0.1` with a session token and opens the browser UI. The CLI also offers `agent-mapper why [folder]` and `--json` export, and they use the same resolution results as the UI.
+- Launched with `npx agent-mapper`. A local server binds to `127.0.0.1` with a session token and opens the browser UI.
 - Reads configuration roots such as `~/.claude`, `~/.claude.json`, `~/.codex`, `~/.agents`, `CODEX_HOME`, project `.claude/`, `.codex/`, `.agents/`, `.mcp.json`, `CLAUDE.md`, `AGENTS.md`, and `*.local` files.
 - Discovers projects under home, enumerates Git worktrees, and watches selected sources. Rescan is always available.
 - The only actions are Open in editor, Reveal in Finder, navigation, filtering, and rescanning.
