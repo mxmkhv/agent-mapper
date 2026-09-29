@@ -1,0 +1,58 @@
+import type { ToolId } from "@agent-mapper/core";
+
+export type RecordKind =
+  | "instruction"
+  | "skill"
+  | "command"
+  | "agent"
+  | "hook"
+  | "mcp"
+  | "memory"
+  | "plugin";
+
+export type Layer = "managed" | "global" | "plugins" | "project" | "user";
+
+/** How loudly an item asks for attention. Active is silent; problem is the only red state. */
+export type Tier = "active" | "inactive" | "unknown" | "approval" | "problem";
+
+export interface RecordDetail {
+  label: string;
+  value: string;
+}
+
+interface PluginRef {
+  id: string;
+  name: string;
+  version?: string;
+  state: string;
+}
+
+export interface InventoryRecord {
+  id: string;
+  kind: RecordKind;
+  tool: ToolId | "unknown";
+  name: string;
+  path: string;
+  realPath: string;
+  scope: string;
+  layer: Layer;
+  tier: Tier;
+  /** Native state word from the resolver, e.g. "shadowed", "cached", "approval required". */
+  label: string;
+  reason: string;
+  loading?: string;
+  /** Position in the source snapshot, used for startup load order. */
+  order: number;
+  startupTokens: number;
+  lines?: number;
+  characters?: number;
+  locator?: string;
+  /** Short secondary text: hook matcher, MCP transport, plugin version. */
+  summary?: string;
+  plugin?: PluginRef;
+  /** Path inside the plugin install, when the record comes from a plugin. */
+  pluginPath?: string;
+  details: RecordDetail[];
+  problems: string[];
+  contributions?: Partial<Record<RecordKind, number>>;
+}

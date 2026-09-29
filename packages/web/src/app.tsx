@@ -1,70 +1,72 @@
 import { useState } from "react";
 import { useInventory, useProjects } from "./data";
-import { Sidebar } from "./sidebar";
-import { Workspace } from "./workspace";
-import type { Tab } from "./workspace-tabs";
+import { Sidebar } from "./shell/sidebar";
+import { useTheme } from "./state/use-theme";
+import { useTool } from "./state/use-tool";
+import { Button } from "./ui/button";
+import { Workspace } from "./workspace/workspace";
 
-function initialTool() {
-  const selected = new URLSearchParams(window.location.search).get("tools");
-  return selected === "claude" || selected === "codex" ? selected : "all";
-}
+const folderKey = "agent-mapper:selected-folder";
 
 export function App() {
   const [selectedPath, setSelectedPath] = useState(
-    () => window.localStorage.getItem("agent-mapper:selected-folder") ?? ""
+    () => window.localStorage.getItem(folderKey) ?? ""
   );
   const [refresh, setRefresh] = useState(0);
-  const [initialTab, setInitialTab] = useState<Tab>("instruction");
+  const [theme, setTheme] = useTheme();
+  const [tool, setTool] = useTool();
   const projects = useProjects();
   const inventory = useInventory(selectedPath, refresh);
-  function selectPath(path: string, tab: Tab = "instruction") {
+  const rescan = () => setRefresh((value) => value + 1);
+  function selectPath(path: string) {
     setSelectedPath(path);
-    setInitialTab(tab);
-    window.localStorage.setItem("agent-mapper:selected-folder", path);
+    window.localStorage.setItem(folderKey, path);
   }
   return (
-    <div className="app-shell">
+    <div className="grid h-full grid-cols-[232px_minmax(0,1fr)] overflow-hidden">
       <Sidebar
+        error={projects.error}
+        loading={projects.loading}
+        onSelect={selectPath}
+        onTheme={setTheme}
         projects={projects.value?.projects ?? []}
         selectedPath={selectedPath}
-        onSelect={selectPath}
-        loading={projects.loading}
-        error={projects.error}
+        theme={theme}
       />
-      <main className="main-area">
-        {inventory.loading && !inventory.value ? (
-          <output className="status-screen">
-            Scanning {selectedPath || "global sources"}…
-          </output>
-        ) : null}
-        {inventory.loading && inventory.value ? (
-          <output className="rescan-notice">Refreshing inventory…</output>
-        ) : null}
-        {inventory.error ? (
-          <div
-            className={
-              inventory.value ? "rescan-notice error" : "status-screen error"
-            }
-            role="alert"
-          >
-            <h2>Could not scan this folder</h2>
-            <p>{inventory.error}</p>
-            <button onClick={() => setRefresh((value) => value + 1)}>
-              Try again
-            </button>
-          </div>
-        ) : null}
+      <main className="grid min-h-0 min-w-0">
         {inventory.value ? (
           <Workspace
+            isProject={Boolean(selectedPath)}
             key={selectedPath || "global"}
+            notice={
+              inventory.error
+                ? `Could not rescan: ${inventory.error}`
+                : undefined
+            }
+            onRescan={rescan}
+            onSelectPath={selectPath}
+            onTool={setTool}
+            refreshing={inventory.loading}
             snapshot={inventory.value}
-            globalView={!selectedPath}
-            initialTool={initialTool()}
-            initialTab={initialTab}
-            onRescan={() => setRefresh((value) => value + 1)}
-            onSelectPath={(path) => selectPath(path, "worktree")}
+            tool={tool}
           />
-        ) : null}
+        ) : (
+          <div className="grid place-items-center p-10 text-center">
+            {inventory.error ? (
+              <div role="alert">
+                <h2 className="text-headline font-semibold">
+                  Could not scan this folder
+                </h2>
+                <p className="text-ink-muted">{inventory.error}</p>
+                <Button onClick={rescan}>Try again</Button>
+              </div>
+            ) : (
+              <output className="text-ink-muted">
+                Scanning {selectedPath || "global sources"}…
+              </output>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );
