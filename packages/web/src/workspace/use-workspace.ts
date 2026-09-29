@@ -73,7 +73,7 @@ function useSelection(
 /** All per-folder UI state: view, filters, selection, and the records the views render. */
 export function useWorkspace(input: WorkspaceInput) {
   const { snapshot, isProject, tool } = input;
-  const [view, setView] = useState<View>("inventory");
+  const [view, setView] = useState<View>(isProject ? "map" : "inventory");
   const [kind, setKind] = useState<RecordKind | "all">("all");
   const records = useMemo(() => buildRecords(snapshot), [snapshot]);
   const context = useMemo(

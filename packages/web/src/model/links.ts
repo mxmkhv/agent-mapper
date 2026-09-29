@@ -38,7 +38,8 @@ export function linkedFrom(
   });
 }
 
-function targetFolder(record: InventoryRecord): string | undefined {
+/** The folder a symlinked skill or agent resolves into, e.g. `.agents/skills`. */
+export function linkFolder(record: InventoryRecord): string | undefined {
   if (!isLink(record)) {
     return undefined;
   }
@@ -51,7 +52,7 @@ export function sharedLinkFolder(
 ): { folder: string; count: number } | undefined {
   const counts = new Map<string, number>();
   for (const record of records) {
-    const folder = targetFolder(record);
+    const folder = linkFolder(record);
     if (folder) {
       counts.set(folder, (counts.get(folder) ?? 0) + 1);
     }
