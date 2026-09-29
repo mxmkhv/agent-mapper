@@ -12,7 +12,7 @@ import { discoverProjects, type DiscoveryResult } from "./inventory";
 import { managedClaudeDirectory } from "./managed-claude-reader";
 import { buildGlobalSnapshot, buildSnapshot } from "./service";
 import { serveAsset } from "./server-assets";
-import { defaultHistoryRoot } from "./source-document-history";
+import { defaultHistoryRoot } from "./source-document-history-folder";
 import { handleDocumentRoute, isDocumentRoute } from "./source-document-routes";
 import { SourceDocumentService } from "./source-document-service";
 import {

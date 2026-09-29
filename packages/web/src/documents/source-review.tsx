@@ -15,7 +15,7 @@ export const notesPane =
   "max-h-[45vh] overflow-auto border-t border-hairline p-5 lg:max-h-none lg:border-t-0 lg:border-l";
 
 export const metadataNote =
-  "Saving replaces the file. Its text, symlinks and permissions are kept; macOS extended attributes, Finder tags and the original creation date are not.";
+  "Saving replaces the file. Its text, symlinks and permission mode are kept; macOS extended attributes, ACLs, Finder tags and the original creation date are not.";
 
 export function hasBlockingErrors(draft: Draft): boolean {
   return Boolean(

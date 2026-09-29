@@ -1,8 +1,10 @@
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { openSourceDocument } from "../source-document-api";
 import { isDirty, type Draft } from "../state/draft-store";
 import { reviewDraft } from "../state/document-actions";
 import { useDocuments, useDraft } from "../state/use-document-drafts";
 import { Button } from "../ui/button";
+import { CopyTextButton } from "./copy-text";
 import { DocumentErrorBoundary } from "./document-error-boundary";
 import { DocumentToolbar } from "./document-toolbar";
 import type { ImpactCoverage } from "./impact-summary";
@@ -50,7 +52,7 @@ function EditorPane({ draft }: { draft: Draft }) {
             label={`Edit ${draft.document.source.name}`}
             onChange={(text) => store.setText(draft.sourceKey, text)}
             onReview={() => void reviewDraft(context)}
-            readOnly={Boolean(draft.busy)}
+            readOnly={Boolean(draft.busy) || !draft.document.editable}
             sourceKey={draft.sourceKey}
             text={draft.text}
           />
@@ -78,17 +80,6 @@ function statusText(draft: Draft): string {
 }
 
 function StatusLine({ draft }: { draft: Draft }) {
-  const [copied, setCopied] = useState<string>();
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(draft.text);
-      setCopied("Draft copied to the clipboard.");
-    } catch (error) {
-      setCopied(
-        `Could not copy the draft (${error instanceof Error ? error.message : String(error)}). Select the text in the editor and copy it manually.`
-      );
-    }
-  }
   return (
     <div className="flex flex-wrap items-center gap-3 px-5 empty:hidden">
       {draft.error ? (
@@ -96,14 +87,14 @@ function StatusLine({ draft }: { draft: Draft }) {
           {draft.error}
         </p>
       ) : null}
-      {draft.error ? (
-        <Button onClick={() => void copy()}>Copy draft</Button>
+      {draft.error && isDirty(draft) ? (
+        <CopyTextButton label="Copy draft" text={draft.text} />
       ) : null}
       <output
         aria-live="polite"
         className="py-2 text-label text-ink-muted empty:hidden"
       >
-        {copied ?? statusText(draft)}
+        {statusText(draft)}
       </output>
     </div>
   );
@@ -116,11 +107,12 @@ function Body(props: {
   onBack(): void;
 }) {
   const { draft } = props;
-  if (props.mode === "history") {
-    return <SourceHistory draft={draft} onRestored={props.onBack} />;
-  }
+  // A conflict outranks the chosen mode: it must be seen before anything else is written.
   if (draft.phase === "conflict") {
     return <SourceConflict draft={draft} />;
+  }
+  if (props.mode === "history") {
+    return <SourceHistory draft={draft} onRestored={props.onBack} />;
   }
   if (draft.phase === "reviewing") {
     return <SourceReview coverage={props.coverage} draft={draft} />;
@@ -132,8 +124,34 @@ function Body(props: {
  * Editing, review, conflict and history take the whole content and inspector area; the
  * header and view bar stay visible and the browsing view waits, untouched, underneath.
  */
+/** Opening a draft (for example from the Drafts menu) rechecks the file on disk; changes become a conflict. */
+function useRevalidate(sourceKey: string) {
+  const { store } = useDocuments();
+  const [problem, setProblem] = useState<string>();
+  useEffect(() => {
+    const ref = store.get(sourceKey)?.ref;
+    if (!ref) {
+      return;
+    }
+    const controller = new AbortController();
+    openSourceDocument(ref, controller.signal).then(
+      (document) => store.revalidate(sourceKey, document),
+      (error: unknown) => {
+        if (!controller.signal.aborted) {
+          setProblem(
+            `Could not recheck the file on disk: ${error instanceof Error ? error.message : String(error)} Saving still checks for changes first.`
+          );
+        }
+      }
+    );
+    return () => controller.abort();
+  }, [store, sourceKey]);
+  return problem;
+}
+
 export function DocumentWorkspace(props: DocumentWorkspaceProps) {
   const draft = useDraft(props.sourceKey);
+  const recheckProblem = useRevalidate(props.sourceKey);
   if (!draft) {
     return (
       <div className="grid h-full place-items-center p-10 text-center">
@@ -147,7 +165,7 @@ export function DocumentWorkspace(props: DocumentWorkspaceProps) {
   return (
     <section
       aria-label={`${draft.document.source.name} document`}
-      className="grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] bg-surface"
+      className="grid h-full min-h-0 grid-rows-[auto_auto_auto_minmax(0,1fr)] bg-surface"
     >
       <DocumentToolbar
         draft={draft}
@@ -157,14 +175,22 @@ export function DocumentWorkspace(props: DocumentWorkspaceProps) {
         onOpen={props.onOpen}
       />
       <StatusLine draft={draft} />
+      {recheckProblem ? (
+        <output className="block px-5 pb-2 text-label text-ink-muted">
+          {recheckProblem}
+        </output>
+      ) : null}
       <div className="min-h-0 border-t border-hairline">
         <DocumentErrorBoundary
           fallback={(message) => (
-            <p className="m-0 p-5 text-label text-problem" role="alert">
-              The editor could not be shown: {message}. Your draft is kept; go
-              back to the inventory and reopen it, or reload agent-mapper after
-              copying your text.
-            </p>
+            <div className="p-5" role="alert">
+              <p className="m-0 mb-3 text-label text-problem">
+                The editor could not be shown: {message}. Your draft is still in
+                memory. Copy it, then reload agent-mapper; a reload is needed if
+                part of the app failed to download.
+              </p>
+              <CopyTextButton label="Copy draft" text={draft.text} />
+            </div>
           )}
         >
           <Body

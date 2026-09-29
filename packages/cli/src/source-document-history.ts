@@ -1,24 +1,11 @@
 import { randomBytes } from "node:crypto";
-import {
-  lstat,
-  mkdir,
-  open,
-  readFile,
-  readdir,
-  rename
-} from "node:fs/promises";
+import { open, readFile, readdir, rename } from "node:fs/promises";
 import { join } from "node:path";
 import type { RevisionSummary } from "@agent-mapper/core";
 import { hashBytes, type DocumentFormat } from "./source-document-bytes";
-import {
-  DocumentApiError,
-  documentError,
-  errnoCode
-} from "./source-document-errors";
+import { documentError, errnoCode } from "./source-document-errors";
 
-const privateDirectory = 0o700;
 const privateFile = 0o600;
-const groupOrOtherBits = 0o077;
 const revisionIdBytes = 12;
 const revisionIdPattern = /^[a-f0-9]{24}$/;
 const snapshotFormat = 1;
@@ -26,7 +13,6 @@ const snapshotFormat = 1;
 export interface StoredRevision {
   summary: Omit<RevisionSummary, "current">;
   bytes: Buffer;
-  format: DocumentFormat;
 }
 
 interface SnapshotFile {
@@ -41,63 +27,6 @@ interface SnapshotFile {
   bom: boolean;
   lineEnding: DocumentFormat["lineEnding"];
   data: string;
-}
-
-/** macOS keeps app data in Application Support; Linux CI and CLI use the XDG data directory. */
-export function defaultHistoryRoot(home: string): string {
-  if (process.platform === "darwin") {
-    return join(
-      home,
-      "Library",
-      "Application Support",
-      "agent-mapper",
-      "revisions"
-    );
-  }
-  const xdg = process.env.XDG_DATA_HOME;
-  return join(
-    xdg?.startsWith("/") ? xdg : join(home, ".local", "share"),
-    "agent-mapper",
-    "revisions"
-  );
-}
-
-async function privateFolder(path: string): Promise<void> {
-  await mkdir(path, { recursive: true, mode: privateDirectory });
-  const info = await lstat(path);
-  const owned = !process.getuid || info.uid === process.getuid();
-  if (
-    info.isSymbolicLink() ||
-    !info.isDirectory() ||
-    !owned ||
-    info.mode & groupOrOtherBits
-  ) {
-    throw documentError(
-      "history_unavailable",
-      `History folder ${path} must be a private folder you own (not a symlink, mode 700). Fix it, then save again.`
-    );
-  }
-}
-
-/** The private history folder for one file, created on first use. Fails before any source write. */
-export async function historyFolder(
-  root: string,
-  sourceKey: string
-): Promise<string> {
-  const folder = join(root, sourceKey);
-  try {
-    await privateFolder(root);
-    await privateFolder(folder);
-  } catch (error) {
-    if (error instanceof DocumentApiError) {
-      throw error;
-    }
-    throw documentError(
-      "history_unavailable",
-      `Could not prepare history folder ${folder} (${errnoCode(error) ?? String(error)}). Nothing was changed.`
-    );
-  }
-  return folder;
 }
 
 /** Writes and flushes one immutable snapshot before the source file is touched. */
@@ -173,8 +102,7 @@ function parseSnapshot(
       hash,
       bytes: bytes.length
     },
-    bytes,
-    format: { bom: Boolean(record.bom), lineEnding: record.lineEnding ?? "lf" }
+    bytes
   };
 }
 
@@ -183,9 +111,9 @@ async function readSnapshotFile(
   input: { revisionId: string; sourceKey: string }
 ): Promise<StoredRevision> {
   const path = join(folder, `${input.revisionId}.json`);
-  let revision: StoredRevision | undefined;
+  let text: string;
   try {
-    revision = parseSnapshot(await readFile(path, "utf8"), input.sourceKey);
+    text = await readFile(path, "utf8");
   } catch (error) {
     if (errnoCode(error) === "ENOENT") {
       throw documentError(
@@ -195,8 +123,15 @@ async function readSnapshotFile(
     }
     throw documentError(
       "history_unavailable",
-      `Could not read history snapshot ${path}. Move it out of the history folder, then try again.`
+      `Could not read history snapshot ${path} (${errnoCode(error) ?? String(error)}). Check its permissions, then try again.`
     );
+  }
+  let revision: StoredRevision | undefined;
+  try {
+    revision = parseSnapshot(text, input.sourceKey);
+  } catch {
+    // JSON.parse reports a damaged snapshot only by throwing; it is reported just below.
+    revision = undefined;
   }
   if (!revision) {
     throw documentError(
@@ -217,17 +152,17 @@ export async function readSnapshot(
   return readSnapshotFile(folder, input);
 }
 
-/** Newest first. */
+/** Newest first. A damaged snapshot is reported in `problems` without hiding the others. */
 export async function listSnapshots(
   folder: string,
   sourceKey: string
-): Promise<StoredRevision[]> {
+): Promise<{ revisions: StoredRevision[]; problems: string[] }> {
   let names: string[];
   try {
     names = await readdir(folder);
   } catch (error) {
     if (errnoCode(error) === "ENOENT") {
-      return [];
+      return { revisions: [], problems: [] };
     }
     throw documentError(
       "history_unavailable",
@@ -238,10 +173,23 @@ export async function listSnapshots(
     .filter((name) => name.endsWith(".json"))
     .map((name) => name.slice(0, -".json".length))
     .filter((id) => revisionIdPattern.test(id));
-  const revisions = await Promise.all(
+  const results = await Promise.allSettled(
     ids.map((revisionId) => readSnapshotFile(folder, { revisionId, sourceKey }))
   );
-  return revisions.sort((a, b) =>
+  const revisions = results.flatMap((result) =>
+    result.status === "fulfilled" ? [result.value] : []
+  );
+  const problems = results.flatMap((result) =>
+    result.status === "rejected"
+      ? [
+          result.reason instanceof Error
+            ? result.reason.message
+            : String(result.reason)
+        ]
+      : []
+  );
+  revisions.sort((a, b) =>
     b.summary.capturedAt.localeCompare(a.summary.capturedAt)
   );
+  return { revisions, problems };
 }

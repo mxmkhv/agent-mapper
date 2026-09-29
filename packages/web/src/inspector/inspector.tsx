@@ -91,7 +91,7 @@ export function RecordInspector({
   onOpenDocument,
   reach
 }: RecordInspectorProps) {
-  // A record picked from Global reach belongs to its own project's scan.
+  // An instruction or skill picked from Global reach carries its own project's scan; other kinds use this view's.
   const action = useSourceAction(
     record.sourceRef?.workingDirectory ?? scope.workingDirectory
   );

@@ -5,7 +5,7 @@ import type {
   MutationResult,
   RestoreRequest,
   RevisionContent,
-  RevisionSummary,
+  RevisionHistory,
   SourceDiagnostic,
   SourceDocument,
   SourceRef,
@@ -26,8 +26,9 @@ export class DocumentRequestError extends Error {
     message: string;
     retryable: boolean;
     diagnostics?: SourceDiagnostic[];
+    cause?: unknown;
   }) {
-    super(failure.message);
+    super(failure.message, { cause: failure.cause });
     this.code = failure.code;
     this.retryable = failure.retryable;
     this.diagnostics = failure.diagnostics;
@@ -41,8 +42,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const hasText = (value: Record<string, unknown>, keys: readonly string[]) =>
   keys.every((key) => typeof value[key] === "string");
 
+const errorCodes = new Set<string>([
+  "invalid_request",
+  "unknown_source",
+  "read_only",
+  "not_found",
+  "too_large",
+  "invalid_encoding",
+  "validation_failed",
+  "conflict",
+  "busy",
+  "history_unavailable",
+  "io_error"
+] satisfies DocumentErrorCode[]);
+
 function isDocumentError(value: unknown): value is DocumentError {
-  return isRecord(value) && hasText(value, ["code", "message"]);
+  return (
+    isRecord(value) &&
+    hasText(value, ["code", "message"]) &&
+    errorCodes.has(String(value.code)) &&
+    typeof value.retryable === "boolean"
+  );
 }
 
 function isDocument(value: unknown): value is SourceDocument {
@@ -71,10 +91,12 @@ function isMutation(value: unknown): value is MutationResult {
   );
 }
 
-function isHistory(value: unknown): value is RevisionSummary[] {
+function isHistory(value: unknown): value is RevisionHistory {
   return (
-    Array.isArray(value) &&
-    value.every(
+    isRecord(value) &&
+    Array.isArray(value.problems) &&
+    Array.isArray(value.revisions) &&
+    value.revisions.every(
       (item) => isRecord(item) && hasText(item, ["revisionId", "capturedAt"])
     )
   );
@@ -104,16 +126,27 @@ function failureFrom(payload: unknown, status: number): DocumentRequestError {
   });
 }
 
+const unknownResult = (cause: unknown) =>
+  new DocumentRequestError({
+    code: "network",
+    message:
+      "Could not reach the local server, so the result is unknown. Check that agent-mapper is still running, then try again.",
+    retryable: true,
+    cause
+  });
+
 async function send(
   action: string,
   request: { body: object; signal?: AbortSignal }
 ): Promise<Response> {
+  // A missing token is a broken session link, not a network problem; let its message through.
+  const token = sessionToken();
   try {
     return await fetch(`/api/source-document/${action}`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        authorization: `Bearer ${sessionToken()}`
+        authorization: `Bearer ${token}`
       },
       body: JSON.stringify(request.body),
       signal: request.signal
@@ -122,12 +155,7 @@ async function send(
     if (request.signal?.aborted) {
       throw error;
     }
-    throw new DocumentRequestError({
-      code: "network",
-      message:
-        "Could not reach the local server, so the result is unknown. Retry sends the same reviewed text.",
-      retryable: true
-    });
+    throw unknownResult(error);
   }
 }
 
@@ -140,7 +168,16 @@ async function post<T>(
   }
 ): Promise<T> {
   const response = await send(action, request);
-  const payload: unknown = await response.json();
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch (error) {
+    if (request.signal?.aborted) {
+      throw error;
+    }
+    // The body was cut off or unreadable, so whether the request took effect is unknown.
+    throw unknownResult(error);
+  }
   if (!response.ok) {
     throw failureFrom(payload, response.status);
   }
@@ -148,7 +185,7 @@ async function post<T>(
     throw new DocumentRequestError({
       code: "io_error",
       message:
-        "The local server returned an unexpected response. Restart agent-mapper.",
+        "The local server returned an unexpected response. Rebuild and restart agent-mapper.",
       retryable: false
     });
   }
@@ -180,7 +217,7 @@ export function restoreSourceRevision(
   return post("restore", { body: request, valid: isMutation });
 }
 
-export function sourceHistory(documentId: string): Promise<RevisionSummary[]> {
+export function sourceHistory(documentId: string): Promise<RevisionHistory> {
   return post("history", { body: { documentId }, valid: isHistory });
 }
 

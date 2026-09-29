@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useInventory, useProjects } from "./data";
+import { AppFailure } from "./documents/app-failure";
+import { DocumentErrorBoundary } from "./documents/document-error-boundary";
 import { Sidebar } from "./shell/sidebar";
 import { DraftStore } from "./state/draft-store";
 import { DocumentsContext, useUnloadGuard } from "./state/use-document-drafts";
@@ -57,40 +59,46 @@ export function App() {
           theme={theme}
         />
         <main className="grid min-h-0 min-w-0">
-          {inventory.value ? (
-            <Workspace
-              initialSelectedId={pendingSelection}
-              isProject={Boolean(selectedPath)}
-              key={selectedPath || "global"}
-              notice={inventory.error ? failedRescan : undefined}
-              onRescan={rescan}
-              onSelectPath={selectPath}
-              onTool={setTool}
-              projectPaths={
-                projects.value?.projects.map((project) => project.path) ?? []
-              }
-              refreshKey={refresh}
-              refreshing={inventory.loading}
-              snapshot={inventory.value}
-              tool={tool}
-            />
-          ) : (
-            <div className="grid place-items-center p-10 text-center">
-              {inventory.error ? (
-                <div role="alert">
-                  <h2 className="text-headline font-semibold">
-                    Could not scan this folder
-                  </h2>
-                  <p className="text-ink-muted">{inventory.error}</p>
-                  <Button onClick={rescan}>Try again</Button>
-                </div>
-              ) : (
-                <output className="text-ink-muted">
-                  Scanning {selectedPath || "global sources"}…
-                </output>
-              )}
-            </div>
-          )}
+          <DocumentErrorBoundary
+            fallback={(message) => (
+              <AppFailure message={message} store={drafts} />
+            )}
+          >
+            {inventory.value ? (
+              <Workspace
+                initialSelectedId={pendingSelection}
+                isProject={Boolean(selectedPath)}
+                key={selectedPath || "global"}
+                notice={inventory.error ? failedRescan : undefined}
+                onRescan={rescan}
+                onSelectPath={selectPath}
+                onTool={setTool}
+                projectPaths={
+                  projects.value?.projects.map((project) => project.path) ?? []
+                }
+                refreshKey={refresh}
+                refreshing={inventory.loading}
+                snapshot={inventory.value}
+                tool={tool}
+              />
+            ) : (
+              <div className="grid place-items-center p-10 text-center">
+                {inventory.error ? (
+                  <div role="alert">
+                    <h2 className="text-headline font-semibold">
+                      Could not scan this folder
+                    </h2>
+                    <p className="text-ink-muted">{inventory.error}</p>
+                    <Button onClick={rescan}>Try again</Button>
+                  </div>
+                ) : (
+                  <output className="text-ink-muted">
+                    Scanning {selectedPath || "global sources"}…
+                  </output>
+                )}
+              </div>
+            )}
+          </DocumentErrorBoundary>
         </main>
       </div>
     </DocumentsContext>

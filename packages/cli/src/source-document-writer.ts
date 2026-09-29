@@ -1,18 +1,20 @@
 import { randomBytes } from "node:crypto";
-import { open, readFile, rename, rm } from "node:fs/promises";
+import { open, rename, rm } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import type {
   MutationResult,
   RevisionSummary,
   SourceDocument
 } from "@agent-mapper/core";
+import { maxDocumentBytes } from "./source-document-bytes";
 import {
   DocumentApiError,
   documentError,
-  errnoCode,
   ioError
 } from "./source-document-errors";
-import { historyFolder, writeSnapshot } from "./source-document-history";
+import { writeSnapshot } from "./source-document-history";
+import { historyFolder } from "./source-document-history-folder";
+import { acquireLock, releaseLock } from "./source-document-lock";
 import {
   canonicalTarget,
   readTarget,
@@ -20,7 +22,6 @@ import {
 } from "./source-document-reader";
 
 const permissionBits = 0o7777;
-const lockFile = 0o600;
 const tokenBytes = 8;
 
 interface BoundTarget {
@@ -45,64 +46,6 @@ export interface MutationPlan {
   check?(proposed: Buffer): void;
 }
 
-interface HeldLock {
-  path: string;
-  token: string;
-}
-
-async function acquireLock(
-  context: MutationContext,
-  folder: string
-): Promise<HeldLock> {
-  const { sourceKey } = context.bound;
-  if (context.busy.has(sourceKey)) {
-    throw documentError(
-      "busy",
-      "Another save or restore of this file is in progress. Wait for it to finish, then try again."
-    );
-  }
-  const path = join(folder, "lock");
-  const token = randomBytes(tokenBytes).toString("hex");
-  try {
-    const handle = await open(path, "wx", lockFile);
-    try {
-      await handle.writeFile(
-        `pid ${process.pid}\ncreated ${new Date().toISOString()}\ntoken ${token}\n`
-      );
-    } finally {
-      await handle.close();
-    }
-  } catch (error) {
-    if (errnoCode(error) === "EEXIST") {
-      throw documentError(
-        "busy",
-        `Another agent-mapper process holds the write lock ${path}. If no other agent-mapper is running, stop all agent-mapper servers, delete that file, and try again.`
-      );
-    }
-    throw ioError(error, `Creating the write lock ${path}`);
-  }
-  context.busy.add(sourceKey);
-  return { path, token };
-}
-
-async function releaseLock(
-  context: MutationContext,
-  lock: HeldLock
-): Promise<void> {
-  context.busy.delete(context.bound.sourceKey);
-  const content = await readFile(lock.path, "utf8").catch((error: unknown) => {
-    // Someone already removed the lock by hand; there is nothing left to release.
-    if (errnoCode(error) === "ENOENT") {
-      return "";
-    }
-    throw error;
-  });
-  // Only remove the lock this operation created.
-  if (content.includes(`token ${lock.token}\n`)) {
-    await rm(lock.path);
-  }
-}
-
 async function writeTemporary(
   current: TargetState,
   bytes: Buffer
@@ -120,9 +63,18 @@ async function writeTemporary(
     // open() applies the umask; set the original mode explicitly.
     await handle.chmod(mode);
     await handle.sync();
-  } finally {
+  } catch (error) {
     await handle.close();
+    // Never leave a partial copy of the draft next to the user's file.
+    const leftover = await rm(temporary, { force: true }).then(
+      () => "",
+      () => ` A temporary file may remain at ${temporary}.`
+    );
+    const failure = ioError(error, `Writing ${canonicalPath}`);
+    failure.message += leftover;
+    throw failure;
   }
+  await handle.close();
   return temporary;
 }
 
@@ -181,7 +133,7 @@ async function readBack(
     return {
       ...result,
       warnings: [
-        `Saved, but reading the file back failed: ${reason} Reopen the source before editing again.`
+        `The file was saved, but agent-mapper could not read it back right away: ${reason}`
       ]
     };
   }
@@ -202,6 +154,12 @@ async function commitLocked(
       outcome: "unchanged",
       document: await context.describe(current)
     };
+  }
+  if (proposed.length > maxDocumentBytes) {
+    throw documentError(
+      "too_large",
+      "With its line endings applied this document is larger than 1 MiB. Shorten it or edit it in another editor."
+    );
   }
   if (current.version !== plan.expectedVersion) {
     throw documentError(
@@ -225,19 +183,29 @@ async function commitLocked(
   });
 }
 
-/** Save and restore share one sequence: lock, equality, version, snapshot, replace, read back. */
+/**
+ * Save and restore share one sequence: history folder, lock, equality, size, version, validation,
+ * snapshot, replace, read back. A lock that cannot be released never hides the result.
+ */
 export async function commitMutation(
   context: MutationContext,
   plan: MutationPlan
 ): Promise<MutationResult> {
-  const folder = await historyFolder(
-    context.historyRoot,
-    context.bound.sourceKey
-  );
-  const lock = await acquireLock(context, folder);
+  const { sourceKey } = context.bound;
+  const folder = await historyFolder(context.historyRoot, sourceKey);
+  const lock = await acquireLock(context.busy, { folder, sourceKey });
+  let result: MutationResult;
   try {
-    return await commitLocked(context, { plan, folder });
-  } finally {
-    await releaseLock(context, lock);
+    result = await commitLocked(context, { plan, folder });
+  } catch (error) {
+    const problem = await releaseLock(context.busy, lock);
+    if (problem && error instanceof Error) {
+      error.message += ` ${problem}`;
+    }
+    throw error;
   }
+  const problem = await releaseLock(context.busy, lock);
+  return problem
+    ? { ...result, warnings: [...(result.warnings ?? []), problem] }
+    : result;
 }

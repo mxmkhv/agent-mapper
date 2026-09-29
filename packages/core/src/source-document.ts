@@ -1,6 +1,6 @@
 import type { InventoryEntry, ToolId } from "./inventory";
 
-/** Browser-safe contract for reading, editing and restoring one instruction or skill file. */
+// Browser-safe contract for reading, editing and restoring one instruction or skill file.
 
 export type SourceScope = "global" | "project";
 
@@ -56,7 +56,7 @@ export interface SourceDocument {
   source: SourceDocumentOrigin;
   canonicalPath: string;
   version: string;
-  /** Text with LF line endings and without a BOM; the server restores both on save. */
+  /** Text without a BOM; CRLF files arrive as LF. The server restores both on save. Mixed-ending files keep their `\r` and are read-only. */
   content: string;
   encoding: { bom: boolean };
   lineEnding: LineEnding;
@@ -97,6 +97,12 @@ export interface RevisionSummary {
   bytes: number;
   /** The captured bytes equal the file on disk now. */
   current: boolean;
+}
+
+export interface RevisionHistory {
+  revisions: RevisionSummary[];
+  /** Damaged snapshots or an unreadable current file; the readable revisions are still listed. */
+  problems: string[];
 }
 
 export interface RevisionContent {

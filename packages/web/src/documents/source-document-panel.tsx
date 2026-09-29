@@ -6,6 +6,7 @@ import { isDirty } from "../state/draft-store";
 import { useDocuments, useDraft } from "../state/use-document-drafts";
 import { Button } from "../ui/button";
 import { Diagnostics } from "./diagnostics";
+import { DocumentErrorBoundary } from "./document-error-boundary";
 import { MarkdownPreview } from "./lazy";
 import { SegmentedToggle } from "./segmented-toggle";
 
@@ -77,9 +78,24 @@ export function DocumentText({
     );
   }
   return (
-    <Suspense fallback={<output className="text-ink-muted">Rendering…</output>}>
-      <MarkdownPreview content={content} />
-    </Suspense>
+    <DocumentErrorBoundary
+      fallback={(message) => (
+        <>
+          <p className="mt-0 text-label text-problem" role="alert">
+            The preview could not be rendered ({message}); showing the source.
+          </p>
+          <pre className="m-0 font-mono text-mono break-words whitespace-pre-wrap">
+            {content}
+          </pre>
+        </>
+      )}
+    >
+      <Suspense
+        fallback={<output className="text-ink-muted">Rendering…</output>}
+      >
+        <MarkdownPreview content={content} />
+      </Suspense>
+    </DocumentErrorBoundary>
   );
 }
 

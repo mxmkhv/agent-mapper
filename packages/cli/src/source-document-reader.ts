@@ -77,6 +77,7 @@ export async function readTarget(canonicalPath: string): Promise<TargetState> {
       ? error
       : ioError(error, `Reading ${canonicalPath}`);
   }
+  // The file can grow between fstat and readFile; check what was actually read.
   if (read.bytes.length > maxDocumentBytes) {
     throw documentError(
       "too_large",

@@ -5,7 +5,7 @@ import type {
   MutationResult,
   RestoreRequest,
   RevisionContent,
-  RevisionSummary,
+  RevisionHistory,
   SourceDocument,
   SourceRef,
   SourceScope,
@@ -24,11 +24,8 @@ import {
   sourceKeyFor
 } from "./source-document-bytes";
 import { DocumentApiError, documentError } from "./source-document-errors";
-import {
-  historyFolder,
-  listSnapshots,
-  readSnapshot
-} from "./source-document-history";
+import { historyFolder } from "./source-document-history-folder";
+import { listSnapshots, readSnapshot } from "./source-document-history";
 import {
   canonicalTarget,
   readOnlyReason,
@@ -40,6 +37,28 @@ import {
   validateDocument
 } from "./source-document-validation";
 import { commitMutation, type MutationPlan } from "./source-document-writer";
+
+/**
+ * History stays usable when the current file cannot be read (too large, not UTF-8): only the
+ * "matches the current file" marker is lost, and the reason is reported.
+ */
+async function currentHash(
+  canonicalPath: string
+): Promise<{ hash?: string; problems: string[] }> {
+  try {
+    return {
+      hash: hashBytes((await readTarget(canonicalPath)).bytes),
+      problems: []
+    };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return {
+      problems: [
+        `The current file could not be read, so no version is marked as current: ${reason}`
+      ]
+    };
+  }
+}
 
 /** Reads, validates, saves and restores instruction and skill files from registered scans. */
 export class SourceDocumentService {
@@ -153,18 +172,22 @@ export class SourceDocumentService {
     });
   }
 
-  async history(documentId: string): Promise<RevisionSummary[]> {
+  async history(documentId: string): Promise<RevisionHistory> {
     const handle = handleFor(this.registry, documentId);
-    const target = await readTarget(handle.canonicalPath);
-    const current = hashBytes(target.bytes);
-    const revisions = await listSnapshots(
-      join(this.options.historyRoot, handle.sourceKey),
-      handle.sourceKey
-    );
-    return revisions.map(({ summary }) => ({
-      ...summary,
-      current: summary.hash === current
-    }));
+    const [listing, current] = await Promise.all([
+      listSnapshots(
+        join(this.options.historyRoot, handle.sourceKey),
+        handle.sourceKey
+      ),
+      currentHash(handle.canonicalPath)
+    ]);
+    return {
+      revisions: listing.revisions.map(({ summary }) => ({
+        ...summary,
+        current: summary.hash === current.hash
+      })),
+      problems: [...listing.problems, ...current.problems]
+    };
   }
 
   async revision(input: {
@@ -183,11 +206,11 @@ export class SourceDocumentService {
         "This saved version is not UTF-8 text and cannot be shown."
       );
     }
-    const target = await readTarget(handle.canonicalPath);
+    const current = await currentHash(handle.canonicalPath);
     return {
       revision: {
         ...revision.summary,
-        current: revision.summary.hash === hashBytes(target.bytes)
+        current: revision.summary.hash === current.hash
       },
       content: decoded.content,
       diagnostics: validateDocument(decoded.content, handle.entry.kind)

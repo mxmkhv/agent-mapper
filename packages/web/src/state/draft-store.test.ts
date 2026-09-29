@@ -39,7 +39,7 @@ it("keeps dirty text when the same file is reopened", () => {
   store.load(document("base\n", "v1"), { ...ref, entryId: "codex" });
   const draft = store.get("key");
   expect(draft?.text).toBe("edited\n");
-  expect(draft?.document.documentId).toBe("doc-v1");
+  expect(draft?.ref.entryId).toBe("codex");
   expect(store.sourceKeyFor({ ...ref, entryId: "codex" })).toBe("key");
 });
 
@@ -66,13 +66,13 @@ it("replaces a clean draft with the fresh file", () => {
 
 it("discards onto the current file and notifies subscribers", () => {
   const store = new DraftStore();
+  store.load(document("base\n", "v1"), ref);
+  store.setText("key", "edited\n");
+  store.load(document("external\n", "v2"), ref);
   let changes = 0;
   store.subscribe(() => {
     changes += 1;
   });
-  store.load(document("base\n", "v1"), ref);
-  store.setText("key", "edited\n");
-  store.load(document("external\n", "v2"), ref);
   const before = store.snapshot();
   store.discard("key");
   expect(store.snapshot()).not.toBe(before);
@@ -81,5 +81,5 @@ it("discards onto the current file and notifies subscribers", () => {
     phase: "editing",
     conflict: undefined
   });
-  expect(changes).toBe(4);
+  expect(changes).toBe(1);
 });

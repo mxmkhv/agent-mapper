@@ -1,9 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import {
-  rebaseOnDisk,
-  reviewDraft,
-  saveReviewed
-} from "../state/document-actions";
+import { reviewDraft, saveReviewed } from "../state/document-actions";
 import { isDirty, type Draft } from "../state/draft-store";
 import { useDocuments } from "../state/use-document-drafts";
 import { Button } from "../ui/button";
@@ -23,7 +19,7 @@ function saveLabel(draft: Draft): string {
   if (draft.busy === "saving") {
     return "Saving…";
   }
-  return draft.retry ? "Retry save" : "Save changes";
+  return draft.outcomeUnknown ? "Save again" : "Save changes";
 }
 
 function ConflictActions({
@@ -58,10 +54,7 @@ function ConflictActions({
       >
         Use current file
       </Button>
-      <Button
-        onClick={() => rebaseOnDisk({ store, sourceKey: draft.sourceKey })}
-        variant="primary"
-      >
+      <Button onClick={() => store.rebase(draft.sourceKey)} variant="primary">
         Continue editing
       </Button>
     </>
@@ -72,13 +65,13 @@ function PhaseActions(props: ToolbarProps) {
   const { draft } = props;
   const { store, onMutated } = useDocuments();
   const context = { store, sourceKey: draft.sourceKey };
+  if (draft.phase === "conflict") {
+    return <ConflictActions draft={draft} onOpen={props.onOpen} />;
+  }
   if (props.mode === "history") {
     return draft.document.editable ? (
       <Button onClick={() => props.onMode("edit")}>Edit</Button>
     ) : null;
-  }
-  if (draft.phase === "conflict") {
-    return <ConflictActions draft={draft} onOpen={props.onOpen} />;
   }
   if (draft.phase === "reviewing") {
     const nothing = draft.review?.text === draft.document.content;
@@ -86,13 +79,7 @@ function PhaseActions(props: ToolbarProps) {
       <>
         <Button
           disabled={draft.busy === "saving"}
-          onClick={() =>
-            store.update(draft.sourceKey, {
-              phase: "editing",
-              review: undefined,
-              retry: undefined
-            })
-          }
+          onClick={() => store.backToEdit(draft.sourceKey)}
         >
           Back to edit
         </Button>
@@ -112,6 +99,7 @@ function PhaseActions(props: ToolbarProps) {
       <Button onClick={() => props.onMode("history")}>History</Button>
       {dirty ? (
         <Button
+          disabled={Boolean(draft.busy)}
           onClick={() => {
             if (
               window.confirm(
@@ -126,8 +114,9 @@ function PhaseActions(props: ToolbarProps) {
         </Button>
       ) : null}
       <Button
-        disabled={!dirty || Boolean(draft.busy)}
+        disabled={!dirty || Boolean(draft.busy) || !draft.document.editable}
         onClick={() => void reviewDraft(context)}
+        title={draft.document.readOnlyReason}
         variant="primary"
       >
         {draft.busy === "validating" ? "Checking…" : "Review changes"}

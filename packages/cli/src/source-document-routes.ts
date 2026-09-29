@@ -5,7 +5,7 @@ import type {
   MutationResult,
   RestoreRequest,
   RevisionContent,
-  RevisionSummary,
+  RevisionHistory,
   SourceDocument,
   SourceRef,
   ValidationResult
@@ -23,7 +23,7 @@ type DocumentPayload =
   | SourceDocument
   | ValidationResult
   | MutationResult
-  | RevisionSummary[]
+  | RevisionHistory
   | RevisionContent;
 
 async function readBody(request: IncomingMessage): Promise<Body> {
@@ -149,7 +149,10 @@ export function isDocumentRoute(pathname: string): boolean {
   return pathname.startsWith(routePrefix);
 }
 
-/** Authenticated POST routes for one selected document. Errors use the `{error: {code, message, retryable}}` envelope. */
+/**
+ * POST routes for one selected document; `server.ts` checks the bearer token, host and origin
+ * before dispatching here. Errors use the `{error: {code, message, retryable}}` envelope.
+ */
 export async function handleDocumentRoute(
   service: SourceDocumentService,
   input: { request: IncomingMessage; response: ServerResponse; url: URL }
@@ -169,6 +172,10 @@ export async function handleDocumentRoute(
     });
     send(response, { status: 200, payload });
   } catch (error) {
+    if (!(error instanceof DocumentApiError)) {
+      // An unexpected failure is a bug; keep its stack in the server log. File content never reaches it.
+      console.error("agent-mapper: document request failed", error);
+    }
     const failure =
       error instanceof DocumentApiError
         ? error

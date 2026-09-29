@@ -14,7 +14,7 @@ export interface DocumentFormat {
 }
 
 export interface DecodedDocument extends DocumentFormat {
-  /** LF-normalized text without the BOM. */
+  /** Text without the BOM; CRLF files are converted to LF, mixed endings are left as they are. */
   content: string;
 }
 

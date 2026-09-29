@@ -10,6 +10,7 @@ import type {
   SourceScope
 } from "@agent-mapper/core";
 
+/** Every open creates a handle; the least recently used are dropped past this bound, and drafts reopen on demand. */
 const maxHandles = 2000;
 const documentIdBytes = 16;
 
@@ -118,7 +119,13 @@ export class SourceDocumentRegistry {
     return documentId;
   }
 
+  /** Using a handle marks it recently used, so a draft that keeps saving is not evicted. */
   handle(documentId: string): DocumentHandle | undefined {
-    return this.handles.get(documentId);
+    const handle = this.handles.get(documentId);
+    if (handle) {
+      this.handles.delete(documentId);
+      this.handles.set(documentId, handle);
+    }
+    return handle;
   }
 }

@@ -8,19 +8,23 @@ import {
 } from "../source-document-api";
 import type { DraftStore } from "./draft-store";
 
-/**
- * Review, save and restore are event handlers. Each binds to the draft's own document handle
- * and SourceRef, so a result that arrives after navigation still lands on the right file.
- */
+// Review, save and restore are event handlers. Each binds to the draft's own document handle and
+// SourceRef, so a result that arrives after navigation still lands on the right file.
+
 interface ActionContext {
   store: DraftStore;
   sourceKey: string;
 }
 
+type MutationContext = ActionContext & { onMutated(): void };
+
 const message = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
 
-/** A stale version means the disk moved on: reopen to compare, keeping the draft. */
+/**
+ * A 409 conflict means the disk moved on: reopen through the draft's own SourceRef and show the
+ * conflict, keeping the draft. Any other failure is shown as it is.
+ */
 async function recover(context: ActionContext, error: unknown): Promise<void> {
   const { store, sourceKey } = context;
   const draft = store.get(sourceKey);
@@ -28,35 +32,27 @@ async function recover(context: ActionContext, error: unknown): Promise<void> {
     return;
   }
   if (!(error instanceof DocumentRequestError) || error.code !== "conflict") {
-    store.update(sourceKey, { busy: undefined, error: message(error) });
+    store.fail(sourceKey, message(error));
     return;
   }
   try {
-    const disk = await openSourceDocument(draft.ref);
-    store.update(sourceKey, {
-      busy: undefined,
-      conflict: disk,
-      phase: "conflict",
-      review: undefined,
-      retry: undefined,
-      error: undefined
-    });
+    store.setConflict(sourceKey, await openSourceDocument(draft.ref));
   } catch (reopenError) {
-    store.update(sourceKey, {
-      busy: undefined,
-      error: `${error.message} Reopening the file also failed: ${message(reopenError)}`
-    });
+    store.fail(
+      sourceKey,
+      `${error.message} Reopening the file also failed: ${message(reopenError)}`
+    );
   }
 }
 
 export async function reviewDraft(context: ActionContext): Promise<void> {
   const { store, sourceKey } = context;
   const draft = store.get(sourceKey);
-  if (!draft || draft.busy) {
+  if (!draft || draft.busy || draft.phase !== "editing") {
     return;
   }
-  const text = draft.text;
-  store.update(sourceKey, { busy: "validating", error: undefined });
+  const { text } = draft;
+  store.begin(sourceKey, "validating");
   try {
     const result = await validateSourceDocument({
       documentId: draft.document.documentId,
@@ -64,100 +60,91 @@ export async function reviewDraft(context: ActionContext): Promise<void> {
       expectedVersion: draft.document.version,
       content: text
     });
-    store.update(sourceKey, {
-      busy: undefined,
-      phase: "reviewing",
-      review: { text, result }
-    });
+    const current = store.get(sourceKey);
+    // Discarded or edited while checking: this result describes text that is gone.
+    if (current?.busy !== "validating" || current.text !== text) {
+      return;
+    }
+    store.review(sourceKey, { text, result });
   } catch (error) {
-    await recover(context, error);
+    if (store.get(sourceKey)?.busy === "validating") {
+      await recover(context, error);
+    }
   }
 }
 
+/** Adopts what a save or restore wrote, reopening the file when the server could not read it back. */
 async function finish(
-  context: ActionContext & { onMutated(): void; done: string },
+  context: MutationContext & { done: string },
   result: MutationResult
 ): Promise<void> {
   const { store, sourceKey } = context;
+  context.onMutated();
   const draft = store.get(sourceKey);
   if (!draft) {
     return;
   }
-  context.onMutated();
-  const saved =
+  const done =
     result.outcome === "saved"
       ? context.done
       : "Nothing to write: the file already matches.";
-  let document = result.document;
-  if (!document) {
-    try {
-      document = await openSourceDocument(draft.ref);
-    } catch (error) {
-      store.update(sourceKey, {
-        busy: undefined,
-        review: undefined,
-        retry: undefined,
-        error: `${saved} Reading the file back failed: ${message(error)} Rescan and reopen it before editing again.`
-      });
-      return;
-    }
-  }
-  store.update(sourceKey, {
-    document,
-    text: document.content,
-    phase: "editing",
-    review: undefined,
-    retry: undefined,
-    busy: undefined,
-    conflict: undefined,
-    error: undefined,
-    notice: [saved, ...(result.warnings ?? [])].join(" ")
-  });
-}
-
-/** Saves only the reviewed text. A lost response keeps the same bytes for retry, which reconciles. */
-export async function saveReviewed(
-  context: ActionContext & { onMutated(): void }
-): Promise<void> {
-  const { store, sourceKey } = context;
-  const draft = store.get(sourceKey);
-  if (!draft?.review || draft.busy) {
+  const notice = [done, ...(result.warnings ?? [])].join(" ");
+  if (result.document) {
+    store.committed(sourceKey, { document: result.document, notice });
     return;
   }
-  const request = draft.retry ?? {
-    text: draft.review.text,
-    expectedVersion: draft.document.version
-  };
-  store.update(sourceKey, { busy: "saving", error: undefined, retry: request });
+  try {
+    const document = await openSourceDocument(draft.ref);
+    store.committed(sourceKey, { document, notice });
+  } catch (error) {
+    store.backToEdit(sourceKey);
+    store.fail(
+      sourceKey,
+      `${notice} Reopening the file failed: ${message(error)} Rescan and reopen it before editing again.`
+    );
+  }
+}
+
+/** Saves only the reviewed text. A lost response keeps the review, so Save resends the same bytes. */
+export async function saveReviewed(context: MutationContext): Promise<void> {
+  const { store, sourceKey } = context;
+  const draft = store.get(sourceKey);
+  if (!draft?.review || draft.busy || draft.phase !== "reviewing") {
+    return;
+  }
+  store.begin(sourceKey, "saving");
   let result: MutationResult;
   try {
     result = await saveSourceDocument({
       documentId: draft.document.documentId,
       sourceKey,
-      expectedVersion: request.expectedVersion,
-      content: request.text
+      expectedVersion: draft.document.version,
+      content: draft.review.text
     });
   } catch (error) {
     if (error instanceof DocumentRequestError && error.code === "network") {
-      store.update(sourceKey, { busy: undefined, error: error.message });
+      store.outcomeUnknown(
+        sourceKey,
+        `${error.message} The save may already have been written; Save again sends the same reviewed text and never writes it twice.`
+      );
       return;
     }
-    store.update(sourceKey, { retry: undefined });
     await recover(context, error);
     return;
   }
   await finish({ ...context, done: "Saved." }, result);
 }
 
+/** Returns true only when the restore was written, so callers never treat a conflict as success. */
 export async function restoreRevision(
-  context: ActionContext & { onMutated(): void; revisionId: string }
-): Promise<void> {
+  context: MutationContext & { revisionId: string }
+): Promise<boolean> {
   const { store, sourceKey } = context;
   const draft = store.get(sourceKey);
   if (!draft || draft.busy) {
-    return;
+    return false;
   }
-  store.update(sourceKey, { busy: "restoring", error: undefined });
+  store.begin(sourceKey, "restoring");
   try {
     const result = await restoreSourceRevision({
       documentId: draft.document.documentId,
@@ -169,18 +156,6 @@ export async function restoreRevision(
   } catch (error) {
     await recover(context, error);
   }
-}
-
-/** Keeps the draft and adopts the file on disk as the new base; the next save needs a fresh review. */
-export function rebaseOnDisk(context: ActionContext): void {
-  const draft = context.store.get(context.sourceKey);
-  if (!draft?.conflict) {
-    return;
-  }
-  context.store.update(context.sourceKey, {
-    document: draft.conflict,
-    conflict: undefined,
-    phase: "editing",
-    review: undefined
-  });
+  const after = store.get(sourceKey);
+  return after?.phase === "editing" && !after.error;
 }

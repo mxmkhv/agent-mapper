@@ -1,5 +1,5 @@
 /**
- * Loaded only when editing or reviewing starts. Imports the editor core, the contributions an
+ * Loaded only when an editor or diff (edit, review, conflict, history) is first shown. Imports the editor core, the contributions an
  * editor and diff view need, and the Markdown tokenizer; no language services or CDN loader.
  */
 import * as monaco from "monaco-editor/editor/editor.api";

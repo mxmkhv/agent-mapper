@@ -1,5 +1,12 @@
 import type { InventoryEntry, SourceDiagnostic } from "@agent-mapper/core";
-import { isMap, parseDocument, type YAMLError } from "yaml";
+import {
+  isAlias,
+  isMap,
+  isScalar,
+  parseDocument,
+  type Document,
+  type YAMLError
+} from "yaml";
 
 const openingLine = "---\n";
 const closingLine = /^---[ \t]*$/m;
@@ -43,18 +50,27 @@ function frontmatterBlock(
   return end ? { header: rest.slice(0, end.index) } : "unterminated";
 }
 
-function skillFieldDiagnostics(
-  data: Record<string, unknown>
-): SourceDiagnostic[] {
+/**
+ * Reads `name` and `description` from the parsed nodes instead of converting to JS, so an alias
+ * (`*anchor`) is reported instead of throwing, and nothing is expanded.
+ */
+function skillFieldDiagnostics(document: Document): SourceDiagnostic[] {
   const diagnostics: SourceDiagnostic[] = [];
   for (const field of ["name", "description"]) {
-    if (!(field in data)) {
+    const node: unknown = document.get(field, true);
+    if (!document.has(field)) {
       diagnostics.push({
         severity: "warning",
         code: `skill-${field}-missing`,
         message: `Skill frontmatter has no \`${field}\`. Claude Code and Codex use it to describe the skill.`
       });
-    } else if (typeof data[field] !== "string") {
+    } else if (isAlias(node)) {
+      diagnostics.push({
+        severity: "warning",
+        code: `skill-${field}-alias`,
+        message: `Skill \`${field}\` uses a YAML alias, so agent-mapper cannot check that it is text.`
+      });
+    } else if (!isScalar(node) || typeof node.value !== "string") {
       diagnostics.push({
         severity: "error",
         code: `skill-${field}-type`,
@@ -66,15 +82,17 @@ function skillFieldDiagnostics(
 }
 
 /**
- * Checks only a leading YAML frontmatter block. Skills rely on it, so problems there block a save;
- * instruction files are plain Markdown to both tools, so the same findings are warnings.
+ * Checks only a leading YAML frontmatter block. For skills, YAML syntax, shape and non-text
+ * `name`/`description` block a save; missing fields only warn. Instruction files are plain
+ * Markdown to both tools, so every finding there is a warning. Line endings are normalized first,
+ * matching what a save writes.
  */
 export function validateDocument(
   content: string,
   kind: DocumentKind
 ): SourceDiagnostic[] {
   const severity = kind === "skill" ? "error" : "warning";
-  const block = frontmatterBlock(content);
+  const block = frontmatterBlock(content.replace(/\r\n?/g, "\n"));
   if (block === "unterminated") {
     return [
       {
@@ -127,12 +145,7 @@ function frontmatterDiagnostics(
   if (kind !== "skill") {
     return problems;
   }
-  const data: unknown = document.toJS({ maxAliasCount: 0 }) ?? {};
-  // isMap above guarantees a plain object for a non-empty block.
-  return [
-    ...problems,
-    ...skillFieldDiagnostics(data as Record<string, unknown>)
-  ];
+  return [...problems, ...skillFieldDiagnostics(document)];
 }
 
 export function blockingDiagnostics(

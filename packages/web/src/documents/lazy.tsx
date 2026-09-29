@@ -1,6 +1,6 @@
 import { lazy } from "react";
 
-/** Monaco and the Markdown renderer load only when a document is shown or edited. */
+/** Monaco loads with the first editor or diff; the Markdown renderer with the first preview. */
 export const SourceEditor = lazy(() =>
   import("./monaco-editor").then((module) => ({
     default: module.SourceEditor
