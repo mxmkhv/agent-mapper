@@ -31,7 +31,7 @@ agent-mapper resolves configuration per tool and per folder, with a reason for e
 
 ## Operating Context
 
-- Launched with `npx agent-mapper`. A local server binds to `127.0.0.1` with a session token and opens the browser UI. The CLI also offers `agent-mapper why [folder]` and `--json` export, and they use the same resolution results as the UI.
+- Launched with `npx agent-mapper`. A local server binds to `127.0.0.1` with a session token and opens the browser UI.
 - Reads configuration roots such as `~/.claude`, `~/.claude.json`, `~/.codex`, `~/.agents`, `CODEX_HOME`, project `.claude/`, `.codex/`, `.agents/`, `.mcp.json`, `CLAUDE.md`, `AGENTS.md`, and `*.local` files.
 - Discovers projects under home, enumerates Git worktrees, and watches selected sources. Rescan is always available.
 - The only actions are Open in editor, Reveal in Finder, navigation, filtering, and rescanning.
@@ -48,7 +48,7 @@ agent-mapper resolves configuration per tool and per folder, with a reason for e
   - **User**: personal `*.local` files, such as `CLAUDE.local.md` and `settings.local.json`.
   - **Managed**: organization policy, shown only when present.
 - **State vocabulary.** Configured, disabled, not used here (shadowed), cached version, needs approval, unknown, problem. MCP servers are never labeled Connected, Healthy, or Authenticated from configuration alone.
-- **Secrets.** Environment variable and header names are shown without values. Credentials are redacted from URLs, arguments, previews, exports, and logs. File content previews stay out of the browser until redaction is verified.
+- **Secrets.** Environment variable and header names are shown without values. Credentials are redacted from URLs, arguments, previews, and logs. File content previews stay out of the browser until redaction is verified.
 - **Context estimates.** Characters ÷ 4, always labeled approximate. They are text-volume estimates, not billed tokens.
 - **Unknown stays visible.** Unsupported formats and unreadable sources appear as entries or coverage notes, never as silently empty lists.
 - **Findings levels.** Problem, resolution information, review suggestion, coverage gap. There is no automatic recommendation to delete something based on length, age, or missing usage.

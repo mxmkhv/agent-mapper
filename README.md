@@ -10,20 +10,18 @@ A local view of Claude Code and Codex configuration. The current build inventori
 
 ## Inventory
 
-| Command                                         | Result                                                                |
-| ----------------------------------------------- | --------------------------------------------------------------------- |
-| `node packages/cli/dist/index.js`               | Open the local UI with global sources and suggested projects          |
-| `node packages/cli/dist/index.js --tools codex` | Open the UI filtered to Codex                                         |
-| `node packages/cli/dist/index.js why .`         | Explain expected instruction and skill loading for the current folder |
-| `node packages/cli/dist/index.js --json .`      | Export the same resolved inventory as JSON                            |
+| Command                                         | Result                                                       |
+| ----------------------------------------------- | ------------------------------------------------------------ |
+| `node packages/cli/dist/index.js`               | Open the local UI with global sources and suggested projects |
+| `node packages/cli/dist/index.js --tools codex` | Open the UI filtered to Codex                                |
 
 Press `⌘K` or click Search to find inventory items by name or source path across tabs. The context cards separate approximate startup text, skill metadata text, and available on-demand text for each tool.
 
-The Findings tab reports broken source links, unreadable files, shadowed instructions, missing plugin files, long instructions, and exact repeated paragraphs in expected startup sources. Findings link to their sources. The 200-line threshold is a review prompt, not a tool limit; repeated paragraph text stays out of JSON and the browser response.
+The Findings tab reports broken source links, unreadable files, shadowed instructions, missing plugin files, long instructions, and exact repeated paragraphs in expected startup sources. Findings link to their sources. The 200-line threshold is a review prompt, not a tool limit; repeated paragraph text stays out of inventory responses.
 
 The UI accepts an explicit folder path, including folders outside home. Select an instruction, skill, agent, hook, plugin, MCP server, or memory file to inspect its source and expected state, then Open or Reveal it in macOS. Hooks are grouped by lifecycle area and show the event, matcher, handler type, source locator, flags, and applicability. Handler commands, URLs, and prompts stay in the source file. Plugin detail lists discovered skills, commands, agents, hooks, and MCP declarations. Selected plugin skills, agents, hooks, and MCP declarations link to their inventory views and back. Installation, enablement, cached copies, and unknown version selection have separate states. Counts describe discovered declarations, not runtime capabilities.
 
-Inventory responses, `why` and `--json` keep free-form file content out; use Open for the full text. The exceptions are the instruction or skill you select and the saved versions you open from its history: their full, unredacted text is sent to the local browser page so you can preview, edit, and compare it. The model describes a fresh local CLI session and lists coverage gaps beside the inventory.
+Inventory responses keep free-form file content out; use Open for the full text. The exceptions are the instruction or skill you select and the saved versions you open from its history: their full, unredacted text is sent to the local browser page so you can preview, edit, and compare it. The model describes a fresh local Claude Code or Codex CLI session and lists coverage gaps beside the inventory.
 
 Hook readers cover local Claude and Codex settings, discovered plugin declarations, local managed Claude settings, and skill and agent frontmatter. Unsupported declaration shapes, hook trust decisions, remote policy, plugin marketplace entry overrides, and live session state remain unverified. MCP readers cover Claude user, project, plugin, and local managed declarations, plus Codex user, project, and plugin declarations. MCP credentials, arguments, and full URLs stay in source files; no server is contacted. Account and session connections, approval state, remote policy, and unsupported declaration fields remain outside local coverage.
 
