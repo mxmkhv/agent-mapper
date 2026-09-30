@@ -105,12 +105,23 @@ function destinationFolders(
 
 async function withConflict(
   destination: { tool: ToolId; path: string },
-  input: { source: TransferSource; fingerprint: string }
+  input: {
+    source: TransferSource;
+    fingerprint: string;
+    protectedRoots: string[];
+  }
 ): Promise<SkillTransferDestination> {
   const { source } = input;
   const real = await resolvedPath(destination.path);
   if (destination.path === source.entryFolder || real === source.sourceFolder) {
     return { ...destination, conflict: "This is where the skill already is." };
+  }
+  // A linked skills folder may lead into a plugin or managed folder, which stays read-only.
+  if (input.protectedRoots.some((root) => inside(real, root))) {
+    return {
+      ...destination,
+      conflict: `${destination.path} leads into ${real}, a plugin or managed folder, which stays read-only.`
+    };
   }
   const exists = await pathExists(destination.path).catch((error: unknown) => {
     throw ioError(error, `Checking ${destination.path}`);
@@ -165,7 +176,6 @@ async function warnings(
   input: {
     request: SkillTransferRequest;
     source: TransferSource;
-    destinations: SkillTransferDestination[];
   }
 ): Promise<string[]> {
   const { request, source } = input;
@@ -177,7 +187,8 @@ async function warnings(
   const warnings = skillPortability({
     content,
     from: source.entry.tool,
-    to: input.destinations.map((item) => item.tool),
+    // Requested tools, not destinations: a folder two tools share still serves both.
+    to: request.tools,
     hasCodexMetadata: await pathExists(
       join(source.sourceFolder, "agents", "openai.yaml")
     )
@@ -210,9 +221,18 @@ export async function planTransfer(
   const folders = await distinctFolders(
     destinationFolders(setup, { request, name })
   );
+  const protectedRoots = await Promise.all(
+    [...setup.registry.protectedRoots(), ...source.readOnlyRoots].map(
+      realOrSelf
+    )
+  );
   const destinations = await Promise.all(
     folders.unique.map((destination) =>
-      withConflict(destination, { source, fingerprint: folder.fingerprint })
+      withConflict(destination, {
+        source,
+        fingerprint: folder.fingerprint,
+        protectedRoots
+      })
     )
   );
   const plan: SkillTransferPlan = {
@@ -230,7 +250,7 @@ export async function planTransfer(
     destinations,
     warnings: [
       ...folders.notes,
-      ...(await warnings(setup, { request, source, destinations }))
+      ...(await warnings(setup, { request, source }))
     ],
     blocked: (await blockedReason(request, source)) ?? folder.problem
   };

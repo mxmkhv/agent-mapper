@@ -9,6 +9,7 @@ import type {
 import { ArrowUpToLine, Copy } from "lucide-react";
 import { ConfirmButton } from "../documents/confirm-button";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
+import type { CopyTarget } from "../model/copy-targets";
 import type { InventoryRecord } from "../model/record-types";
 import { useDocuments } from "../state/use-document-drafts";
 import {
@@ -27,7 +28,7 @@ import {
 interface SkillTransferProps {
   record: InventoryRecord;
   sourceRef: SourceRef;
-  projectPaths: readonly string[];
+  copyTargets: readonly CopyTarget[];
   context: PathContext;
   scannedAt: string;
   /** Shows the moved skill in its new place once the rescan lists it. */
@@ -83,7 +84,7 @@ function TransferForm(props: FormProps) {
       {mode === "copy" ? (
         <ProjectPicker
           onChange={choice.setProjectPath}
-          projects={props.projectPaths}
+          targets={props.copyTargets}
           value={choice.projectPath}
         />
       ) : (

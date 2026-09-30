@@ -80,6 +80,15 @@ export class SourceDocumentRegistry {
       : undefined;
   }
 
+  /** Plugin and managed roots from every scan; nothing inside them may be written. */
+  protectedRoots(): string[] {
+    return [
+      ...new Set(
+        [...this.contexts.values()].flatMap((context) => context.readOnlyRoots)
+      )
+    ];
+  }
+
   /** Project folders this server has scanned. */
   projectDirectories(): string[] {
     return [...this.contexts.values()]

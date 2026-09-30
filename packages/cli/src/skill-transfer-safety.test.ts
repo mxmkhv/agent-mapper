@@ -27,6 +27,8 @@ it("copies once when one tool's skills folder links to the other's", async () =>
   });
   expect(plan.destinations).toHaveLength(1);
   expect(plan.warnings[0]).toContain("so one copy serves Codex too");
+  // The shared folder still serves Codex, so its portability warnings stay.
+  expect(plan.warnings.join("\n")).toContain("allowed-tools");
   expect(apply.status).toBe(200);
   expect(readdirSync(join(other, ".claude/skills"))).toEqual(["deploy"]);
 });
@@ -119,4 +121,36 @@ it("reports a partly removed project skill and keeps the global copy", async () 
     ({ entry }) => entry.id
   );
   expect(ids).toContain(apply.body.created[0]?.entryId);
+});
+
+it("refuses a destination that leads into a managed folder", async () => {
+  const { fixture, other, ref, transfer } = await setup();
+  mkdirSync(join(other, ".agents"));
+  symlinkSync(join(fixture.home, "managed"), join(other, ".agents/skills"));
+  const { plan, apply } = await transfer({
+    source: await ref(fixture.project, ".claude/skills/deploy/SKILL.md"),
+    mode: "copy",
+    projectPath: other,
+    tools: ["codex"]
+  });
+  expect(plan.destinations[0]?.conflict).toContain("stays read-only");
+  expect(apply.status).toBe(409);
+  expect(existsSync(join(fixture.home, "managed/deploy"))).toBe(false);
+});
+
+it("refuses a link that escapes through another link", async () => {
+  const { fixture, deploy, ref, post } = await setup();
+  write(join(deploy, "../outside"), "Not part of the skill.\n");
+  symlinkSync(".", join(deploy, "a"));
+  mkdirSync(join(deploy, "dir"));
+  symlinkSync("../a/../outside", join(deploy, "dir/link"));
+  const plan = await post<SkillTransferPlan>("plan", {
+    source: await ref(fixture.project, ".claude/skills/deploy/SKILL.md"),
+    mode: "copy",
+    projectPath: join(fixture.home, "work/other"),
+    tools: ["claude"]
+  });
+  expect(plan.body.blocked).toContain(
+    "dir/link leads outside the skill folder"
+  );
 });

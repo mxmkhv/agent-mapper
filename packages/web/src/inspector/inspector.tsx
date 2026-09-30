@@ -2,6 +2,7 @@ import type { InstructionImport, ToolId } from "@agent-mapper/core";
 import { Layers } from "lucide-react";
 import { isLink, linkedFrom, linkTarget } from "../model/links";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
+import type { CopyTarget } from "../model/copy-targets";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
 import { stateText } from "../model/states";
 import {
@@ -31,8 +32,7 @@ interface InspectorScope {
   context: PathContext;
   workingDirectory: string;
   scannedAt: string;
-  /** Projects a skill can be copied into. */
-  projectPaths: readonly string[];
+  copyTargets: readonly CopyTarget[];
 }
 
 interface RecordInspectorProps {
@@ -183,7 +183,7 @@ export function RecordInspector({
         <SkillTransfer
           context={scope.context}
           onSelect={onSelect}
-          projectPaths={scope.projectPaths}
+          copyTargets={scope.copyTargets}
           record={record}
           scannedAt={scope.scannedAt}
           sourceRef={record.sourceRef}

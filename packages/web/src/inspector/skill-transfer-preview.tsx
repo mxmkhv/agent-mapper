@@ -1,4 +1,5 @@
 import type { SkillTransferPlan, ToolId } from "@agent-mapper/core";
+import type { CopyTarget } from "../model/copy-targets";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
 import type { PlanState } from "../state/use-skill-transfer";
 import { ToolGlyph, toolName } from "../ui/marks";
@@ -18,11 +19,11 @@ function bytesText(bytes: number): string {
 }
 
 export function ProjectPicker({
-  projects,
+  targets,
   value,
   onChange
 }: {
-  projects: readonly string[];
+  targets: readonly CopyTarget[];
   value: string;
   onChange(path: string): void;
 }) {
@@ -35,9 +36,9 @@ export function ProjectPicker({
         value={value}
       >
         <option value="">Choose a project</option>
-        {projects.map((path) => (
-          <option key={path} title={path} value={path}>
-            {path.split("/").at(-1)}
+        {targets.map((target) => (
+          <option key={target.path} title={target.path} value={target.path}>
+            {target.label}
           </option>
         ))}
       </select>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useInventory, useProjects } from "./data";
 import { AppFailure } from "./documents/app-failure";
+import { copyTargets } from "./model/copy-targets";
 import { DocumentErrorBoundary } from "./documents/document-error-boundary";
 import { Sidebar } from "./shell/sidebar";
 import type { Landing } from "./shell/view-bar";
@@ -77,6 +78,10 @@ export function App() {
                 projectPaths={
                   projects.value?.projects.map((project) => project.path) ?? []
                 }
+                copyTargets={copyTargets(
+                  projects.value?.projects ?? [],
+                  selectedPath ? inventory.value.workingDirectory : undefined
+                )}
                 refreshKey={refresh}
                 refreshing={inventory.loading}
                 snapshot={inventory.value}

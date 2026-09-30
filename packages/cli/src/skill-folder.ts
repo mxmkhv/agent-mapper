@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lstat, readFile, readdir, readlink } from "node:fs/promises";
+import { lstat, readFile, readdir, readlink, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, sep } from "node:path";
 import type { SkillTransferFile } from "@agent-mapper/core";
 import { errnoCode, ioError } from "./source-document-errors";
@@ -42,10 +42,36 @@ function linkProblem(item: { path: string; link: string }): string | undefined {
   return undefined;
 }
 
+/**
+ * Text alone can hide an escape (`a -> .` then `b -> ../a/../outside`), so the link is also
+ * followed on disk. A link to nothing is refused too: the copy could not be checked.
+ */
+async function resolvedLinkProblem(item: {
+  path: string;
+  link: string;
+  absolutePath: string;
+  realRoot: string;
+}): Promise<string | undefined> {
+  try {
+    const target = await realpath(item.absolutePath);
+    return target === item.realRoot ||
+      target.startsWith(`${item.realRoot}${sep}`)
+      ? undefined
+      : `${item.path} leads outside the skill folder (${item.link}), so the copy would break it. Replace the link with the file.`;
+  } catch (error) {
+    const code = errnoCode(error);
+    if (code === "ENOENT" || code === "ELOOP") {
+      return `${item.path} links to nothing (${item.link}). Remove the link or restore its target.`;
+    }
+    throw error;
+  }
+}
+
 async function readItem(
-  root: string,
+  folder: { root: string; realRoot: string },
   absolutePath: string
 ): Promise<{ item: FolderItem; problem?: string }> {
+  const { root } = folder;
   const info = await lstat(absolutePath);
   const path = posixPath(relative(root, absolutePath));
   const base = {
@@ -58,7 +84,9 @@ async function readItem(
     const link = await readlink(absolutePath);
     return {
       item: { ...base, type: "symlink", bytes: 0, link },
-      problem: linkProblem({ path, link })
+      problem:
+        linkProblem({ path, link }) ??
+        (await resolvedLinkProblem({ ...folder, path, link, absolutePath }))
     };
   }
   if (info.isDirectory()) {
@@ -87,6 +115,19 @@ async function fingerprintOf(items: readonly FolderItem[]): Promise<string> {
   return hash.digest("hex");
 }
 
+function sizeProblem(
+  root: string,
+  size: { count: number; totalBytes: number }
+): string | undefined {
+  if (size.count >= maxItems) {
+    return `${root} holds more than ${maxItems} files and folders. Skills this large are not copied here; use Finder or the shell.`;
+  }
+  if (size.totalBytes > maxBytes) {
+    return `${root} holds more than 50 MiB. Skills this large are not copied here; use Finder or the shell.`;
+  }
+  return undefined;
+}
+
 /** Lists a skill folder without following links, parents before children, siblings sorted by name. */
 export async function readSkillFolder(root: string): Promise<SkillFolder> {
   const items: FolderItem[] = [];
@@ -98,7 +139,7 @@ export async function readSkillFolder(root: string): Promise<SkillFolder> {
       if (items.length >= maxItems) {
         return;
       }
-      const read = await readItem(root, join(directory, name));
+      const read = await readItem({ root, realRoot }, join(directory, name));
       items.push(read.item);
       totalBytes += read.item.bytes;
       if (read.problem) {
@@ -110,18 +151,15 @@ export async function readSkillFolder(root: string): Promise<SkillFolder> {
     }
   };
   let rootMode;
+  let realRoot = root;
   let fingerprint = "";
   try {
     rootMode = (await lstat(root)).mode & permissionBits;
+    realRoot = await realpath(root);
     await walk(root);
-    if (items.length >= maxItems) {
-      problems.unshift(
-        `${root} holds more than ${maxItems} files and folders. Skills this large are not copied here; use Finder or the shell.`
-      );
-    } else if (totalBytes > maxBytes) {
-      problems.unshift(
-        `${root} holds more than 50 MiB. Skills this large are not copied here; use Finder or the shell.`
-      );
+    const tooLarge = sizeProblem(root, { count: items.length, totalBytes });
+    if (tooLarge) {
+      problems.unshift(tooLarge);
     }
     if (!problems.length) {
       fingerprint = await fingerprintOf(items);
