@@ -1,12 +1,12 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import type { RevisionContent } from "@agent-mapper/core";
+import { revealSourceHistory } from "../source-document-api";
 import { restoreRevision } from "../state/document-actions";
 import { isDirty, type Draft } from "../state/draft-store";
 import { useDocuments } from "../state/use-document-drafts";
 import { tildePath, type PathContext } from "../model/paths";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
-import { CopyTextButton } from "./copy-text";
 import { Diagnostics } from "./diagnostics";
 import { SourceDiff } from "./lazy";
 import { RevisionList } from "./revision-list";
@@ -83,6 +83,29 @@ function useRestore(draft: Draft, onRestored: () => void) {
       onRestored();
     }
   };
+}
+
+/** The saved versions live under a long hashed folder; Finder shows it instead of printing the path. */
+function RevealFolder({ documentId }: { documentId: string }) {
+  const [error, setError] = useState<string>();
+  async function reveal() {
+    setError(undefined);
+    try {
+      await revealSourceHistory(documentId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  }
+  return (
+    <>
+      <Button onClick={() => void reveal()}>Reveal in Finder</Button>
+      {error ? (
+        <p className="mt-2 mb-0 text-label text-problem" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </>
+  );
 }
 
 function RestorePanel({
@@ -193,7 +216,7 @@ export function SourceHistory({
           />
         ) : null}
         <div className="mt-5">
-          <CopyTextButton label="Copy folder path" text={historyDirectory} />
+          <RevealFolder documentId={documentId} />
         </div>
       </aside>
     </div>

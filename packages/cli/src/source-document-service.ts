@@ -175,13 +175,18 @@ export class SourceDocumentService {
     });
   }
 
+  /** Where this document's saved versions live; the folder exists once the first version is saved. */
+  historyDirectory(documentId: string): string {
+    return join(
+      this.options.historyRoot,
+      handleFor(this.registry, documentId).sourceKey
+    );
+  }
+
   async history(documentId: string): Promise<RevisionHistory> {
     const handle = handleFor(this.registry, documentId);
     const [listing, current] = await Promise.all([
-      listSnapshots(
-        join(this.options.historyRoot, handle.sourceKey),
-        handle.sourceKey
-      ),
+      listSnapshots(this.historyDirectory(documentId), handle.sourceKey),
       currentHash(handle.canonicalPath)
     ]);
     return {
@@ -199,7 +204,7 @@ export class SourceDocumentService {
   }): Promise<RevisionContent> {
     const handle = handleFor(this.registry, input.documentId);
     const revision = await readSnapshot(
-      join(this.options.historyRoot, handle.sourceKey),
+      this.historyDirectory(input.documentId),
       { revisionId: input.revisionId, sourceKey: handle.sourceKey }
     );
     const decoded = decodeDocument(revision.bytes);

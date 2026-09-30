@@ -16,6 +16,7 @@ import { defaultHistoryRoot } from "./source-document-history-folder";
 import { handleDocumentRoute, isDocumentRoute } from "./source-document-routes";
 import { SourceDocumentService } from "./source-document-service";
 import {
+  launchOpen,
   performSourceAction,
   sourcePathIndex,
   type SourcePathStore
@@ -99,17 +100,14 @@ async function inventoryPayload(
   return payload;
 }
 
+const sessionError = {
+  error: "Session expired or missing. Reopen the URL printed by agent-mapper."
+};
+
 async function handleApi(context: RequestContext, url: URL): Promise<void> {
   const { request, response } = context;
   if (request.headers.authorization !== `Bearer ${context.token}`) {
-    sendJson({
-      response,
-      status: status.unauthorized,
-      payload: {
-        error:
-          "Session expired or missing. Reopen the URL printed by agent-mapper."
-      }
-    });
+    sendJson({ response, status: status.unauthorized, payload: sessionError });
     return;
   }
   if (request.method === "GET" && url.pathname === "/api/projects") {
@@ -129,7 +127,13 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
     return;
   }
   if (isDocumentRoute(url.pathname)) {
-    await handleDocumentRoute(context.documents, { request, response, url });
+    const launch = context.options.launchSource ?? launchOpen;
+    await handleDocumentRoute(context.documents, {
+      request,
+      response,
+      url,
+      launch
+    });
     return;
   }
   if (request.method === "POST" && url.pathname === "/api/source-action") {

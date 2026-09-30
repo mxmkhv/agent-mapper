@@ -1,7 +1,9 @@
+import { stat } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type {
   ContentRequest,
   DocumentError,
+  HistoryReveal,
   MutationResult,
   RestoreRequest,
   RevisionContent,
@@ -20,6 +22,7 @@ const routePrefix = "/api/source-document/";
 
 type Body = Record<string, unknown>;
 type DocumentPayload =
+  | HistoryReveal
   | SourceDocument
   | ValidationResult
   | MutationResult
@@ -108,9 +111,31 @@ function restoreRequest(body: Body): RestoreRequest {
   };
 }
 
+/** Opens a Finder window, as Reveal in Finder does for sources. */
+type Launch = (args: string[]) => Promise<void>;
+
+async function revealHistory(
+  folder: string,
+  launch: Launch
+): Promise<HistoryReveal> {
+  try {
+    await stat(folder);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw documentError(
+        "not_found",
+        "There are no saved versions yet, so there is no folder to show. Save or restore this file once first."
+      );
+    }
+    throw error;
+  }
+  await launch(["-R", folder]);
+  return { revealed: true };
+}
+
 function dispatch(
   service: SourceDocumentService,
-  input: { action: string; body: Body }
+  input: { action: string; body: Body; launch: Launch }
 ): Promise<DocumentPayload> {
   const { action, body } = input;
   switch (action) {
@@ -129,6 +154,11 @@ function dispatch(
       });
     case "restore":
       return service.restore(restoreRequest(body));
+    case "reveal-history":
+      return revealHistory(
+        service.historyDirectory(text(body, "documentId")),
+        input.launch
+      );
     default:
       throw documentError("not_found", "Unknown document route.");
   }
@@ -155,7 +185,12 @@ export function isDocumentRoute(pathname: string): boolean {
  */
 export async function handleDocumentRoute(
   service: SourceDocumentService,
-  input: { request: IncomingMessage; response: ServerResponse; url: URL }
+  input: {
+    request: IncomingMessage;
+    response: ServerResponse;
+    url: URL;
+    launch: Launch;
+  }
 ): Promise<void> {
   const { request, response, url } = input;
   try {
@@ -168,7 +203,8 @@ export async function handleDocumentRoute(
     const body = await readBody(request);
     const payload = await dispatch(service, {
       action: url.pathname.slice(routePrefix.length),
-      body
+      body,
+      launch: input.launch
     });
     send(response, { status: 200, payload });
   } catch (error) {

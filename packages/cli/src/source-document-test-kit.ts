@@ -117,12 +117,17 @@ export async function startDocumentServer(fixture: DocumentFixture) {
   vi.stubEnv("CLAUDE_CONFIG_DIR", "");
   vi.stubEnv("CODEX_HOME", "");
   mkdirSync(join(fixture.home, "web"), { recursive: true });
+  // Finder requests are recorded, never run.
+  const launched: string[][] = [];
   const app = createAppServer({
     home: fixture.home,
     codexHome: join(fixture.home, ".codex"),
     managedClaudeDir: join(fixture.home, "managed"),
     historyRoot: fixture.history,
-    webRoot: join(fixture.home, "web")
+    webRoot: join(fixture.home, "web"),
+    launchSource: async (args) => {
+      launched.push(args);
+    }
   });
   const address = await app.listen();
   const client = documentClient(`http://127.0.0.1:${address.port}`, {
@@ -130,6 +135,7 @@ export async function startDocumentServer(fixture: DocumentFixture) {
   });
   return {
     ...client,
+    launched,
     async close() {
       await app.close();
       vi.unstubAllEnvs();

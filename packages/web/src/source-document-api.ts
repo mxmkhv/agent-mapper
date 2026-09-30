@@ -2,6 +2,7 @@ import type {
   ContentRequest,
   DocumentError,
   DocumentErrorCode,
+  HistoryReveal,
   MutationResult,
   RestoreRequest,
   RevisionContent,
@@ -219,6 +220,17 @@ export function restoreSourceRevision(
 
 export function sourceHistory(documentId: string): Promise<RevisionHistory> {
   return post("history", { body: { documentId }, valid: isHistory });
+}
+
+function isReveal(value: unknown): value is HistoryReveal {
+  return isRecord(value) && value.revealed === true;
+}
+
+/** Asks the local server to show this document's saved-versions folder in Finder. */
+export function revealSourceHistory(
+  documentId: string
+): Promise<HistoryReveal> {
+  return post("reveal-history", { body: { documentId }, valid: isReveal });
 }
 
 export function sourceRevision(input: {
