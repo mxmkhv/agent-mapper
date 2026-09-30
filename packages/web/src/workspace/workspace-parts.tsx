@@ -133,6 +133,7 @@ export function Content({ props, state, reach }: PartsProps) {
       <WorktreeView
         comparison={props.snapshot.comparison}
         context={state.context}
+        onRemoved={props.onRescan}
         onSelectPath={props.onSelectPath}
         refreshKey={props.refreshKey}
         tool={props.tool}

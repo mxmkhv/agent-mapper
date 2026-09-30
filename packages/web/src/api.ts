@@ -131,3 +131,12 @@ export async function setProjectHidden(
     body: JSON.stringify({ path })
   });
 }
+
+/** Runs `git worktree remove` without --force; Git's refusal comes back as the error message. */
+export async function removeWorktree(path: string): Promise<void> {
+  await request("/api/worktrees/remove", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ path })
+  });
+}

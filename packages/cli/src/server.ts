@@ -13,12 +13,14 @@ import { managedClaudeDirectory } from "./managed-claude-reader";
 import { projectRoute, type ProjectsPayload } from "./project-routes";
 import { buildGlobalSnapshot, buildSnapshot } from "./service";
 import { serveAsset } from "./server-assets";
+import { removeWorktree } from "./worktree-remove";
 import { defaultHistoryRoot } from "./source-document-history-folder";
 import { handleDocumentRoute, isDocumentRoute } from "./source-document-routes";
 import { SourceDocumentService } from "./source-document-service";
 import {
   launchOpen,
   performSourceAction,
+  readJson,
   sourcePathIndex,
   type SourcePathStore
 } from "./source-actions";
@@ -104,6 +106,25 @@ async function inventoryPayload(
   return payload;
 }
 
+/** POST routes that act and answer `{ ok: true }`; failures throw an actionable message. */
+const postActions = new Map<string, (context: RequestContext) => Promise<void>>(
+  [
+    [
+      "/api/source-action",
+      (context) =>
+        performSourceAction({
+          request: context.request,
+          paths: context.sourcePaths,
+          launch: context.options.launchSource
+        })
+    ],
+    [
+      "/api/worktrees/remove",
+      async (context) => removeWorktree((await readJson(context.request)).path)
+    ]
+  ]
+);
+
 const sessionError = {
   error: "Session expired or missing. Reopen the URL printed by agent-mapper."
 };
@@ -142,12 +163,10 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
     });
     return;
   }
-  if (request.method === "POST" && url.pathname === "/api/source-action") {
-    await performSourceAction({
-      request,
-      paths: context.sourcePaths,
-      launch: context.options.launchSource
-    });
+  const action =
+    request.method === "POST" ? postActions.get(url.pathname) : undefined;
+  if (action) {
+    await action(context);
     sendJson({ response, status: status.ok, payload: { ok: true } });
     return;
   }

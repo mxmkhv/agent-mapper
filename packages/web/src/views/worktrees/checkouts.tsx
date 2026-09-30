@@ -5,12 +5,11 @@ import {
   type WorktreeDifference,
   type WorktreeRecord
 } from "@agent-mapper/core";
-import { GitBranch } from "lucide-react";
 import type { Landing } from "../../shell/view-bar";
 import { EmptyState } from "../../ui/empty-state";
-import { StateLabel, StateMarker } from "../../ui/marks";
-import { tildePath, type PathContext } from "../../model/paths";
+import type { PathContext } from "../../model/paths";
 import { useFolderScans, type FolderScan } from "../../state/use-folder-scans";
+import { CheckoutRow } from "./checkout-row";
 import { relevantDifferences } from "./difference-groups";
 import { ListPane, ListSection } from "./panes";
 
@@ -30,14 +29,13 @@ function readDifferences(snapshot: InventorySnapshot): CheckoutScan {
   };
 }
 
-const folderName = (path: string) => path.split("/").at(-1) ?? path;
-
 interface CheckoutsProps {
   worktrees: WorktreeRecord[];
   context: PathContext;
   tool: ToolId;
   refreshKey: number;
   onSelectPath(path: string, landing?: Landing): void;
+  onRemoved(): void;
 }
 
 function DifferenceCount({
@@ -76,7 +74,8 @@ export function Checkouts({
   context,
   tool,
   refreshKey,
-  onSelectPath
+  onSelectPath,
+  onRemoved
 }: CheckoutsProps) {
   const linked = worktrees.filter((tree) => !tree.isMain);
   const scans = useFolderScans(
@@ -102,48 +101,16 @@ export function Checkouts({
   return (
     <ListPane>
       <ListSection count={linked.length} title="Linked worktrees">
-        {linked.map((tree) => {
-          const available = tree.state === "available";
-          const folder = folderName(tree.path);
-          return (
-            <button
-              className="grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_minmax(0,1fr)_120px] items-center gap-2.5 px-3 text-left hover:bg-hover disabled:cursor-default disabled:hover:bg-transparent [&+&]:border-t [&+&]:border-wash"
-              disabled={!available}
-              key={tree.path}
-              onClick={() => onSelectPath(tree.path, { view: "worktrees" })}
-              title={tildePath(tree.path, context)}
-            >
-              <GitBranch
-                aria-hidden="true"
-                className="size-4 text-ink-muted"
-                strokeWidth={1.6}
-              />
-              <StateMarker tier={available ? "active" : "problem"} />
-              <span
-                className={`truncate font-semibold ${available ? "" : "text-ink-muted"}`}
-              >
-                {tree.branch ?? folder}
-              </span>
-              {available ? (
-                <span className="truncate font-mono text-mono text-ink-faint">
-                  {tree.branch ? folder : "detached"}
-                </span>
-              ) : (
-                // Git still lists the checkout but its folder is gone; say where to look.
-                <span className="truncate text-caption text-ink-muted">
-                  Folder unavailable · check git worktree list
-                </span>
-              )}
-              <span className="truncate text-right">
-                {available ? (
-                  <DifferenceCount scan={scans.get(tree.path)} tool={tool} />
-                ) : (
-                  <StateLabel text={tree.state} tier="problem" />
-                )}
-              </span>
-            </button>
-          );
-        })}
+        {linked.map((tree) => (
+          <CheckoutRow
+            context={context}
+            key={tree.path}
+            onOpen={() => onSelectPath(tree.path, { view: "worktrees" })}
+            onRemoved={onRemoved}
+            status={<DifferenceCount scan={scans.get(tree.path)} tool={tool} />}
+            tree={tree}
+          />
+        ))}
       </ListSection>
     </ListPane>
   );

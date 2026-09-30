@@ -9,7 +9,7 @@ const bytesPerKilobyte = 1024;
 const outputMegabytes = 10;
 const gitOutputLimit = outputMegabytes * bytesPerKilobyte * bytesPerKilobyte;
 
-async function git(directory: string, args: string[]): Promise<string> {
+export async function git(directory: string, args: string[]): Promise<string> {
   const { stdout } = await run("git", args, {
     cwd: directory,
     encoding: "utf8",
