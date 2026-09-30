@@ -17,7 +17,12 @@ The first release covers instructions, skills, commands, agents, hooks, memory, 
 - Which hooks and MCP servers are configured here?
 - Which files are duplicated, shadowed, broken, or worth reviewing?
 
-The app is read-only with respect to agent configuration. Files stay where they are. Actions are Open in editor, Reveal in Finder, navigation, filtering, and rescanning. The app may save its own preferences.
+The app is read-only with respect to agent configuration, with a few explicit exceptions. Files stay where they are. Actions are Open in editor, Reveal in Finder, navigation, filtering, and rescanning. The app may save its own preferences. The exceptions below always need a deliberate click:
+
+- Edit instructions and `SKILL.md` files in the app, with a diff review, conflict checks, and private revision history. Plugin and managed files stay read-only.
+- Remove a project from the sidebar. This is an app preference in `~/.config/agent-mapper/config.json`; the folder is untouched and can be restored.
+- Remove a linked worktree with `git worktree remove`, after an inline confirmation. The app never passes `--force`, so Git refuses checkouts with uncommitted or untracked files. The branch is kept.
+- Show each worktree branch's pull request state. This is the app's only network read, made through the user's own `gh` login. A missing or logged-out `gh` leaves a hint, not an error.
 
 ## Scope
 
@@ -333,4 +338,4 @@ Success means users can explain their setup and make a useful review or cleanup 
 - Identify account-managed configuration that cannot be inventoried locally and document that coverage clearly.
 - Review parser dependencies, exact runtime minimum, package-name availability, and the existing license before release.
 
-Future editing should use explicit diffs and reversible changes. Snapshot/restore, disable-to-test workflows, and updates remain outside this read-only release.
+Further editing should keep explicit diffs and reversible changes. Snapshot/restore, disable-to-test workflows, and updates remain outside this release.
