@@ -14,18 +14,22 @@ it("reads Codex TOML hooks in nested project config layers", async () => {
     mkdirSync(join(nested, ".codex"), { recursive: true });
     writeFileSync(
       join(project, ".codex", "config.toml"),
-      '[[hooks.Stop]]\n[[hooks.Stop.hooks]]\ntype = "command"\ncommand = "private-value"\n'
+      '[[hooks.Stop]]\n[[hooks.Stop.hooks]]\ntype = "command"\ncommand = "./check.sh --token private-value"\n'
     );
     writeFileSync(
       join(nested, ".codex", "config.toml"),
-      '[[hooks.PreToolUse]]\n[[hooks.PreToolUse.hooks]]\ntype = "command"\ncommand = "private-value"\n'
+      '[[hooks.PreToolUse]]\n[[hooks.PreToolUse.hooks]]\ntype = "command"\ncommand = "./check.sh --token private-value"\n'
     );
     writeFileSync(
       join(nested, ".codex", "hooks.json"),
       JSON.stringify({
         hooks: {
           SessionStart: [
-            { hooks: [{ type: "command", command: "private-value" }] }
+            {
+              hooks: [
+                { type: "command", command: "./check.sh --token private-value" }
+              ]
+            }
           ]
         }
       })
