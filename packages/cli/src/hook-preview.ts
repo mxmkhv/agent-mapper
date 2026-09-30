@@ -18,6 +18,21 @@ const webhookHost =
 const opaqueSegment = /^(?=.*\d)(?=.*[A-Za-z])[\w-]{20,}$/;
 // mysql -p<password> attaches the value to the flag.
 const attachedPasswordTools = /^(mysql|mysqldump|mysqladmin|mariadb)$/;
+// A secret-named key glued to its value anywhere in a word: X-Api-Key:abc, --header=Token:abc, {"token":"abc"}.
+const secretPair = new RegExp(
+  String.raw`^(.*?[\w.-]*(?:${secretName.source})[\w.-]*["']?[:=])(.+)$`,
+  "is"
+);
+
+/** Fragments carry tokens in OAuth redirects (#access_token=…); mask their values like a query's. */
+function redactFragment(url: URL): void {
+  const fragment = url.hash.slice(1);
+  if (fragment.includes("=")) {
+    url.hash = fragment.replace(/=[^&]*/g, `=${mask}`);
+  } else if (opaqueSegment.test(fragment)) {
+    url.hash = mask;
+  }
+}
 
 function redactPath(url: URL): void {
   if (webhookHost.test(url.hostname)) {
@@ -30,7 +45,7 @@ function redactPath(url: URL): void {
     .join("/");
 }
 
-/** http(s) and ws(s) URLs lose credentials, query values, and secret-looking path segments. */
+/** http(s) and ws(s) URLs lose credentials, query and fragment values, and secret-looking path segments. */
 function redactWebUrl(value: string): string | undefined {
   let url: URL;
   try {
@@ -48,6 +63,7 @@ function redactWebUrl(value: string): string | undefined {
     url.searchParams.set(key, mask);
   }
   redactPath(url);
+  redactFragment(url);
   // Serialization percent-encodes the mask; restore it without decoding anything the user wrote.
   return url.toString().replaceAll(encodeURIComponent(mask), mask);
 }
@@ -112,6 +128,10 @@ function redactWord(word: string): string {
   if (url) {
     return `${url}${trailing}`;
   }
+  const pair = secretPair.exec(inner);
+  if (pair?.[1] && pair[2]) {
+    return `${pair[1]}${maskWord(pair[2])}`;
+  }
   return secretValue.test(bare) ? `${mask}${trailing}` : word;
 }
 
@@ -149,10 +169,10 @@ function redactWords(words: string[]): string[] {
 }
 
 /**
- * Masks secret values in free-form handler text while keeping its shape: secret-named env assignments and
- * `--flag=value`s, the word after a secret-named flag, `-u`, a secret-named `Header:`, or an auth scheme
- * (Bearer, Basic, token…), URL credentials, query values and secret-looking path segments, webhook paths,
- * mysql's attached `-p`, and credential-shaped words. Quotes group words; this is not a full shell parser,
+ * Masks secret values in free-form handler text while keeping its shape: secret-named env assignments,
+ * `--flag=value`s and `Key:value` pairs anywhere in a word, the word after a secret-named flag, `-u`, a
+ * secret-named `Header:`, or an auth scheme (Bearer, Basic, token…), URL credentials, query and fragment
+ * values, secret-looking path segments, webhook paths, mysql's attached `-p`, and credential-shaped words. Quotes group words; this is not a full shell parser,
  * so it errs toward masking.
  */
 export function redactText(text: string, cap = true): string {

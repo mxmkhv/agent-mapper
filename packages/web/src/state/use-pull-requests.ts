@@ -7,7 +7,45 @@ type PullRequestState =
   | { status: "done"; lookup: PullRequestLookup }
   | { status: "error"; message: string };
 
-/** Pull requests for a repository, fetched again on each rescan. Nothing is fetched without a path. */
+interface CachedLookup {
+  refresh: number;
+  request: Promise<PullRequestLookup>;
+  settled?: PullRequestLookup;
+}
+
+/**
+ * One `gh pr list` per repository per scan. Leaving and reopening the Worktrees view, or switching folders,
+ * reuses the answer; a rescan (new `refresh`) asks again. Failures are dropped so the next visit retries.
+ * The request is never aborted: another view may be waiting on it.
+ */
+const lookups = new Map<string, CachedLookup>();
+
+export function pullRequestLookup(path: string, refresh: number): CachedLookup {
+  const cached = lookups.get(path);
+  if (cached?.refresh === refresh) {
+    return cached;
+  }
+  const entry: CachedLookup = { refresh, request: getPullRequests(path) };
+  entry.request.then(
+    (lookup) => {
+      entry.settled = lookup;
+    },
+    () => {
+      if (lookups.get(path) === entry) {
+        lookups.delete(path);
+      }
+    }
+  );
+  lookups.set(path, entry);
+  return entry;
+}
+
+function settledLookup(path: string, refresh: number) {
+  const cached = lookups.get(path);
+  return cached?.refresh === refresh ? cached.settled : undefined;
+}
+
+/** Pull requests for a repository, shared across mounts and fetched again on each rescan. */
 export function usePullRequests(
   path: string | undefined,
   refresh: number
@@ -21,22 +59,28 @@ export function usePullRequests(
     if (!path) {
       return undefined;
     }
-    const controller = new AbortController();
-    void getPullRequests(path, controller.signal).then(
-      (lookup) => setState({ key, value: { status: "done", lookup } }),
-      (error: unknown) => {
-        if (!controller.signal.aborted) {
-          setState({
-            key,
-            value: {
-              status: "error",
-              message: error instanceof Error ? error.message : String(error)
-            }
-          });
-        }
-      }
+    let active = true;
+    pullRequestLookup(path, refresh).request.then(
+      (lookup) =>
+        active && setState({ key, value: { status: "done", lookup } }),
+      (error: unknown) =>
+        active &&
+        setState({
+          key,
+          value: {
+            status: "error",
+            message: error instanceof Error ? error.message : String(error)
+          }
+        })
     );
-    return () => controller.abort();
-  }, [key, path]);
-  return state.key === key ? state.value : { status: "loading" };
+    return () => {
+      active = false;
+    };
+  }, [key, path, refresh]);
+  if (state.key === key) {
+    return state.value;
+  }
+  // A cached answer renders at once on remount instead of flashing a loading state.
+  const settled = path ? settledLookup(path, refresh) : undefined;
+  return settled ? { status: "done", lookup: settled } : { status: "loading" };
 }

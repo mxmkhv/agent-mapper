@@ -3,6 +3,7 @@ import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
+import { pullRequestFor, type PullRequestsByBranch } from "@agent-mapper/core";
 import { pullRequests, type GhRunner } from "./pull-requests";
 
 const roots: string[] = [];
@@ -72,6 +73,30 @@ it("keeps the most relevant pull request per branch", async () => {
     truncated: false
   });
   expect(calls).toEqual([root]);
+});
+
+it("treats branch names that match Object members as plain branches", async () => {
+  const root = repository();
+  const names = ["constructor", "toString", "__proto__"];
+  const result = await pullRequests(root, () =>
+    Promise.resolve(
+      JSON.stringify(
+        names.map((name, index) => listed(`${name}#${index + 1} OPEN T`))
+      )
+    )
+  );
+  if (result.status !== "ready") {
+    throw new Error("expected a ready lookup");
+  }
+  // The wire round trip matters: the browser reads a JSON-parsed object.
+  const received = JSON.parse(
+    JSON.stringify(result.byBranch)
+  ) as PullRequestsByBranch;
+  expect(names.map((name) => pullRequestFor(received, name)?.number)).toEqual([
+    1, 2, 3
+  ]);
+  expect(Object.getPrototypeOf(result.byBranch)).toBe(Object.prototype);
+  expect(pullRequestFor({}, "constructor")).toBeUndefined();
 });
 
 it("asks gh from the main checkout when given a linked worktree", async () => {

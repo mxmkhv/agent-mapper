@@ -58,16 +58,19 @@ function summary(value: unknown): [string, PullRequestSummary] | undefined {
   ];
 }
 
-/** gh lists newest first; keep the first PR of the best rank per branch. */
+/**
+ * gh lists newest first; keep the first PR of the best rank per branch. A Map, then fromEntries: branch names
+ * such as "constructor" or "__proto__" must neither read nor replace Object.prototype members.
+ */
 function byBranch(listed: unknown[]): PullRequestsByBranch {
-  const result: PullRequestsByBranch = {};
+  const best = new Map<string, PullRequestSummary>();
   for (const [branch, pr] of listed.map(summary).filter((item) => !!item)) {
-    const current = result[branch];
+    const current = best.get(branch);
     if (!current || rank[pr.state] < rank[current.state]) {
-      result[branch] = pr;
+      best.set(branch, pr);
     }
   }
-  return result;
+  return Object.fromEntries(best);
 }
 
 interface GhFailure {

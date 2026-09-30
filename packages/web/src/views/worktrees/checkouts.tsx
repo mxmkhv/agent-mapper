@@ -1,5 +1,6 @@
 import {
   coverageProblems,
+  pullRequestFor,
   type InventorySnapshot,
   type ToolId,
   type WorktreeDifference,
@@ -145,7 +146,9 @@ export function Checkouts({
             key={tree.path}
             onOpen={() => onSelectPath(tree.path, { view: "worktrees" })}
             onRemoved={onRemoved}
-            pullRequest={tree.branch ? byBranch[tree.branch] : undefined}
+            pullRequest={
+              tree.branch ? pullRequestFor(byBranch, tree.branch) : undefined
+            }
             status={<DifferenceCount scan={scans.get(tree.path)} tool={tool} />}
             tree={tree}
           />

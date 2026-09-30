@@ -19,6 +19,14 @@ export interface PullRequestSummary {
 /** Head branch name → its pull request. */
 export type PullRequestsByBranch = Record<string, PullRequestSummary>;
 
+/** The branch's own entry only: names like "constructor" or "toString" must not reach inherited members. */
+export function pullRequestFor(
+  byBranch: PullRequestsByBranch,
+  branch: string
+): PullRequestSummary | undefined {
+  return Object.hasOwn(byBranch, branch) ? byBranch[branch] : undefined;
+}
+
 /** Pull requests by head branch name, or why GitHub could not be asked. */
 export type PullRequestLookup =
   | {

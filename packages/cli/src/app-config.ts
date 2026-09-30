@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import { withFileLock } from "./config-lock";
 import { errnoCode } from "./source-document-errors";
 
 /** agent-mapper's own preferences. Agent configuration is never stored here. */
@@ -90,7 +91,10 @@ function projectPath(value: string | undefined): string {
   return resolve(value);
 }
 
-/** Serializes read-modify-write cycles so two quick removals cannot drop each other's change. */
+/**
+ * Serializes read-modify-write cycles: a queue inside this server, and a lock file across agent-mapper
+ * processes, so no removal can drop another's change.
+ */
 export class ConfigStore {
   private queue: Promise<unknown> = Promise.resolve();
 
@@ -102,16 +106,18 @@ export class ConfigStore {
 
   setHidden(value: string | undefined, hidden: boolean): Promise<AppConfig> {
     const path = projectPath(value);
-    const next = this.queue.then(async () => {
-      const config = await readConfig(this.path);
-      const others = config.hiddenProjects.filter((item) => item !== path);
-      const updated = {
-        ...config,
-        hiddenProjects: hidden ? [...others, path].sort() : others
-      };
-      await writeConfig(this.path, updated);
-      return updated;
-    });
+    const next = this.queue.then(() =>
+      withFileLock(this.path, async () => {
+        const config = await readConfig(this.path);
+        const others = config.hiddenProjects.filter((item) => item !== path);
+        const updated = {
+          ...config,
+          hiddenProjects: hidden ? [...others, path].sort() : others
+        };
+        await writeConfig(this.path, updated);
+        return updated;
+      })
+    );
     // A failed write must not block later requests; the caller still sees this one's error.
     this.queue = next.catch(() => undefined);
     return next;

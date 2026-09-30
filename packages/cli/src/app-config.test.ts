@@ -1,9 +1,11 @@
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
+  utimesSync,
   writeFileSync
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -62,4 +64,36 @@ it("refuses to treat an unexpected file as empty", async () => {
     `${path} was written by a newer agent-mapper (version 2). Update agent-mapper, or delete the file.`
   );
   expect(readFileSync(path, "utf8")).toContain("pinned");
+});
+
+it("keeps removals from separate agent-mapper processes sharing one file", async () => {
+  const { path } = store();
+  // Separate stores have separate in-memory queues, like two servers; only the lock file orders them.
+  const first = new ConfigStore(path);
+  const second = new ConfigStore(path);
+  const paths = Array.from({ length: 8 }, (_, index) => `/p${index}`);
+  await Promise.all(
+    paths.map((item, index) =>
+      (index % 2 ? first : second).setHidden(item, true)
+    )
+  );
+  expect((await first.read()).hiddenProjects).toEqual(paths);
+  expect(existsSync(`${path}.lock`)).toBe(false);
+});
+
+it("clears a lock left by a crashed process and waits out a live one", async () => {
+  const { path, config } = store();
+  mkdirSync(join(path, ".."), { recursive: true });
+  const lock = `${path}.lock`;
+  writeFileSync(lock, "pid 1\n");
+  const old = (Date.now() - 60_000) / 1000;
+  utimesSync(lock, old, old);
+  await config.setHidden("/a", true);
+  expect((await config.read()).hiddenProjects).toEqual(["/a"]);
+
+  writeFileSync(lock, "pid 1\n");
+  await expect(config.setHidden("/b", true)).rejects.toThrow(
+    `Another agent-mapper process is updating its settings (${lock} exists). Try again; if no other agent-mapper is running, delete that file.`
+  );
+  expect((await config.read()).hiddenProjects).toEqual(["/a"]);
 });

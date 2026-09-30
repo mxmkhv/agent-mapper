@@ -42,6 +42,13 @@ it("masks secret env assignments, flags, headers, and credential-shaped words", 
     ["mysql -uroot -phunter2 app", "mysql -uroot -p••• app"],
     ['MY_TOKEN="abc def" ./run.sh', 'MY_TOKEN="•••" ./run.sh'],
     ["run --token 'two words' --fast", "run --token '•••' --fast"],
+    ["curl -H X-Api-Key:visible-secret x", "curl -H X-Api-Key:••• x"],
+    ['curl -H "X-Api-Key:visible-secret" x', 'curl -H "X-Api-Key:•••" x'],
+    [
+      "curl --header=Authorization:visible-secret x",
+      "curl --header=Authorization:••• x"
+    ],
+    [`echo '{"token":"visible-secret"}'`, `echo '{"token":•••'`],
     [`post sk-live${"x".repeat(12)} ghp_${"a1".repeat(10)}`, "post ••• •••"],
     [`check ${"a".repeat(40)}`, "check •••"]
   ];
@@ -54,6 +61,27 @@ it("keeps ordinary paths and names that only look like key prefixes", () => {
   expect(redactText("sk-tools/run.sh --mode fast")).toBe(
     "sk-tools/run.sh --mode fast"
   );
+  expect(redactText("bash .claude/hooks/session-start.sh")).toBe(
+    "bash .claude/hooks/session-start.sh"
+  );
+});
+
+it("never lets a known secret through, whatever its shape", () => {
+  const secret = "visible-secret";
+  const shapes = [
+    `X-Api-Key:${secret}`,
+    `curl -H "X-Api-Key:${secret}"`,
+    `curl --header=Authorization:${secret}`,
+    `open https://x.example/cb#access_token=${secret}`,
+    `open https://x.example/cb?token=${secret}`,
+    `psql postgres://user:${secret}@db/app`,
+    `API_KEY=${secret} run`,
+    `run --password ${secret}`,
+    `curl -H "Authorization: Bearer ${secret}"`
+  ];
+  for (const shape of shapes) {
+    expect(redactText(shape)).not.toContain(secret);
+  }
 });
 
 it("strips credentials from URLs, connection strings, and webhook paths", () => {
@@ -82,6 +110,18 @@ it("strips credentials from URLs, connection strings, and webhook paths", () => 
     [
       "cli redis://:hunter2@host:6379?auth=x",
       "cli redis://•••@host:6379?auth=•••"
+    ],
+    [
+      "open https://app.example.com/cb#access_token=visible-secret&state=x",
+      "open https://app.example.com/cb#access_token=•••&state=•••"
+    ],
+    [
+      "open https://app.example.com/cb#a1b2c3d4e5f6g7h8i9j0k1",
+      "open https://app.example.com/cb#•••"
+    ],
+    [
+      "open https://docs.example.com/guide#setup",
+      "open https://docs.example.com/guide#setup"
     ]
   ];
   for (const [input, expected] of cases) {
