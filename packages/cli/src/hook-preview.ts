@@ -4,11 +4,34 @@ const maxPreviewLength = 400;
 const mask = "•••";
 const secretName =
   /(token|secret|passw(or)?d|pass|api[-_]?key|access[-_]?key|private[-_]?key|auth|credential|cookie|session|bearer)/i;
-// Known credential prefixes, JWTs, and long opaque strings. Paths and dotted names keep their separators, so they never match.
+// Flags whose next word is a credential even though the flag name does not say so: curl -u user:pass.
+const credentialFlag = /^(-u|--user)$/;
+// Authorization schemes stay visible; the word after them is the credential.
+const authScheme = /^(bearer|basic|token|digest|bot)$/i;
+// Known credential formats, JWTs, and long opaque strings. A path or dotted name only matches the length rule
+// when it has no "/" or "." at all.
 const secretValue =
-  /^(sk-|ghp_|gho_|ghs_|ghu_|github_pat_|glpat-|xox[abpr]-|AKIA|eyJ)|^[A-Za-z0-9_+=-]{32,}$/;
+  /^(?:(?:sk|pk|rk)-[\w-]{8,}|gh[pousr]_\w{16,}|github_pat_\w{16,}|glpat-[\w-]{10,}|xox[abpr]-[\w-]{8,}|AKIA[0-9A-Z]{12,}|eyJ[\w-]+\.[\w-]+(?:\.[\w-]+)?|[A-Za-z0-9_+=-]{32,})$/;
+// Webhook URLs carry their secret in the path.
+const webhookHost =
+  /(^|\.)hooks\.slack\.com$|(^|\.)discord(app)?\.com$|\.webhook\.office\.com$/i;
+const opaqueSegment = /^(?=.*\d)(?=.*[A-Za-z])[\w-]{20,}$/;
+// mysql -p<password> attaches the value to the flag.
+const attachedPasswordTools = /^(mysql|mysqldump|mysqladmin|mariadb)$/;
 
-function redactUrl(value: string): string | undefined {
+function redactPath(url: URL): void {
+  if (webhookHost.test(url.hostname)) {
+    url.pathname = `/${mask}`;
+    return;
+  }
+  url.pathname = url.pathname
+    .split("/")
+    .map((segment) => (opaqueSegment.test(segment) ? mask : segment))
+    .join("/");
+}
+
+/** http(s) and ws(s) URLs lose credentials, query values, and secret-looking path segments. */
+function redactWebUrl(value: string): string | undefined {
   let url: URL;
   try {
     url = new URL(value);
@@ -24,56 +47,117 @@ function redactUrl(value: string): string | undefined {
   for (const key of new Set(url.searchParams.keys())) {
     url.searchParams.set(key, mask);
   }
-  return decodeURI(url.toString());
+  redactPath(url);
+  // Serialization percent-encodes the mask; restore it without decoding anything the user wrote.
+  return url.toString().replaceAll(encodeURIComponent(mask), mask);
+}
+
+/** Any other scheme://user:pass@host (postgres, redis, amqp…) keeps its shape with the credentials masked. */
+function redactConnectionString(value: string): string | undefined {
+  const match = /^([a-z][a-z0-9+.-]*:\/\/)([^/@\s]*@)?([^?#]*)(.*)$/i.exec(
+    value
+  );
+  if (!match) {
+    return undefined;
+  }
+  const [, scheme = "", credentials, rest = "", query = ""] = match;
+  return `${scheme}${credentials ? `${mask}@` : ""}${rest}${query.replace(/=[^&#]*/g, `=${mask}`)}`;
+}
+
+function redactUrl(value: string): string | undefined {
+  return redactWebUrl(value) ?? redactConnectionString(value);
+}
+
+/** Splits on whitespace outside quotes, keeping separators so the text keeps its shape. */
+function tokenize(text: string): string[] {
+  return text.match(/\s+|(?:"[^"]*"?|'[^']*'?|[^\s"']+)+/g) ?? [];
+}
+
+interface Quoted {
+  open: string;
+  inner: string;
+  close: string;
+}
+
+function unquote(word: string): Quoted {
+  const quote = word[0];
+  if (
+    (quote === '"' || quote === "'") &&
+    word.length > 1 &&
+    word.endsWith(quote)
+  ) {
+    return { open: quote, inner: word.slice(1, -1), close: quote };
+  }
+  return { open: "", inner: word, close: "" };
+}
+
+function maskWord(word: string): string {
+  const { open, close } = unquote(word);
+  return `${open}${mask}${close}`;
 }
 
 function redactWord(word: string): string {
-  const [, open = "", bare = word, close = ""] =
-    /^(["']?)(.*?)(["':,;]?)$/s.exec(word) ?? [];
-  const assignment = /^(-{0,2}[A-Za-z_][\w.-]*)=(.+)$/.exec(bare);
-  if (assignment?.[1] && secretName.test(assignment[1])) {
-    return `${open}${assignment[1]}=${mask}${close}`;
+  const assignment = /^(-{0,2}[A-Za-z_][\w.-]*)=(.+)$/s.exec(word);
+  if (assignment?.[1] && assignment[2] && secretName.test(assignment[1])) {
+    return `${assignment[1]}=${maskWord(assignment[2])}`;
   }
+  const { open, inner, close } = unquote(word);
+  if (open) {
+    // A quoted header or argument ("Authorization: Bearer x") is redacted as its own text.
+    return `${open}${redactText(inner, false)}${close}`;
+  }
+  const trailing = /[:,;]$/.exec(inner)?.[0] ?? "";
+  const bare = trailing ? inner.slice(0, -1) : inner;
   const url = redactUrl(bare);
   if (url) {
-    return `${open}${url}${close}`;
+    return `${url}${trailing}`;
   }
-  return secretValue.test(bare) ? `${open}${mask}${close}` : word;
+  return secretValue.test(bare) ? `${mask}${trailing}` : word;
 }
 
-/**
- * Masks secret values in free-form handler text while keeping its shape: env assignments and flags with
- * secret-like names, the word after a secret-like flag or "Bearer", URL credentials and query values, and
- * credential-shaped strings. Whitespace tokenizing is not a shell parser, so it errs toward masking.
- */
-export function redactText(text: string): string {
-  const parts = text.split(/(\s+)/);
+function redactWords(words: string[]): string[] {
+  const attachedPasswords = words.some((word) =>
+    attachedPasswordTools.test(word)
+  );
   let maskNext = false;
-  const redacted = parts.map((part) => {
-    if (/^\s*$/.test(part)) {
-      return part;
+  return words.map((word) => {
+    if (/^\s+$/.test(word)) {
+      return word;
     }
-    const bare = part.replace(/^["']|["':]$/g, "");
-    // "Authorization: Bearer <token>": the scheme stays visible and the mask moves to the token.
-    if (/^(bearer|basic)$/i.test(bare)) {
+    const bare = unquote(word).inner.replace(/:$/, "");
+    if (authScheme.test(bare)) {
       maskNext = true;
-      return part;
+      return word;
     }
     if (maskNext) {
       maskNext = false;
-      return part.replace(/^(["']?).*?(["',;]?)$/s, `$1${mask}$2`);
+      return maskWord(word);
     }
     if (
-      secretName.test(bare) &&
-      (/^-{1,2}[\w-]+$/.test(bare) || /[:=]["']?$/.test(part))
+      credentialFlag.test(word) ||
+      (secretName.test(bare) &&
+        (/^-{1,2}[\w-]+$/.test(bare) || /:["']?$/.test(word)))
     ) {
       maskNext = true;
-      return part;
+      return word;
     }
-    return redactWord(part);
+    if (attachedPasswords && /^-p\S+$/.test(word)) {
+      return `-p${mask}`;
+    }
+    return redactWord(word);
   });
-  const result = redacted.join("").trim();
-  return result.length > maxPreviewLength
+}
+
+/**
+ * Masks secret values in free-form handler text while keeping its shape: secret-named env assignments and
+ * `--flag=value`s, the word after a secret-named flag, `-u`, a secret-named `Header:`, or an auth scheme
+ * (Bearer, Basic, token…), URL credentials, query values and secret-looking path segments, webhook paths,
+ * mysql's attached `-p`, and credential-shaped words. Quotes group words; this is not a full shell parser,
+ * so it errs toward masking.
+ */
+export function redactText(text: string, cap = true): string {
+  const result = redactWords(tokenize(text)).join("").trim();
+  return cap && result.length > maxPreviewLength
     ? `${result.slice(0, maxPreviewLength)}…`
     : result;
 }

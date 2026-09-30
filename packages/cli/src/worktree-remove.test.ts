@@ -65,6 +65,15 @@ it("passes on Git's refusal to remove a worktree with changes", async () => {
   expect(existsSync(join(linked, "notes.md"))).toBe(true);
 });
 
+it("explains a locked worktree without suggesting --force", async () => {
+  const { main, linked } = repository();
+  git(main, "worktree", "lock", linked);
+  await expect(removeWorktree(linked)).rejects.toThrow(
+    "Git did not remove app-feature: it is locked. Run git worktree unlock on it, then try again."
+  );
+  expect(existsSync(linked)).toBe(true);
+});
+
 it("refuses the main checkout, unknown folders, and relative paths", async () => {
   const { main } = repository();
   await expect(removeWorktree(main)).rejects.toThrow(

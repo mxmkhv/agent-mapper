@@ -34,12 +34,12 @@ function RemoveAction({
     return <output className="text-label text-ink-muted">Removing…</output>;
   }
   return (
-    <span title="Runs git worktree remove. The branch stays; Git refuses while the checkout has uncommitted changes.">
+    <span title="Runs git worktree remove. Git refuses while the checkout has uncommitted changes or untracked files; ignored files such as .env and node_modules are deleted with the folder. The branch stays.">
       <ConfirmButton
         confirmLabel="Remove"
         label="Remove"
         onConfirm={onRemove}
-        question={`Remove ${name}?`}
+        question={`Remove ${name}? Ignored files like .env go too.`}
       />
     </span>
   );

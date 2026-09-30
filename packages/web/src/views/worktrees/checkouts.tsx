@@ -66,17 +66,29 @@ function DifferenceCount({
   );
 }
 
-/** Why pull requests are missing, when they are; silent while loading or when GitHub answered. */
+/** Why pull requests are missing or incomplete; silent while loading or when every PR is listed. */
 function PullRequestHint({
   state
 }: {
   state: ReturnType<typeof usePullRequests>;
 }) {
-  let message: string | undefined;
   if (state.status === "error") {
-    message = `Could not load pull requests: ${state.message}`;
-  } else if (state.status === "done" && state.lookup.status === "unavailable") {
-    message = `Pull requests: ${state.lookup.reason}`;
+    return (
+      <p className="m-0 px-2.5 text-caption text-problem" role="alert">
+        Could not load pull requests: {state.message}
+      </p>
+    );
+  }
+  if (state.status !== "done") {
+    return null;
+  }
+  const { lookup } = state;
+  let message: string | undefined;
+  if (lookup.status === "unavailable") {
+    message = `Pull requests: ${lookup.reason}`;
+  } else if (lookup.truncated) {
+    message =
+      "Showing the newest 200 pull requests; branches with older ones have no badge.";
   }
   return message ? (
     <p className="m-0 px-2.5 text-caption text-ink-muted">{message}</p>

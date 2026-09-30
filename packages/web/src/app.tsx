@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { setProjectHidden } from "./api";
 import { useInventory, useProjects } from "./data";
 import { AppFailure } from "./documents/app-failure";
 import { DocumentErrorBoundary } from "./documents/document-error-boundary";
@@ -7,6 +6,7 @@ import { Sidebar } from "./shell/sidebar";
 import type { Landing } from "./shell/view-bar";
 import { DraftStore } from "./state/draft-store";
 import { DocumentsContext, useUnloadGuard } from "./state/use-document-drafts";
+import { useHiddenProjects } from "./state/use-hidden-projects";
 import { useTheme } from "./state/use-theme";
 import { useTool } from "./state/use-tool";
 import { Button } from "./ui/button";
@@ -24,6 +24,9 @@ export function App() {
   const [tool, setTool] = useTool();
   const [projectsRefresh, setProjectsRefresh] = useState(0);
   const projects = useProjects(projectsRefresh);
+  const visibility = useHiddenProjects(projects.value, () =>
+    setProjectsRefresh((value) => value + 1)
+  );
   const inventory = useInventory(selectedPath, refresh);
   // Drafts sit above the per-folder Workspace so project switches and rescans keep them.
   const [drafts] = useState(() => new DraftStore());
@@ -34,10 +37,7 @@ export function App() {
     setRefresh((value) => value + 1);
     setProjectsRefresh((value) => value + 1);
   };
-  async function setHidden(path: string, hidden: boolean) {
-    await setProjectHidden(path, hidden);
-    setProjectsRefresh((value) => value + 1);
-  }
+
   const documents = {
     store: drafts,
     onMutated() {
@@ -59,12 +59,12 @@ export function App() {
       <div className="grid h-full grid-cols-[200px_minmax(0,1fr)] overflow-hidden lg:grid-cols-[232px_minmax(0,1fr)]">
         <Sidebar
           error={projects.error}
-          hiddenProjects={projects.value?.hidden ?? []}
+          hiddenProjects={visibility.hidden}
           loading={projects.loading && !projects.value}
           onSelect={selectPath}
-          onSetHidden={setHidden}
+          onSetHidden={visibility.setHidden}
           onTheme={setTheme}
-          projects={projects.value?.projects ?? []}
+          projects={visibility.projects}
           selectedPath={selectedPath}
           theme={theme}
         />
@@ -83,9 +83,9 @@ export function App() {
                 onRescan={rescan}
                 onSelectPath={selectPath}
                 onTool={setTool}
-                projectPaths={
-                  projects.value?.projects.map((project) => project.path) ?? []
-                }
+                projectPaths={visibility.projects.map(
+                  (project) => project.path
+                )}
                 refreshKey={refresh}
                 refreshing={inventory.loading}
                 snapshot={inventory.value}

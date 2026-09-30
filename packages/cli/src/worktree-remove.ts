@@ -1,5 +1,5 @@
 import { basename, isAbsolute, resolve } from "node:path";
-import { git, readWorktrees } from "./worktree-git";
+import { git, repositoryWorktrees } from "./worktree-git";
 
 function gitMessage(error: unknown): string {
   const stderr = (error as { stderr?: unknown } | undefined)?.stderr;
@@ -20,7 +20,8 @@ function refusal(name: string, reason: string): string {
 
 /**
  * Runs `git worktree remove` for one linked worktree, without --force: Git refuses when the checkout has
- * uncommitted or untracked files, or is locked, and that refusal is passed on. The branch is kept.
+ * uncommitted changes or untracked files, or is locked, and that refusal is passed on. Ignored files (.env,
+ * node_modules, build output) are deleted with the folder. The branch is kept.
  * The path must match a linked, available worktree in a fresh `git worktree list`, so the browser cannot
  * name an arbitrary folder.
  */
@@ -29,9 +30,9 @@ export async function removeWorktree(value: string | undefined): Promise<void> {
     throw new Error("Send the worktree's absolute folder path.");
   }
   const path = resolve(value);
-  const scan = await readWorktrees(path);
-  const target = scan.worktrees.find((tree) => tree.path === path);
-  const main = scan.worktrees.find((tree) => tree.isMain);
+  const worktrees = await repositoryWorktrees(path);
+  const target = worktrees.find((tree) => tree.path === path);
+  const main = worktrees.find((tree) => tree.isMain);
   if (!target || !main) {
     throw new Error(
       `${path} is not a Git worktree. Rescan to refresh the worktree list.`

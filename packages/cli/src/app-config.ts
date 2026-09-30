@@ -4,14 +4,13 @@ import { errnoCode } from "./source-document-errors";
 
 /** agent-mapper's own preferences. Agent configuration is never stored here. */
 export interface AppConfig {
-  /** Projects removed from the sidebar. Discovery still walks past them but does not list or git-scan them. */
+  /** Projects removed from the sidebar. Discovery skips listing them and git-scanning their folders. */
   hiddenProjects: string[];
 }
 
-const emptyConfig: AppConfig = { hiddenProjects: [] };
 const configVersion = 1;
 
-/** ~/.config/agent-mapper/config.json, or an absolute XDG_CONFIG_HOME, as the MVP brief specifies for every platform. */
+/** ~/.config/agent-mapper/config.json on every platform, as the MVP brief specifies; an absolute XDG_CONFIG_HOME overrides ~/.config. */
 export function defaultConfigPath(home: string): string {
   const xdg = process.env.XDG_CONFIG_HOME;
   return join(
@@ -22,24 +21,30 @@ export function defaultConfigPath(home: string): string {
 }
 
 function parseConfig(path: string, text: string): AppConfig {
+  const fix = "Fix or delete it, then rescan.";
   let value: unknown;
   try {
     value = JSON.parse(text);
   } catch {
+    throw new Error(`${path} is not valid JSON. ${fix}`);
+  }
+  // Anything unexpected is refused rather than treated as empty, so the next save cannot overwrite it.
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${path} must contain a JSON object. ${fix}`);
+  }
+  const config = value as Record<string, unknown>;
+  if (config.version !== undefined && config.version !== configVersion) {
     throw new Error(
-      `${path} is not valid JSON. Fix or delete it, then rescan.`
+      `${path} was written by a newer agent-mapper (version ${String(config.version)}). Update agent-mapper, or delete the file.`
     );
   }
-  const hidden =
-    value && typeof value === "object" && "hiddenProjects" in value
-      ? value.hiddenProjects
-      : [];
+  const hidden = config.hiddenProjects ?? [];
   if (
     !Array.isArray(hidden) ||
     hidden.some((item) => typeof item !== "string")
   ) {
     throw new Error(
-      `${path} has an invalid hiddenProjects list; it must be an array of folder paths. Fix or delete it, then rescan.`
+      `${path} has an invalid hiddenProjects list; it must be an array of folder paths. ${fix}`
     );
   }
   return { hiddenProjects: hidden };
@@ -51,7 +56,7 @@ async function readConfig(path: string): Promise<AppConfig> {
     text = await readFile(path, "utf8");
   } catch (error) {
     if (errnoCode(error) === "ENOENT") {
-      return emptyConfig;
+      return { hiddenProjects: [] };
     }
     throw new Error(
       `Could not read ${path} (${errnoCode(error) ?? String(error)}). Check its permissions, then rescan.`,
@@ -78,7 +83,7 @@ async function writeConfig(path: string, config: AppConfig): Promise<void> {
   }
 }
 
-export function projectPath(value: string | undefined): string {
+function projectPath(value: string | undefined): string {
   if (!value || !isAbsolute(value)) {
     throw new Error("Send the project's absolute folder path.");
   }
@@ -95,7 +100,8 @@ export class ConfigStore {
     return readConfig(this.path);
   }
 
-  setHidden(path: string, hidden: boolean): Promise<AppConfig> {
+  setHidden(value: string | undefined, hidden: boolean): Promise<AppConfig> {
+    const path = projectPath(value);
     const next = this.queue.then(async () => {
       const config = await readConfig(this.path);
       const others = config.hiddenProjects.filter((item) => item !== path);

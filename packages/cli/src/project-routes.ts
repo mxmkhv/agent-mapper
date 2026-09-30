@@ -1,5 +1,5 @@
 import type { IncomingMessage } from "node:http";
-import { projectPath, type ConfigStore } from "./app-config";
+import type { ConfigStore } from "./app-config";
 import { discoverProjects, type DiscoveryResult } from "./discovery";
 import { readJson } from "./source-actions";
 
@@ -37,6 +37,6 @@ export async function projectRoute({
     return undefined;
   }
   const body = await readJson(request);
-  await config.setHidden(projectPath(body.path), hidden);
+  await config.setHidden(body.path, hidden);
   return { ok: true };
 }

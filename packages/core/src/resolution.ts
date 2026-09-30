@@ -47,7 +47,7 @@ function winningOverride(
 
 // Claude Code 2.1.285 reads AGENTS.md only as a fallback for the whole folder
 // chain: one project CLAUDE.md or CLAUDE.local.md anywhere from the working
-// directory up to / drops every AGENTS.md, including ones in other folders.
+// directory up to / (or in a .claude folder along the way) drops every AGENTS.md in the chain.
 // The user file (~/.claude/CLAUDE.md) does not count.
 function winningClaudeFile({
   entry,

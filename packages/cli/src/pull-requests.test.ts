@@ -23,6 +23,7 @@ interface GhFailure {
   code?: string;
   stderr?: string;
   killed?: boolean;
+  signal?: string;
 }
 
 const failing =
@@ -56,6 +57,7 @@ it("keeps the most relevant pull request per branch", async () => {
         listed("feat/b#7 MERGED B"),
         listed("feat/b#6 MERGED Old_B"),
         listed("feat/c#5 CLOSED C"),
+        { ...listed("feat/d#4 OPEN Fork"), isCrossRepository: true },
         { headRefName: 3, number: "bad" }
       ])
     );
@@ -66,9 +68,49 @@ it("keeps the most relevant pull request per branch", async () => {
       "feat/a": { number: 8, state: "draft", title: "A", url: "u8" },
       "feat/b": { number: 7, state: "merged", title: "B", url: "u7" },
       "feat/c": { number: 5, state: "closed", title: "C", url: "u5" }
-    }
+    },
+    truncated: false
   });
   expect(calls).toEqual([root]);
+});
+
+it("asks gh from the main checkout when given a linked worktree", async () => {
+  const root = repository();
+  const linked = `${root}-linked`;
+  roots.push(linked);
+  execFileSync(
+    "git",
+    [
+      "-C",
+      root,
+      "-c",
+      "user.name=T",
+      "-c",
+      "user.email=t@e.x",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "init"
+    ],
+    { stdio: "ignore" }
+  );
+  execFileSync(
+    "git",
+    ["-C", root, "worktree", "add", "-b", "feature", linked],
+    {
+      stdio: "ignore"
+    }
+  );
+  const calls: string[] = [];
+  const full = Array.from({ length: 200 }, (_, index) =>
+    listed(`b${index}#${index + 1} MERGED T`)
+  );
+  const result = await pullRequests(linked, (directory) => {
+    calls.push(directory);
+    return Promise.resolve(JSON.stringify(full));
+  });
+  expect(calls).toEqual([root]);
+  expect(result.status === "ready" && result.truncated).toBe(true);
 });
 
 it("explains a missing, logged-out, or remote-less gh instead of failing", async () => {
@@ -90,10 +132,24 @@ it("explains a missing, logged-out, or remote-less gh instead of failing", async
   expect(await reason(failing({ stderr: "no git remotes found" }))).toBe(
     "This repository has no GitHub remote, so there are no pull requests to show."
   );
-  expect(await reason(failing({ killed: true }))).toBe(
-    "GitHub did not answer in time. Rescan to try again."
+});
+
+it("reports other gh failures as errors", async () => {
+  const root = repository();
+  await expect(
+    pullRequests(root, failing({ killed: true, signal: "SIGTERM" }))
+  ).rejects.toThrow(
+    "GitHub did not answer within 20 seconds. Rescan to try again."
   );
-  expect(await reason(() => Promise.resolve("{}"))).toBe(
+  await expect(
+    pullRequests(
+      root,
+      failing({ stderr: "HTTP 403: API rate limit exceeded\n" })
+    )
+  ).rejects.toThrow(
+    "gh could not list pull requests: HTTP 403: API rate limit exceeded. Run gh pr list in the repository to see why."
+  );
+  await expect(pullRequests(root, () => Promise.resolve("{}"))).rejects.toThrow(
     "gh returned pull requests in an unexpected format. Update gh, then rescan."
   );
 });

@@ -18,28 +18,83 @@ it("shows commands with exec-form arguments", () => {
 });
 
 it("masks secret env assignments, flags, headers, and credential-shaped words", () => {
-  expect(redactText("GITHUB_TOKEN=abc DEBUG=1 ./notify.sh")).toBe(
-    "GITHUB_TOKEN=••• DEBUG=1 ./notify.sh"
-  );
-  expect(redactText("notify --api-key abc --token=def --verbose")).toBe(
-    "notify --api-key ••• --token=••• --verbose"
-  );
-  expect(
-    redactText('curl -H "Authorization: Bearer abc" -H "X-Api-Key: def" x')
-  ).toBe('curl -H "Authorization: Bearer •••" -H "X-Api-Key: •••" x');
-  expect(redactText("post sk-live123 ghp_abc123")).toBe("post ••• •••");
-  expect(redactText(`check ${"a".repeat(40)}`)).toBe("check •••");
+  const cases: [string, string][] = [
+    [
+      "GITHUB_TOKEN=abc DEBUG=1 ./notify.sh",
+      "GITHUB_TOKEN=••• DEBUG=1 ./notify.sh"
+    ],
+    [
+      "notify --api-key abc --token=def --verbose",
+      "notify --api-key ••• --token=••• --verbose"
+    ],
+    [
+      'curl -H "Authorization: Bearer abc" -H "X-Api-Key: def" x',
+      'curl -H "Authorization: Bearer •••" -H "X-Api-Key: •••" x'
+    ],
+    [
+      'curl -H "Authorization: token abc123" x',
+      'curl -H "Authorization: token •••" x'
+    ],
+    [
+      "curl -u admin:hunter2 https://api.example.com",
+      "curl -u ••• https://api.example.com/"
+    ],
+    ["mysql -uroot -phunter2 app", "mysql -uroot -p••• app"],
+    ['MY_TOKEN="abc def" ./run.sh', 'MY_TOKEN="•••" ./run.sh'],
+    ["run --token 'two words' --fast", "run --token '•••' --fast"],
+    [`post sk-live${"x".repeat(12)} ghp_${"a1".repeat(10)}`, "post ••• •••"],
+    [`check ${"a".repeat(40)}`, "check •••"]
+  ];
+  for (const [input, expected] of cases) {
+    expect(redactText(input)).toBe(expected);
+  }
 });
 
-it("strips URL credentials and query values", () => {
+it("keeps ordinary paths and names that only look like key prefixes", () => {
+  expect(redactText("sk-tools/run.sh --mode fast")).toBe(
+    "sk-tools/run.sh --mode fast"
+  );
+});
+
+it("strips credentials from URLs, connection strings, and webhook paths", () => {
   expect(
     hookPreview({
       type: "http",
       url: "https://user:secret@hooks.example.com/run?key=abc&team=x"
     })
   ).toBe("https://hooks.example.com/run?key=•••&team=•••");
-  expect(redactText("curl https://user:secret@example.com/a")).toBe(
-    "curl https://example.com/a"
+  expect(
+    hookPreview({
+      type: "http",
+      url: "https://hooks.slack.com/services/T0AAA/B0BBB/abcdefghijklmnop"
+    })
+  ).toBe("https://hooks.slack.com/•••");
+  const cases: [string, string][] = [
+    ["curl https://user:secret@example.com/a", "curl https://example.com/a"],
+    [
+      "notify https://example.com/hook/a1b2c3d4e5f6g7h8i9j0k1",
+      "notify https://example.com/hook/•••"
+    ],
+    [
+      "psql postgres://admin:hunter2@db.local/app",
+      "psql postgres://•••@db.local/app"
+    ],
+    [
+      "cli redis://:hunter2@host:6379?auth=x",
+      "cli redis://•••@host:6379?auth=•••"
+    ]
+  ];
+  for (const [input, expected] of cases) {
+    expect(redactText(input)).toBe(expected);
+  }
+});
+
+it("previews URLs with malformed percent escapes instead of failing the scan", () => {
+  expect(redactText("curl https://example.com/%zz/100%")).toBe(
+    "curl https://example.com/%zz/100%"
+  );
+  expect(hookPreview({ type: "http", url: "https://example.com/%FF" })).toBe(
+    "https://example.com/%FF"
   );
 });
 
@@ -53,8 +108,12 @@ it("names MCP tools and previews prompts", () => {
   expect(hookPreview({ type: "command" })).toBeUndefined();
 });
 
-it("caps long previews", () => {
-  expect(
-    hookPreview({ type: "command", command: `echo ${"word ".repeat(200)}` })
-  ).toHaveLength(401);
+it("keeps the start of long previews", () => {
+  const preview = hookPreview({
+    type: "command",
+    command: `echo start ${"word ".repeat(200)}`
+  });
+  expect(preview).toHaveLength(401);
+  expect(preview?.startsWith("echo start word")).toBe(true);
+  expect(preview?.endsWith("…")).toBe(true);
 });

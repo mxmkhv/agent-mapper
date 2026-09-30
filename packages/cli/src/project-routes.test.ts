@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
@@ -103,5 +104,28 @@ it("rejects relative paths and explains a broken config file", async () => {
     expect(await broken.json()).toEqual({
       error: `${options.configPath} is not valid JSON. Fix or delete it, then rescan.`
     });
+  });
+});
+
+it("hides a main checkout together with its linked worktrees", async () => {
+  const options = fixture();
+  const main = join(options.home, "gamma");
+  const git = (...args: string[]) =>
+    execFileSync("git", ["-C", main, ...args], { stdio: "ignore" });
+  mkdirSync(main);
+  writeFileSync(join(main, "CLAUDE.md"), "gamma instructions");
+  git("init", "-b", "main");
+  git("add", ".");
+  git("-c", "user.name=T", "-c", "user.email=t@e.x", "commit", "-m", "init");
+  git("worktree", "add", "-b", "feature", join(options.home, "gamma-feature"));
+  await withServer(options, async (call) => {
+    expect((await call("/api/projects/hide", post(main))).status).toBe(200);
+    const body = (await (await call("/api/projects")).json()) as {
+      projects: { path: string }[];
+    };
+    expect(body.projects.map((project) => project.path)).toEqual([
+      join(options.home, "alpha"),
+      join(options.home, "beta")
+    ]);
   });
 });

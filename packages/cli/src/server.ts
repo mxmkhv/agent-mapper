@@ -31,7 +31,7 @@ export interface AppServerOptions {
   managedClaudeDir?: string;
   /** Private revision snapshots; defaults to the platform data folder. */
   historyRoot?: string;
-  /** agent-mapper preferences such as removed projects; defaults to ~/.config/agent-mapper/config.json. */
+  /** agent-mapper preferences such as removed projects; defaults to ~/.config/agent-mapper/config.json (XDG_CONFIG_HOME aware). */
   configPath?: string;
   launchSource?: (args: string[]) => Promise<void>;
 }

@@ -8,7 +8,7 @@ export interface WorktreeRecord {
   head?: string;
 }
 
-/** The pull request that best describes a branch: an open or draft one first, then the newest merged or closed. */
+/** The pull request that best describes a branch: open or draft first, then merged, then closed; newest within each. */
 export interface PullRequestSummary {
   number: number;
   state: "open" | "draft" | "merged" | "closed";
@@ -21,7 +21,12 @@ export type PullRequestsByBranch = Record<string, PullRequestSummary>;
 
 /** Pull requests by head branch name, or why GitHub could not be asked. */
 export type PullRequestLookup =
-  | { status: "ready"; byBranch: PullRequestsByBranch }
+  | {
+      status: "ready";
+      byBranch: PullRequestsByBranch;
+      /** gh hit its list limit, so older branches may have no badge. */
+      truncated: boolean;
+    }
   | { status: "unavailable"; reason: string };
 
 export interface ComparisonSide {

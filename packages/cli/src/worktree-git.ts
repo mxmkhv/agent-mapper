@@ -193,6 +193,18 @@ export async function readWorktrees(directory: string): Promise<WorktreeScan> {
   }
 }
 
+/** The repository's worktrees, or Git's own reason when it could not list them (Git missing, broken repo). */
+export async function repositoryWorktrees(
+  directory: string
+): Promise<WorktreeRecord[]> {
+  const scan = await readWorktrees(directory);
+  const [problem] = scan.errors;
+  if (!scan.worktrees.length && problem) {
+    throw new Error(problem);
+  }
+  return scan.worktrees;
+}
+
 export async function trackedFiles(
   directory: string,
   errors: string[]

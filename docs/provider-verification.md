@@ -14,10 +14,11 @@ On 2026-09-30, Claude Code 2.1.285 was checked for the `AGENTS.md` fallback acro
 | `parent/AGENTS.md`, `parent/child/CLAUDE.md`                          | `parent/child/CLAUDE.md`                      |
 | `parent/CLAUDE.md`, `parent/child/AGENTS.md`                          | `parent/CLAUDE.md`                            |
 | `parent/AGENTS.md`, `parent/child/CLAUDE.local.md`                    | `parent/child/CLAUDE.local.md`                |
+| `parent/AGENTS.md`, `parent/child/.claude/CLAUDE.md`                  | `parent/child/.claude/CLAUDE.md`              |
 | `parent/AGENTS.md`, `parent/child/AGENTS.md`                          | Both `AGENTS.md` files                        |
 | `parent/child/AGENTS.md`, user `~/.claude/CLAUDE.md` (`user,project`) | User `CLAUDE.md` and `parent/child/AGENTS.md` |
 
-The fallback applies to the whole folder chain. One project `CLAUDE.md` or `CLAUDE.local.md` anywhere from the working directory up drops every `AGENTS.md`. The user `CLAUDE.md` does not count. The mapper marks those `AGENTS.md` files as shadowed.
+The fallback applies to the whole folder chain. One project `CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` anywhere from the working directory up drops every `AGENTS.md`. The user `CLAUDE.md` does not count. The mapper marks those `AGENTS.md` files as shadowed.
 
 The form `@agent-detail.md.` did not add the referenced file to `/context`, even when a file named `agent-detail.md.` existed. Removing the final period made it appear. The mapper records punctuation-ended tokens as syntax unknown and does not claim a loaded or missing import. This result covers Claude Code 2.1.283 only. External import approval, custom instruction-file settings, other versions, and existing session reloads remain unverified.
 
