@@ -128,21 +128,13 @@ export function SourceDocumentPanel({
   const dirty = isDirty(draft);
   return (
     <div>
+      {/* Edit leads: it is the main thing to do with an app-editable file, and wrapping keeps it from clipping. */}
       <div className="flex flex-wrap items-center gap-2">
-        <SegmentedToggle<"preview" | "source">
-          label="Source view"
-          onChange={setView}
-          options={[
-            { value: "preview", label: "Preview" },
-            { value: "source", label: "Source" }
-          ]}
-          value={view}
-        />
-        <span className="flex-1" />
         <Button
           disabled={!document.editable}
           onClick={() => onOpen(draft.sourceKey, "edit")}
           title={document.readOnlyReason}
+          variant="primary"
         >
           <PencilLine
             aria-hidden="true"
@@ -155,6 +147,16 @@ export function SourceDocumentPanel({
           <History aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
           History
         </Button>
+        <span className="flex-1" />
+        <SegmentedToggle<"preview" | "source">
+          label="Source view"
+          onChange={setView}
+          options={[
+            { value: "preview", label: "Preview" },
+            { value: "source", label: "Source" }
+          ]}
+          value={view}
+        />
       </div>
       <output
         aria-live="polite"
