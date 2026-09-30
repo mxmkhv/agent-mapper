@@ -36,7 +36,7 @@ export class DocumentRequestError extends Error {
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
@@ -137,13 +137,13 @@ const unknownResult = (cause: unknown) =>
   });
 
 async function send(
-  action: string,
+  path: string,
   request: { body: object; signal?: AbortSignal }
 ): Promise<Response> {
   // A missing token is a broken session link, not a network problem; let its message through.
   const token = sessionToken();
   try {
-    return await fetch(`/api/source-document/${action}`, {
+    return await fetch(path, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -160,15 +160,16 @@ async function send(
   }
 }
 
-async function post<T>(
-  action: string,
+/** POSTs to a local route that replies with a payload or the `{error: {code, message}}` envelope. */
+export async function postJson<T>(
+  path: string,
   request: {
     body: object;
     signal?: AbortSignal;
     valid(value: unknown): value is T;
   }
 ): Promise<T> {
-  const response = await send(action, request);
+  const response = await send(path, request);
   let payload: unknown;
   try {
     payload = await response.json();
@@ -192,6 +193,11 @@ async function post<T>(
   }
   return payload;
 }
+
+const post = <T>(
+  action: string,
+  request: Parameters<typeof postJson<T>>[1]
+): Promise<T> => postJson(`/api/source-document/${action}`, request);
 
 export function openSourceDocument(
   ref: SourceRef,

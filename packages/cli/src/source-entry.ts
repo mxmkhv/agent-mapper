@@ -23,6 +23,17 @@ export interface Candidate {
   declarationOnly?: boolean;
 }
 
+/** Identifies one candidate across scans; skills found by folder carry no name or locator. */
+export function candidateKey(
+  candidate: Pick<Candidate, "tool" | "kind" | "path" | "locator" | "name">
+): string {
+  return `${candidate.tool}:${candidate.kind}:${candidate.path}:${candidate.locator ?? candidate.name ?? ""}`;
+}
+
+export function entryIdFor(key: string): string {
+  return createHash("sha256").update(key).digest("hex").slice(0, idLength);
+}
+
 export interface SourceRead {
   state: InventoryEntry["readState"];
   content: string;
@@ -109,7 +120,7 @@ export function makeEntry(options: {
       : {};
   const readable = source.state === "readable" && !candidate.declarationOnly;
   return {
-    id: createHash("sha256").update(key).digest("hex").slice(0, idLength),
+    id: entryIdFor(key),
     tool: candidate.tool,
     kind: candidate.kind,
     name:

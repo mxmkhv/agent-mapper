@@ -9,17 +9,22 @@ import type { AddressInfo } from "node:net";
 import { homedir } from "node:os";
 import type { InventorySnapshot } from "@agent-mapper/core";
 import { discoverProjects, type DiscoveryResult } from "./inventory";
-import { managedClaudeDirectory } from "./managed-claude-reader";
 import { buildGlobalSnapshot, buildSnapshot } from "./service";
 import { serveAsset } from "./server-assets";
-import { defaultHistoryRoot } from "./source-document-history-folder";
+import {
+  createServices,
+  rememberProjects,
+  type ServerServices
+} from "./server-services";
+import {
+  handleSkillTransferRoute,
+  isSkillTransferRoute
+} from "./skill-transfer-routes";
 import { handleDocumentRoute, isDocumentRoute } from "./source-document-routes";
-import { SourceDocumentService } from "./source-document-service";
 import {
   launchOpen,
   performSourceAction,
-  sourcePathIndex,
-  type SourcePathStore
+  sourcePathIndex
 } from "./source-actions";
 
 export interface AppServerOptions {
@@ -37,14 +42,12 @@ export interface AppServer {
   close(): Promise<void>;
 }
 
-interface RequestContext {
+interface RequestContext extends ServerServices {
   request: IncomingMessage;
   response: ServerResponse;
   server: Server;
   token: string;
   options: AppServerOptions;
-  sourcePaths: SourcePathStore;
-  documents: SourceDocumentService;
 }
 
 type ApiPayload =
@@ -96,7 +99,7 @@ async function inventoryPayload(
     ...previous,
     [scope]: sourcePathIndex(payload)
   });
-  context.documents.register(scope, payload);
+  context.registry.register(scope, payload);
   return payload;
 }
 
@@ -111,11 +114,9 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
     return;
   }
   if (request.method === "GET" && url.pathname === "/api/projects") {
-    sendJson({
-      response,
-      status: status.ok,
-      payload: await discoverProjects(context.options.home ?? homedir())
-    });
+    const payload = await discoverProjects(context.options.home ?? homedir());
+    rememberProjects(context.discovered, payload);
+    sendJson({ response, status: status.ok, payload });
     return;
   }
   if (request.method === "GET" && url.pathname === "/api/inventory") {
@@ -134,6 +135,10 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
       url,
       launch
     });
+    return;
+  }
+  if (isSkillTransferRoute(url.pathname)) {
+    await handleSkillTransferRoute(context.skills, { request, response, url });
     return;
   }
   if (request.method === "POST" && url.pathname === "/api/source-action") {
@@ -187,12 +192,7 @@ async function handleRequest(context: RequestContext): Promise<void> {
 
 export function createAppServer(options: AppServerOptions): AppServer {
   const token = randomBytes(tokenBytes).toString("hex");
-  const sourcePaths: SourcePathStore = new Map();
-  const documents = new SourceDocumentService({
-    managedRoot: managedClaudeDirectory(options),
-    historyRoot:
-      options.historyRoot ?? defaultHistoryRoot(options.home ?? homedir())
-  });
+  const services = createServices(options);
   const server = createServer((request, response) => {
     void handleRequest({
       request,
@@ -200,8 +200,7 @@ export function createAppServer(options: AppServerOptions): AppServer {
       server,
       token,
       options,
-      sourcePaths,
-      documents
+      ...services
     }).catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       sendJson({

@@ -185,7 +185,8 @@ export function Inspector({ props, state, reach }: PartsProps) {
     imports: props.snapshot.imports,
     context: state.context,
     workingDirectory: props.snapshot.workingDirectory,
-    scannedAt: props.snapshot.scannedAt
+    scannedAt: props.snapshot.scannedAt,
+    projectPaths: props.projectPaths
   };
   return (
     <RecordInspector
