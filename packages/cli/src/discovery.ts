@@ -144,9 +144,15 @@ class DiscoveryWalk {
   }
 }
 
+export interface DiscoveryOptions {
+  maxDepth?: number;
+  /** Project folders the user removed; they are neither git-scanned nor listed. */
+  hidden?: ReadonlySet<string>;
+}
+
 export async function discoverProjects(
   home = homedir(),
-  maxDepth = defaultDepth
+  { maxDepth = defaultDepth, hidden = new Set() }: DiscoveryOptions = {}
 ): Promise<DiscoveryResult> {
   const walk = new DiscoveryWalk(resolve(home), maxDepth);
   let directories = [walk.root];
@@ -158,11 +164,14 @@ export async function discoverProjects(
     directories = children.flat();
   }
   const grouped = await groupWorktrees(
-    [...walk.projects].map(([path, hits]) => ({ path, hits })),
+    [...walk.projects]
+      .filter(([path]) => !hidden.has(path))
+      .map(([path, hits]) => ({ path, hits })),
     walk.root
   );
   return {
-    projects: grouped.projects,
+    // Linked worktrees group under their main checkout, so a hidden main path is filtered again here.
+    projects: grouped.projects.filter((project) => !hidden.has(project.path)),
     errors: [...walk.errors, ...grouped.errors],
     exclusions: excludedDirectories,
     maxDepth

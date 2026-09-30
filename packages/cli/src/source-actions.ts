@@ -24,7 +24,7 @@ const safeTextExtensions = new Set([
   ".yml"
 ]);
 
-async function readJson(
+export async function readJson(
   request: IncomingMessage
 ): Promise<Record<string, string>> {
   let body = "";

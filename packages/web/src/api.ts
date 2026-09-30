@@ -7,6 +7,8 @@ export interface ProjectSuggestion {
 }
 export interface ProjectList {
   projects: ProjectSuggestion[];
+  /** Folders the user removed from the list; saved by the local server. */
+  hidden: string[];
   errors: string[];
   exclusions: string[];
   maxDepth: number;
@@ -115,5 +117,17 @@ export async function sourceAction({
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ path, id, action })
+  });
+}
+
+/** Removes a project from the sidebar, or brings it back. Stored in agent-mapper's own config file. */
+export async function setProjectHidden(
+  path: string,
+  hidden: boolean
+): Promise<void> {
+  await request(`/api/projects/${hidden ? "hide" : "restore"}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ path })
   });
 }

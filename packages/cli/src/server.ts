@@ -8,8 +8,9 @@ import {
 import type { AddressInfo } from "node:net";
 import { homedir } from "node:os";
 import type { InventorySnapshot } from "@agent-mapper/core";
-import { discoverProjects, type DiscoveryResult } from "./inventory";
+import { ConfigStore, defaultConfigPath } from "./app-config";
 import { managedClaudeDirectory } from "./managed-claude-reader";
+import { projectRoute, type ProjectsPayload } from "./project-routes";
 import { buildGlobalSnapshot, buildSnapshot } from "./service";
 import { serveAsset } from "./server-assets";
 import { defaultHistoryRoot } from "./source-document-history-folder";
@@ -29,6 +30,8 @@ export interface AppServerOptions {
   managedClaudeDir?: string;
   /** Private revision snapshots; defaults to the platform data folder. */
   historyRoot?: string;
+  /** agent-mapper preferences such as removed projects; defaults to ~/.config/agent-mapper/config.json. */
+  configPath?: string;
   launchSource?: (args: string[]) => Promise<void>;
 }
 export interface AppServer {
@@ -45,10 +48,11 @@ interface RequestContext {
   options: AppServerOptions;
   sourcePaths: SourcePathStore;
   documents: SourceDocumentService;
+  config: ConfigStore;
 }
 
 type ApiPayload =
-  DiscoveryResult | InventorySnapshot | { error: string } | { ok: true };
+  ProjectsPayload | InventorySnapshot | { error: string } | { ok: true };
 interface JsonReply {
   response: ServerResponse;
   status: number;
@@ -110,12 +114,14 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
     sendJson({ response, status: status.unauthorized, payload: sessionError });
     return;
   }
-  if (request.method === "GET" && url.pathname === "/api/projects") {
-    sendJson({
-      response,
-      status: status.ok,
-      payload: await discoverProjects(context.options.home ?? homedir())
-    });
+  const projects = await projectRoute({
+    request,
+    url,
+    config: context.config,
+    home: context.options.home ?? homedir()
+  });
+  if (projects) {
+    sendJson({ response, status: status.ok, payload: projects });
     return;
   }
   if (request.method === "GET" && url.pathname === "/api/inventory") {
@@ -193,6 +199,9 @@ export function createAppServer(options: AppServerOptions): AppServer {
     historyRoot:
       options.historyRoot ?? defaultHistoryRoot(options.home ?? homedir())
   });
+  const config = new ConfigStore(
+    options.configPath ?? defaultConfigPath(options.home ?? homedir())
+  );
   const server = createServer((request, response) => {
     void handleRequest({
       request,
@@ -201,7 +210,8 @@ export function createAppServer(options: AppServerOptions): AppServer {
       token,
       options,
       sourcePaths,
-      documents
+      documents,
+      config
     }).catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       sendJson({

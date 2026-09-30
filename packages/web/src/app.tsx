@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { setProjectHidden } from "./api";
 import { useInventory, useProjects } from "./data";
 import { AppFailure } from "./documents/app-failure";
 import { DocumentErrorBoundary } from "./documents/document-error-boundary";
@@ -21,7 +22,8 @@ export function App() {
   const [landing, setLanding] = useState<Landing>();
   const [theme, setTheme] = useTheme();
   const [tool, setTool] = useTool();
-  const projects = useProjects();
+  const [projectsRefresh, setProjectsRefresh] = useState(0);
+  const projects = useProjects(projectsRefresh);
   const inventory = useInventory(selectedPath, refresh);
   // Drafts sit above the per-folder Workspace so project switches and rescans keep them.
   const [drafts] = useState(() => new DraftStore());
@@ -30,7 +32,12 @@ export function App() {
   const rescan = () => {
     setRefreshAfterSave(false);
     setRefresh((value) => value + 1);
+    setProjectsRefresh((value) => value + 1);
   };
+  async function setHidden(path: string, hidden: boolean) {
+    await setProjectHidden(path, hidden);
+    setProjectsRefresh((value) => value + 1);
+  }
   const documents = {
     store: drafts,
     onMutated() {
@@ -52,8 +59,10 @@ export function App() {
       <div className="grid h-full grid-cols-[200px_minmax(0,1fr)] overflow-hidden lg:grid-cols-[232px_minmax(0,1fr)]">
         <Sidebar
           error={projects.error}
-          loading={projects.loading}
+          hiddenProjects={projects.value?.hidden ?? []}
+          loading={projects.loading && !projects.value}
           onSelect={selectPath}
+          onSetHidden={setHidden}
           onTheme={setTheme}
           projects={projects.value?.projects ?? []}
           selectedPath={selectedPath}

@@ -10,24 +10,28 @@ interface LoadState<T> {
   path?: string;
 }
 
-export function useProjects(): LoadState<ProjectList> {
+/** Rediscovers projects whenever `refresh` changes; the previous list stays visible meanwhile. */
+export function useProjects(refresh: number): LoadState<ProjectList> {
   const [state, setState] = useState<LoadState<ProjectList>>({ loading: true });
+  const key = String(refresh);
   useEffect(() => {
     const controller = new AbortController();
     void getProjects(controller.signal).then(
-      (value) => setState({ value, loading: false }),
+      (value) => setState({ value, loading: false, key }),
       (error: unknown) => {
         if (!controller.signal.aborted) {
-          setState({
+          setState((previous) => ({
+            value: previous.value,
             error: error instanceof Error ? error.message : String(error),
-            loading: false
-          });
+            loading: false,
+            key
+          }));
         }
       }
     );
     return () => controller.abort();
-  }, []);
-  return state;
+  }, [key]);
+  return state.key === key ? state : { ...state, loading: true };
 }
 
 export function useInventory(
