@@ -1,5 +1,5 @@
 import type { InstructionImport } from "@agent-mapper/core";
-import { Info, Layers } from "lucide-react";
+import { Layers } from "lucide-react";
 import { isLink, linkedFrom, linkTarget } from "../model/links";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
@@ -19,7 +19,8 @@ import {
   Imports,
   LinkRow,
   Provenance,
-  Section
+  Section,
+  sizeText
 } from "./inspector-sections";
 import { ReachSection, type ReachScope } from "./reach-section";
 
@@ -83,6 +84,37 @@ function Links({
   );
 }
 
+/**
+ * State and size on one line. The resolver's reason explains only what is not normal; for an active item it
+ * restates the label, so it moves to the label's tooltip.
+ */
+function StateLine({
+  record,
+  context
+}: {
+  record: InventoryRecord;
+  context: PathContext;
+}) {
+  const reason = tildeText(record.reason, context);
+  const normal = record.tier === "active";
+  const size = sizeText(record);
+  return (
+    <>
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-label">
+        <StateMarker tier={record.tier} />
+        <strong
+          className={record.tier === "problem" ? "text-problem" : ""}
+          title={normal ? reason : undefined}
+        >
+          {stateText(record)}
+        </strong>
+        {size ? <span className="text-ink-muted">· {size}</span> : null}
+      </div>
+      {normal ? null : <p className="mt-2 mb-0 text-ink-muted">{reason}</p>}
+    </>
+  );
+}
+
 export function RecordInspector({
   record,
   scope,
@@ -112,15 +144,7 @@ export function RecordInspector({
       <h2 className="mt-1.5 mb-1 text-headline font-semibold tracking-tight break-words">
         {record.name}
       </h2>
-      <div className="mt-2 flex items-center gap-2 text-label">
-        <StateMarker tier={record.tier} />
-        <strong className={record.tier === "problem" ? "text-problem" : ""}>
-          {stateText(record)}
-        </strong>
-      </div>
-      <p className="mt-2 mb-0 text-ink-muted">
-        {tildeText(record.reason, scope.context)}
-      </p>
+      <StateLine context={scope.context} record={record} />
       {record.problems.map((problem) => (
         <p
           className="mt-2 mb-0 text-label text-problem"
@@ -132,13 +156,13 @@ export function RecordInspector({
       ))}
       <Provenance context={scope.context} onSelect={onSelect} record={record} />
       {record.sourceRef ? (
-        <Section title="Source">
+        <div className="mt-5">
           <SourceDocumentPanel
             onOpen={onOpenDocument}
             scannedAt={scope.scannedAt}
             sourceRef={record.sourceRef}
           />
-        </Section>
+        </div>
       ) : null}
       <Links onSelect={onSelect} record={record} scope={scope} />
       {record.kind === "plugin" ? (
@@ -151,9 +175,7 @@ export function RecordInspector({
           <Imports context={scope.context} imports={imports} />
         </Section>
       ) : null}
-      <Section title="Details">
-        <Details context={scope.context} record={record} />
-      </Section>
+      <Details context={scope.context} record={record} />
       {reach ? <ReachSection reach={reach} record={record} /> : null}
       <div className="mt-5.5 flex gap-2">
         <Button
@@ -200,29 +222,6 @@ export function InspectorEmpty({
           {active} active · {inactive} inactive for {tool}
         </p>
       </div>
-    </div>
-  );
-}
-
-export function CoverageInspector({ notes }: { notes: string[] }) {
-  return (
-    <div className="px-5 pt-4.5 pb-7">
-      <div className="flex items-center gap-1.5 text-label text-ink-muted">
-        <Info aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
-        Coverage
-      </div>
-      <h2 className="mt-1.5 mb-1 text-headline font-semibold tracking-tight">
-        What this scan can't see
-      </h2>
-      <p className="mt-2 text-ink-muted">
-        These limits apply to every view. An empty list does not prove a tool
-        has nothing configured.
-      </p>
-      <ul className="mt-4 grid list-disc gap-2 pl-4 text-ink-muted">
-        {notes.map((note) => (
-          <li key={note}>{note}</li>
-        ))}
-      </ul>
     </div>
   );
 }

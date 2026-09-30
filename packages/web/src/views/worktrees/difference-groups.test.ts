@@ -1,6 +1,10 @@
 import { expect, it } from "vitest";
 import type { WorktreeDifference } from "@agent-mapper/core";
-import { groupDifferences, relevantDifferences } from "./difference-groups";
+import {
+  differenceSections,
+  groupDifferences,
+  relevantDifferences
+} from "./difference-groups";
 
 const row = (
   relativePath: string,
@@ -52,4 +56,22 @@ it("puts a symlinked skill folder in the same group as its files", () => {
   ]);
   expect(group?.label).toBe(".claude/skills/lens");
   expect(group?.rows).toHaveLength(2);
+});
+
+it("puts content differences first and counts files per state", () => {
+  const sections = differenceSections([
+    row(".agents/skills/lens/SKILL.md", "only-main"),
+    row(".agents/skills/lens/LICENSE", "only-main"),
+    row("AGENTS.md", "different-content")
+  ]);
+  expect(
+    sections.map((section) => [
+      section.state,
+      section.groups.length,
+      section.files
+    ])
+  ).toEqual([
+    ["different-content", 1, 1],
+    ["only-main", 1, 2]
+  ]);
 });

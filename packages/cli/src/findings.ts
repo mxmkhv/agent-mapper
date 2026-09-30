@@ -206,7 +206,7 @@ function pairFindings(seen: Map<string, ResolvedEntry[]>): Finding[] {
       code: "repeated-instruction",
       level: "review",
       title: "Repeated instruction paragraphs",
-      reason: `${count} substantive paragraph${count === 1 ? "" : "s"} repeat across expected startup sources. Review both files; the text stays local.`,
+      reason: `${count} paragraph${count === 1 ? " repeats" : "s repeat"} in both files`,
       sources: [source(first), source(second)]
     })
   );

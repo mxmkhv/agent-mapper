@@ -2,9 +2,9 @@ import { useState } from "react";
 import type { WorktreeDifference } from "@agent-mapper/core";
 import { ChevronDown, ChevronRight, FileDiff } from "lucide-react";
 import type { Tier } from "../../model/record-types";
-import { StateLabel, StateMarker, ToolGlyph } from "../../ui/marks";
+import { StateMarker, ToolGlyph } from "../../ui/marks";
 import { PathLine } from "../../ui/path-line";
-import { groupDifferences, type DifferenceGroup } from "./difference-groups";
+import type { DifferenceGroup } from "./difference-groups";
 
 export const differenceInfo = {
   "only-main": {
@@ -39,11 +39,12 @@ export const differenceInfo = {
   { label: string; tier: Tier; reason: string }
 >;
 
+// No state column: the section heading names the state every row shares.
 const rowClass =
-  "grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_16px_auto] items-center gap-2.5 px-3 text-left [&+&]:border-t [&+&]:border-wash";
+  "grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_16px] items-center gap-2.5 px-3 text-left [&+&]:border-t [&+&]:border-wash";
 
 interface ListProps {
-  rows: WorktreeDifference[];
+  groups: DifferenceGroup[];
   selectedId?: string;
   onSelect(id: string): void;
 }
@@ -87,7 +88,6 @@ function FileRow({
         />
       )}
       {row.tool === "shared" ? <span /> : <ToolGlyph tool={row.tool} />}
-      <StateLabel text={info.label} tier="inactive" />
     </button>
   );
 }
@@ -96,7 +96,7 @@ function FileRow({
  * Skill and agent folders collapse into one row each: a whole skill missing from a branch is one fact,
  * not forty files.
  */
-export function DifferenceList({ rows, selectedId, onSelect }: ListProps) {
+export function DifferenceList({ groups, selectedId, onSelect }: ListProps) {
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const toggle = (key: string) =>
     setOpen((previous) => {
@@ -106,7 +106,7 @@ export function DifferenceList({ rows, selectedId, onSelect }: ListProps) {
       }
       return next;
     });
-  return groupDifferences(rows).map((group) => {
+  return groups.map((group) => {
     const [only] = group.rows;
     // Loose files stay single rows; every skill or agent folder is a group, even with one file.
     if (group.rows.length === 1 && only && only.relativePath === group.key) {
@@ -142,7 +142,6 @@ export function DifferenceList({ rows, selectedId, onSelect }: ListProps) {
             </span>
           </span>
           <span />
-          <StateLabel text={info.label} tier="inactive" />
         </button>
         {expanded
           ? group.rows.map((row) => (

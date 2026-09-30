@@ -150,17 +150,14 @@ export function memoryDraft(memory: MemoryRecord, order: number): RecordDraft {
     order,
     startupTokens: 0,
     lines: memory.lineCount,
+    bytes: memory.sizeBytes,
     readState: memory.readState,
     details: [
       { label: "Project match", value: memory.projectMatch },
       {
         label: "Modified",
         value: new Date(memory.modifiedAt).toLocaleString()
-      },
-      ...detail(
-        "Size",
-        memory.sizeBytes === undefined ? undefined : `${memory.sizeBytes} bytes`
-      )
+      }
     ],
     problems: memory.error ? [memory.error] : []
   };
@@ -185,9 +182,8 @@ export function pluginDraft(plugin: PluginRecord, order: number): RecordDraft {
     order,
     startupTokens: 0,
     summary: plugin.version,
+    marketplace: plugin.marketplace,
     details: [
-      ...detail("Version", plugin.version),
-      ...detail("Marketplace", plugin.marketplace),
       ...detail("Installation", plugin.installationEvidence),
       ...detail("Settings", plugin.settingsEvidence)
     ],

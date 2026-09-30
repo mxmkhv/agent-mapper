@@ -3,6 +3,7 @@ import type {
   Layer,
   RecordKind
 } from "../../model/record-types";
+import { isBackgroundVersion } from "../../model/plugin-versions";
 import { kindOrder } from "../../ui/kind-icon";
 
 /** Configuration stacks from organization policy down to personal overrides. */
@@ -38,25 +39,6 @@ function kindGroups(records: InventoryRecord[]): KindGroup[] {
         .sort((a, b) => a.order - b.order)
     }))
     .filter((group) => group.records.length > 0);
-}
-
-/**
- * A plugin version is a candidate, not a contribution, when it is inactive or when its selection is
- * unknown while another version of the same plugin is selected.
- */
-export function isBackgroundVersion(
-  plugin: InventoryRecord,
-  plugins: readonly InventoryRecord[]
-): boolean {
-  if (plugin.tier === "inactive") {
-    return true;
-  }
-  return (
-    plugin.tier === "unknown" &&
-    plugins.some(
-      (other) => other.name === plugin.name && other.tier === "active"
-    )
-  );
 }
 
 const tierRank = {

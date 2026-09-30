@@ -2,13 +2,10 @@ import type { InventorySnapshot, ToolId } from "@agent-mapper/core";
 import { layerHint } from "../model/layers";
 import { tildePath } from "../model/paths";
 import type { InventoryRecord } from "../model/record-types";
-import {
-  CoverageInspector,
-  InspectorEmpty,
-  RecordInspector
-} from "../inspector/inspector";
+import { CoverageInspector } from "../inspector/coverage-inspector";
+import { InspectorEmpty, RecordInspector } from "../inspector/inspector";
 import type { HeaderTitle } from "../shell/header";
-import type { ViewTab } from "../shell/view-bar";
+import type { Landing, ViewTab } from "../shell/view-bar";
 import { toolName } from "../ui/marks";
 import { FindingsView } from "../views/findings-view";
 import { InventoryView } from "../views/inventory-view";
@@ -26,11 +23,11 @@ export interface WorkspaceProps {
   refreshing: boolean;
   refreshKey: number;
   projectPaths: string[];
-  initialSelectedId?: string;
+  landing?: Landing;
   notice?: string;
   onTool(tool: ToolId): void;
   onRescan(): void;
-  onSelectPath(path: string, selectId?: string): void;
+  onSelectPath(path: string, landing?: Landing): void;
 }
 
 export interface PartsProps {
@@ -61,7 +58,8 @@ export function tabsFor({ props, state }: PartsProps): ViewTab[] {
       ? [
           {
             id: "worktrees",
-            label: "Worktrees",
+            // Inside a linked checkout the tab counts files that differ from the main checkout.
+            label: props.snapshot.comparison ? "Differences" : "Worktrees",
             count:
               (props.snapshot.comparison &&
                 relevantDifferences(
@@ -109,7 +107,6 @@ export function Content({ props, state, reach }: PartsProps) {
         estimate={props.snapshot.context}
         onKind={state.filterKind}
         onSelect={state.select}
-        onToggleInactive={state.toggleInactive}
         records={state.toolRecords}
         showInactive={state.showInactive}
         tool={props.tool}
@@ -121,7 +118,7 @@ export function Content({ props, state, reach }: PartsProps) {
       <ReachView
         {...common}
         globalRecords={state.toolRecords}
-        onOpenProject={(path) => props.onSelectPath(path)}
+        onOpenProject={props.onSelectPath}
         onSelect={(record: InventoryRecord) =>
           state.select(record.id, { reveal: false })
         }
@@ -137,6 +134,7 @@ export function Content({ props, state, reach }: PartsProps) {
         comparison={props.snapshot.comparison}
         context={state.context}
         onSelectPath={props.onSelectPath}
+        refreshKey={props.refreshKey}
         tool={props.tool}
         workingDirectory={props.snapshot.workingDirectory}
         worktrees={props.snapshot.worktrees}
@@ -158,6 +156,7 @@ export function Content({ props, state, reach }: PartsProps) {
       kind={state.kind}
       onKind={state.filterKind}
       onSelect={state.select}
+      otherVersions={state.showInactive ? undefined : state.otherVersions}
       records={state.visible}
     />
   );
@@ -165,7 +164,12 @@ export function Content({ props, state, reach }: PartsProps) {
 
 export function Inspector({ props, state, reach }: PartsProps) {
   if (state.showCoverage) {
-    return <CoverageInspector notes={props.snapshot.coverage} />;
+    return (
+      <CoverageInspector
+        context={state.context}
+        notes={props.snapshot.coverage}
+      />
+    );
   }
   if (!state.selected) {
     return (

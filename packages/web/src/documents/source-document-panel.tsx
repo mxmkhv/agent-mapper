@@ -170,7 +170,7 @@ export function SourceDocumentPanel({
         </p>
       ) : null}
       <Diagnostics diagnostics={document.diagnostics} />
-      <div className="mt-2 max-h-80 overflow-auto rounded-card border border-hairline bg-canvas p-3">
+      <div className="mt-2 max-h-[60vh] overflow-auto rounded-card border border-hairline bg-canvas p-3">
         <DocumentText content={document.content} view={view} />
       </div>
     </div>

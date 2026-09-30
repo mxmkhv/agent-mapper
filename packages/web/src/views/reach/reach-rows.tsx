@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { isLink } from "../../model/links";
 import { tildePath, type PathContext } from "../../model/paths";
 import type { InventoryRecord } from "../../model/record-types";
+import type { Landing } from "../../shell/view-bar";
 import { stateText } from "../../model/states";
 import { KindIcon, kindLabel } from "../../ui/kind-icon";
 import { StateMarker, SymlinkBadge } from "../../ui/marks";
@@ -21,7 +22,7 @@ export interface ReachViewProps {
   showInactive: boolean;
   selectedId?: string;
   onSelect(record: InventoryRecord): void;
-  onOpenProject(path: string): void;
+  onOpenProject(path: string, landing?: Landing): void;
 }
 
 /** Column cells never claim a result for a project that is still scanning or failed to scan. */
@@ -122,6 +123,28 @@ function SourceRow({ row, props }: { row: ReachRow; props: ReachViewProps }) {
   );
 }
 
+/** Rows that apply everywhere draw one cell instead of a dot per project, once every scan has finished. */
+function UniformCells({ projects }: { projects: ReachProject[] }) {
+  const settled = projects.every((project) => project.records);
+  if (!settled) {
+    return projects.map((project) => (
+      <ScanCell key={project.path} project={project}>
+        <StateMarker large tier="active" />
+      </ScanCell>
+    ));
+  }
+  return (
+    <td
+      className="text-center text-caption text-ink-muted"
+      colSpan={projects.length}
+    >
+      {projects.length === 1
+        ? "the only project"
+        : `all ${projects.length} projects`}
+    </td>
+  );
+}
+
 export function SectionRows({
   section,
   props
@@ -175,11 +198,7 @@ export function SectionRows({
               </span>
             </span>
           </td>
-          {props.projects.map((project) => (
-            <ScanCell key={project.path} project={project}>
-              <StateMarker large tier="active" />
-            </ScanCell>
-          ))}
+          <UniformCells projects={props.projects} />
         </tr>
       ) : null}
       {open

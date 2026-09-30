@@ -19,7 +19,6 @@ interface MapViewProps {
   selectedId?: string;
   onSelect(id: string): void;
   onKind(kind: RecordKind): void;
-  onToggleInactive(): void;
 }
 
 function Contributions({ plugin }: { plugin: InventoryRecord }) {
@@ -83,18 +82,11 @@ function PluginChips({
             </button>
           ))}
         </div>
-        {layer.backgroundPlugins ? (
+        {/* Show inactive in the view bar is the one control that reveals these. */}
+        {layer.backgroundPlugins && !props.showInactive ? (
           <p className="mt-1.5 mb-0 text-caption text-ink-faint">
-            {props.showInactive ? "Showing " : ""}
-            {layer.backgroundPlugins} other{" "}
+            +{layer.backgroundPlugins} other{" "}
             {layer.backgroundPlugins === 1 ? "version" : "versions"}
-            {props.showInactive ? "" : " hidden"} ·{" "}
-            <button
-              className="text-ink-muted underline underline-offset-2"
-              onClick={props.onToggleInactive}
-            >
-              {props.showInactive ? "hide" : "show"}
-            </button>
           </p>
         ) : null}
       </div>

@@ -16,6 +16,8 @@ interface InventoryViewProps {
   kind: RecordKind | "all";
   selectedId?: string;
   context: PathContext;
+  /** Background versions per plugin name, while they are folded into the selected version's row. */
+  otherVersions?: ReadonlyMap<string, number>;
   hintFor(group: InventoryGroup): string | undefined;
   onKind(kind: RecordKind | "all"): void;
   onSelect(id: string): void;
@@ -108,6 +110,11 @@ export function InventoryView(props: InventoryViewProps) {
                 context={props.context}
                 key={record.id}
                 onSelect={props.onSelect}
+                otherVersions={
+                  record.kind === "plugin"
+                    ? props.otherVersions?.get(record.name)
+                    : undefined
+                }
                 record={record}
                 selected={record.id === props.selectedId}
               />

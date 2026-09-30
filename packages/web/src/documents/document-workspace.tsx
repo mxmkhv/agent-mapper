@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from "react";
+import type { PathContext } from "../model/paths";
 import { openSourceDocument } from "../source-document-api";
 import { isDirty, type Draft } from "../state/draft-store";
 import { reviewDraft } from "../state/document-actions";
@@ -19,6 +20,9 @@ interface DocumentWorkspaceProps {
   sourceKey: string;
   mode: DocumentMode;
   coverage: ImpactCoverage;
+  context: PathContext;
+  /** Where Back returns to, e.g. "map". */
+  backTo: string;
   onMode(mode: DocumentMode): void;
   onOpen(sourceKey: string): void;
   onBack(): void;
@@ -41,8 +45,10 @@ function EditorPane({ draft }: { draft: Draft }) {
           value={view}
         />
         <span className="hidden text-caption text-ink-faint md:inline">
-          ⌘S reviews changes · Ctrl+M switches Tab between indenting and moving
-          focus
+          ⌘S to review
+        </span>
+        <span className="sr-only">
+          Ctrl+M switches Tab between indenting and moving focus.
         </span>
       </div>
       {view === "source" ? (
@@ -108,6 +114,7 @@ function Body(props: {
   draft: Draft;
   mode: DocumentMode;
   coverage: ImpactCoverage;
+  context: PathContext;
   onBack(): void;
 }) {
   const { draft } = props;
@@ -116,10 +123,22 @@ function Body(props: {
     return <SourceConflict draft={draft} />;
   }
   if (props.mode === "history") {
-    return <SourceHistory draft={draft} onRestored={props.onBack} />;
+    return (
+      <SourceHistory
+        context={props.context}
+        draft={draft}
+        onRestored={props.onBack}
+      />
+    );
   }
   if (draft.phase === "reviewing") {
-    return <SourceReview coverage={props.coverage} draft={draft} />;
+    return (
+      <SourceReview
+        context={props.context}
+        coverage={props.coverage}
+        draft={draft}
+      />
+    );
   }
   return <EditorPane draft={draft} />;
 }
@@ -161,7 +180,7 @@ export function DocumentWorkspace(props: DocumentWorkspaceProps) {
       <div className="grid h-full place-items-center p-10 text-center">
         <div>
           <p className="text-ink-muted">This draft is no longer available.</p>
-          <Button onClick={props.onBack}>Back to inventory</Button>
+          <Button onClick={props.onBack}>Back to {props.backTo}</Button>
         </div>
       </div>
     );
@@ -172,6 +191,8 @@ export function DocumentWorkspace(props: DocumentWorkspaceProps) {
       className="grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] bg-surface"
     >
       <DocumentToolbar
+        backTo={props.backTo}
+        context={props.context}
         draft={draft}
         mode={props.mode}
         onBack={props.onBack}
@@ -193,6 +214,7 @@ export function DocumentWorkspace(props: DocumentWorkspaceProps) {
           )}
         >
           <Body
+            context={props.context}
             coverage={props.coverage}
             draft={draft}
             mode={props.mode}

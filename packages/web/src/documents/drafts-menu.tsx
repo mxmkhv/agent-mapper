@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
 import { FileText } from "lucide-react";
+import { tildePath, type PathContext } from "../model/paths";
 import { isDirty } from "../state/draft-store";
 import { useDrafts } from "../state/use-document-drafts";
 import { Button } from "../ui/button";
 
 /** Keeps every unsaved draft reachable, even when its source left the current view or inventory. */
-export function DraftsMenu({ onOpen }: { onOpen(sourceKey: string): void }) {
+export function DraftsMenu({
+  context,
+  onOpen
+}: {
+  context: PathContext;
+  onOpen(sourceKey: string): void;
+}) {
   const drafts = [...useDrafts().values()].filter(isDirty);
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -32,7 +39,7 @@ export function DraftsMenu({ onOpen }: { onOpen(sourceKey: string): void }) {
       {open ? (
         <ul
           aria-label="Unsaved drafts"
-          className="absolute top-8 right-0 z-30 m-0 grid w-80 max-w-[calc(100vw-2rem)] list-none gap-0.5 rounded-panel border border-hairline bg-surface p-1 shadow-dialog"
+          className="absolute top-8 right-0 z-40 m-0 grid w-80 max-w-[calc(100vw-2rem)] list-none gap-0.5 rounded-panel border border-hairline bg-surface p-1 shadow-dialog"
         >
           {drafts.map((draft) => (
             <li key={draft.sourceKey}>
@@ -48,7 +55,7 @@ export function DraftsMenu({ onOpen }: { onOpen(sourceKey: string): void }) {
                   {draft.document.source.name}
                 </span>
                 <span className="block font-mono text-caption break-all text-ink-muted">
-                  {draft.document.canonicalPath}
+                  {tildePath(draft.document.canonicalPath, context)}
                 </span>
               </button>
             </li>

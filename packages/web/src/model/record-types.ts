@@ -46,10 +46,14 @@ export interface InventoryRecord {
   startupTokens: number;
   lines?: number;
   characters?: number;
+  /** File size, for records measured in bytes rather than characters (memory). */
+  bytes?: number;
   locator?: string;
   /** Short secondary text: hook matcher, MCP transport, plugin version. */
   summary?: string;
   plugin?: PluginRef;
+  /** Marketplace a plugin record was installed from. */
+  marketplace?: string;
   /** Path inside the plugin install, when the record comes from a plugin. */
   pluginPath?: string;
   details: RecordDetail[];

@@ -6,13 +6,13 @@ export function EmptyState({
   children
 }: {
   title: string;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   return (
     <div className="col-span-full grid place-items-center p-16 text-center">
       <div>
         <h3 className="m-0 font-semibold">{title}</h3>
-        <p className="mt-1 text-ink-muted">{children}</p>
+        {children ? <p className="mt-1 text-ink-muted">{children}</p> : null}
       </div>
     </div>
   );

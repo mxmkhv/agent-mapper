@@ -100,15 +100,51 @@ export function SourceEditor(props: SourceEditorProps) {
   return <div className="h-full min-h-64" ref={host} />;
 }
 
+export interface DiffStats {
+  /** Lines touched, counting a replaced line once. */
+  changed: number;
+  added: number;
+  removed: number;
+}
+
+const lineCount = (start: number, end: number) => (end ? end - start + 1 : 0);
+
+function diffStats(changes: readonly monaco.editor.ILineChange[]): DiffStats {
+  const stats = { changed: 0, added: 0, removed: 0 };
+  for (const change of changes) {
+    const added = lineCount(
+      change.modifiedStartLineNumber,
+      change.modifiedEndLineNumber
+    );
+    const removed = lineCount(
+      change.originalStartLineNumber,
+      change.originalEndLineNumber
+    );
+    stats.added += added;
+    stats.removed += removed;
+    stats.changed += Math.max(added, removed);
+  }
+  return stats;
+}
+
 interface SourceDiffProps {
   original: string;
   modified: string;
   label: string;
+  onStats?(stats: DiffStats): void;
 }
 
 /** Read-only comparison; side by side when there is room, inline when narrow. */
-export function SourceDiff({ original, modified, label }: SourceDiffProps) {
+export function SourceDiff({
+  original,
+  modified,
+  label,
+  ...props
+}: SourceDiffProps) {
   const host = useRef<HTMLDivElement>(null);
+  const reportStats = useEffectEvent((stats: DiffStats) =>
+    props.onStats?.(stats)
+  );
   useEditorTheme();
 
   useEffect(() => {
@@ -128,7 +164,17 @@ export function SourceDiff({ original, modified, label }: SourceDiffProps) {
       ariaLabel: label
     });
     diff.setModel({ original: originalModel, modified: modifiedModel });
+    // The diff is computed asynchronously; the first result scrolls to the first change instead of line 1.
+    let revealed = false;
+    const updates = diff.onDidUpdateDiff(() => {
+      if (!revealed) {
+        revealed = true;
+        diff.revealFirstDiff();
+      }
+      reportStats(diffStats(diff.getLineChanges() ?? []));
+    });
     return () => {
+      updates.dispose();
       diff.dispose();
       originalModel.dispose();
       modifiedModel.dispose();

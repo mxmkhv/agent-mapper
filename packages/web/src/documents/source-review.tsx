@@ -1,8 +1,10 @@
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
+import type { PathContext } from "../model/paths";
 import type { Draft } from "../state/draft-store";
 import { Diagnostics } from "./diagnostics";
 import { ImpactSummary, type ImpactCoverage } from "./impact-summary";
 import { SourceDiff } from "./lazy";
+import type { DiffStats } from "./monaco-editor";
 
 export const loadingEditor = (
   <output className="block p-5 text-ink-muted">Loading editor…</output>
@@ -23,14 +25,34 @@ export function hasBlockingErrors(draft: Draft): boolean {
   );
 }
 
+/** "1 line changed +1 −1", once the diff has been computed. */
+function ChangeSize({ stats }: { stats?: DiffStats }) {
+  if (!stats) {
+    return <p className="m-0 mb-4 text-label text-ink-muted">Comparing…</p>;
+  }
+  return (
+    <p className="m-0 mb-4 text-label">
+      <strong className="font-semibold">
+        {stats.changed} {stats.changed === 1 ? "line" : "lines"} changed
+      </strong>{" "}
+      <span className="text-ink-muted tabular-nums">
+        +{stats.added} −{stats.removed}
+      </span>
+    </p>
+  );
+}
+
 /** Read-only diff of the file on disk against the exact text that Save will write. */
 export function SourceReview({
   draft,
-  coverage
+  coverage,
+  context
 }: {
   draft: Draft;
   coverage: ImpactCoverage;
+  context: PathContext;
 }) {
+  const [stats, setStats] = useState<{ text: string; stats: DiffStats }>();
   const review = draft.review;
   if (!review) {
     return null;
@@ -43,17 +65,21 @@ export function SourceReview({
           <SourceDiff
             label="Changes to review: file on disk on the left, your draft on the right"
             modified={review.text}
+            onStats={(next) => setStats({ text: review.text, stats: next })}
             original={draft.document.content}
           />
         </Suspense>
       </div>
       <aside aria-label="Review notes" className={notesPane}>
-        <h3 className="m-0 mb-2 text-label font-semibold">Review changes</h3>
         {nothing ? (
-          <p className="m-0 mb-2 text-label text-ink-muted">
+          <p className="m-0 mb-4 text-label text-ink-muted">
             No changes: your draft matches the file on disk.
           </p>
-        ) : null}
+        ) : (
+          <ChangeSize
+            stats={stats?.text === review.text ? stats.stats : undefined}
+          />
+        )}
         {review.result.unchanged && !nothing ? (
           <p className="m-0 mb-2 text-label text-ink-muted">
             The file on disk already contains this text, probably from an
@@ -67,9 +93,12 @@ export function SourceReview({
           </p>
         ) : null}
         <div className="mt-4">
-          <ImpactSummary coverage={coverage} impact={review.result.impact} />
+          <ImpactSummary
+            context={context}
+            coverage={coverage}
+            impact={review.result.impact}
+          />
         </div>
-        <p className="mt-4 mb-0 text-caption text-ink-faint">{metadataNote}</p>
       </aside>
     </div>
   );

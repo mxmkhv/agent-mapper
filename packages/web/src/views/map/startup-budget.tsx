@@ -33,7 +33,10 @@ export function StartupBudget({ context, tool, records }: BudgetProps) {
     `${(value / Math.max(startup, 1)) * percent}%`;
   return (
     <div className="mt-2.5">
-      <div className="flex flex-wrap gap-4 text-label text-ink-muted">
+      <div
+        className="flex flex-wrap gap-4 text-label text-ink-muted"
+        title="Characters ÷ 4, not billed tokens"
+      >
         <span>
           Startup{" "}
           <strong className="font-semibold text-ink tabular-nums">
@@ -49,9 +52,6 @@ export function StartupBudget({ context, tool, records }: BudgetProps) {
         {estimate.unaccountedSources ? (
           <span>{estimate.unaccountedSources} unmeasured</span>
         ) : null}
-        <span className="text-ink-faint">
-          Characters ÷ 4, not billed tokens
-        </span>
       </div>
       <div
         className="mt-2 flex h-1.5 gap-0.5 overflow-hidden rounded-full bg-wash"

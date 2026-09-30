@@ -46,3 +46,33 @@ export function groupDifferences(
     };
   });
 }
+
+export interface DifferenceSection {
+  state: WorktreeDifference["state"];
+  groups: DifferenceGroup[];
+  files: number;
+}
+
+/** Files present in both checkouts that disagree matter most; files only in main are usually just an older branch. */
+const sectionOrder: readonly WorktreeDifference["state"][] = [
+  "different-content",
+  "unknown",
+  "only-here",
+  "only-main"
+];
+
+/** One section per state, so a long run of "only in main" never buries a content difference. */
+export function differenceSections(
+  rows: readonly WorktreeDifference[]
+): DifferenceSection[] {
+  return sectionOrder
+    .map((state) => {
+      const members = rows.filter((row) => row.state === state);
+      return {
+        state,
+        groups: groupDifferences(members),
+        files: members.length
+      };
+    })
+    .filter((section) => section.files > 0);
+}

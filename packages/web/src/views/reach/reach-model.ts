@@ -1,7 +1,7 @@
 import { isInside } from "../../model/paths";
 import type { InventoryRecord, RecordKind } from "../../model/record-types";
 import { kindOrder } from "../../ui/kind-icon";
-import { isBackgroundVersion } from "../map/map-model";
+import { isBackgroundVersion } from "../../model/plugin-versions";
 
 export interface ReachProject {
   name: string;
