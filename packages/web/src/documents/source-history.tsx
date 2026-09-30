@@ -1,9 +1,12 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import type { RevisionContent } from "@agent-mapper/core";
+import { revealSourceHistory } from "../source-document-api";
 import { restoreRevision } from "../state/document-actions";
 import { isDirty, type Draft } from "../state/draft-store";
 import { useDocuments } from "../state/use-document-drafts";
+import { tildePath, type PathContext } from "../model/paths";
 import { Button } from "../ui/button";
+import { EmptyState } from "../ui/empty-state";
 import { Diagnostics } from "./diagnostics";
 import { SourceDiff } from "./lazy";
 import { RevisionList } from "./revision-list";
@@ -82,23 +85,89 @@ function useRestore(draft: Draft, onRestored: () => void) {
   };
 }
 
+/** The saved versions live under a long hashed folder; Finder shows it instead of printing the path. */
+function RevealFolder({ documentId }: { documentId: string }) {
+  const [error, setError] = useState<string>();
+  async function reveal() {
+    setError(undefined);
+    try {
+      await revealSourceHistory(documentId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  }
+  return (
+    <>
+      <Button onClick={() => void reveal()}>Reveal in Finder</Button>
+      {error ? (
+        <p className="mt-2 mb-0 text-label text-problem" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+function RestorePanel({
+  draft,
+  ready,
+  onRestore
+}: {
+  draft: Draft;
+  ready: RevisionContent;
+  onRestore(revisionId: string): void;
+}) {
+  const blockedReason = isDirty(draft)
+    ? "Save or discard your unsaved changes before restoring."
+    : draft.document.readOnlyReason;
+  return (
+    <div className="mt-4">
+      <Diagnostics diagnostics={ready.diagnostics} />
+      <p className="mt-2 mb-2 text-caption text-ink-faint">
+        Restoring writes the version on the right back exactly, even if it has
+        warnings or errors, and keeps a copy of the current file so you can undo
+        it.
+      </p>
+      <Button
+        disabled={Boolean(blockedReason) || Boolean(draft.busy)}
+        onClick={() => onRestore(ready.revision.revisionId)}
+        title={metadataNote}
+        variant="primary"
+      >
+        {draft.busy === "restoring" ? "Restoring…" : "Restore this version"}
+      </Button>
+      {blockedReason ? (
+        <p className="mt-2 mb-0 text-label text-ink-muted">{blockedReason}</p>
+      ) : null}
+    </div>
+  );
+}
+
 export function SourceHistory({
   draft,
+  context,
   onRestored
 }: {
   draft: Draft;
+  context: PathContext;
   onRestored(): void;
 }) {
-  const { documentId } = draft.document;
+  const { documentId, historyDirectory } = draft.document;
   const list = useHistoryList(documentId);
   const [selectedId, setSelectedId] = useState<string>();
   const selected = useRevision(documentId, selectedId);
   const restore = useRestore(draft, onRestored);
-  const blockedReason = isDirty(draft)
-    ? "Save or discard your unsaved changes before restoring."
-    : draft.document.readOnlyReason;
   const ready =
     selected.load?.status === "ready" ? selected.load.value : undefined;
+  const history = list.load?.status === "ready" ? list.load.value : undefined;
+  if (history && !history.revisions.length && !history.problems.length) {
+    return (
+      <EmptyState title="No saved versions yet">
+        agent-mapper keeps a copy of the file each time you save or restore it
+        here.
+      </EmptyState>
+    );
+  }
   return (
     <div className={splitLayout}>
       <div className="min-h-0">
@@ -109,16 +178,18 @@ export function SourceHistory({
         />
       </div>
       <aside aria-label="Saved versions" className={notesPane}>
-        <h3 className="m-0 mb-1 text-label font-semibold">Saved versions</h3>
-        <p className="m-0 mb-3 font-mono text-caption break-words text-ink-faint">
-          {draft.document.historyDirectory}
-        </p>
+        <h3
+          className="m-0 mb-3 text-label font-semibold"
+          title={tildePath(historyDirectory, context)}
+        >
+          Saved versions
+        </h3>
         {list.load?.status === "error" ? (
           <LoadProblem message={list.load.message} onRetry={list.retry} />
         ) : null}
-        {list.load?.status === "ready" ? (
+        {history ? (
           <>
-            {list.load.value.problems.map((problem) => (
+            {history.problems.map((problem) => (
               <p
                 className="m-0 mb-2 text-label text-problem"
                 key={problem}
@@ -128,7 +199,7 @@ export function SourceHistory({
               </p>
             ))}
             <RevisionList
-              items={list.load.value.revisions}
+              items={history.revisions}
               onSelect={setSelectedId}
               selectedId={selectedId}
             />
@@ -138,29 +209,15 @@ export function SourceHistory({
           <p className="m-0 text-label text-ink-muted">Loading history…</p>
         ) : null}
         {ready ? (
-          <div className="mt-4">
-            <Diagnostics diagnostics={ready.diagnostics} />
-            <p className="mt-2 mb-2 text-caption text-ink-faint">
-              Restoring writes the version on the right back exactly, even if it
-              has warnings or errors, and keeps a copy of the current file so
-              you can undo it. {metadataNote}
-            </p>
-            <Button
-              disabled={Boolean(blockedReason) || Boolean(draft.busy)}
-              onClick={() => void restore(ready.revision.revisionId)}
-              variant="primary"
-            >
-              {draft.busy === "restoring"
-                ? "Restoring…"
-                : "Restore this version"}
-            </Button>
-            {blockedReason ? (
-              <p className="mt-2 mb-0 text-label text-ink-muted">
-                {blockedReason}
-              </p>
-            ) : null}
-          </div>
+          <RestorePanel
+            draft={draft}
+            onRestore={(revisionId) => void restore(revisionId)}
+            ready={ready}
+          />
         ) : null}
+        <div className="mt-5">
+          <RevealFolder documentId={documentId} />
+        </div>
       </aside>
     </div>
   );

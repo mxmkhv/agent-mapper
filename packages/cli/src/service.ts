@@ -2,6 +2,7 @@ import { realpath, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import {
+  coverageAreas,
   resolveInventory,
   summarizeContext,
   type InventoryEntry,
@@ -15,19 +16,7 @@ import { resolveScanContext } from "./scan-context";
 export { createAppServer } from "./server";
 
 function coverage(errors: string[]): string[] {
-  return [
-    ...errors,
-    "Hook coverage includes local managed files and skill and agent frontmatter. Agent Stop hooks become SubagentStop while running as subagents. Remote and device policy selection, activation, project trust, and unsupported declaration shapes are not verified.",
-    "MCP coverage includes readable local managed files. Remote and device policy selection, runtime filters, account and session connections, approval state, and unsupported declaration fields are not verified. Servers are not contacted.",
-    "Memory coverage includes local Markdown files only. Claude encoded folder names are candidates, not verified project matches; custom memory locations and live use are not resolved.",
-    "Agent coverage includes local Claude Markdown and Codex TOML files, plus Claude plugin agent files. Managed and session agents, unsupported declarations, project trust, and live use are not verified. Agent prompts stay in source files.",
-    "Worktree comparison checks common local configuration files by relative path and content. Generated folders and inherited global files are excluded. A changed settings file does not identify which declaration changed inside it.",
-    "Context figures approximate known file text at four characters per token. Imported instruction content, skill listing budgets, memory loading, settings effects, and other runtime content are not estimated.",
-    "Instruction resolution models default Claude Code and Codex file rules. Custom instruction file settings, trust decisions, and runtime overrides are not inspected.",
-    "Claude user configuration follows CLAUDE_CONFIG_DIR in this process. An existing Claude session may use a different environment.",
-    "Local managed Claude instructions are scanned when readable. Remote, MDM, registry, and host policy are not inspected; they may replace or combine with local managed settings.",
-    "This view models a fresh local CLI session. Runtime flags, account-managed settings, and live session state are not inspected."
-  ];
+  return [...errors, ...coverageAreas.map((area) => area.detail)];
 }
 
 function resolveItems(entries: InventoryEntry[], path: string) {

@@ -56,12 +56,13 @@ it("shows linked checkouts from the main view, including stale registrations", (
       workingDirectory: "/app",
       context: {},
       tool: "claude",
+      refreshKey: 0,
       onSelectPath: () => undefined
     })
   );
   expect(html).toContain("feature");
   expect(html).toContain("prunable");
-  expect(html).toContain("Open checkout");
+  expect(html).toContain("linked");
 });
 
 it("explains when the selected folder is outside Git", () => {
@@ -71,13 +72,14 @@ it("explains when the selected folder is outside Git", () => {
       workingDirectory: "/plain",
       context: {},
       tool: "claude",
+      refreshKey: 0,
       onSelectPath: () => undefined
     })
   );
   expect(html).toContain("No Git repository");
 });
 
-it("labels differences and tracking without showing configuration content", () => {
+it("lists content differences before files only in the main checkout", () => {
   const html = renderToStaticMarkup(
     createElement(WorktreeView, {
       worktrees,
@@ -85,12 +87,14 @@ it("labels differences and tracking without showing configuration content", () =
       workingDirectory: "/linked",
       context: {},
       tool: "claude",
+      refreshKey: 0,
       onSelectPath: () => undefined
     })
   );
-  expect(html).toContain("Different content");
-  expect(html).toContain("Only in main checkout");
-  expect(html).toContain("tracked");
+  expect(html.indexOf("Different content")).toBeGreaterThan(-1);
+  expect(html.indexOf("Different content")).toBeLessThan(
+    html.indexOf("Only in main checkout")
+  );
   expect(html).not.toContain("Private prompt");
 });
 
@@ -122,6 +126,7 @@ it("keeps shared differences but hides Claude files under the Codex filter", () 
       workingDirectory: "/linked",
       context: {},
       tool: "codex",
+      refreshKey: 0,
       onSelectPath: () => undefined
     })
   );
@@ -144,9 +149,10 @@ it("shows checkout paths under home with ~", () => {
       workingDirectory: "/Users/me/app",
       context: { home: "/Users/me" },
       tool: "claude",
+      refreshKey: 0,
       onSelectPath: () => undefined
     })
   );
-  expect(html).toContain("<span>~/<wbr/></span>");
+  expect(html).toContain('title="~/trees/feature"');
   expect(html).not.toContain("Users");
 });

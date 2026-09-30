@@ -1,11 +1,12 @@
 import type { InventoryRecord } from "../model/record-types";
+import type { Landing } from "../shell/view-bar";
 import { stateText } from "../model/states";
 import { StateMarker } from "../ui/marks";
 import { recordKey, type ReachProject } from "../views/reach/reach-model";
 
 export interface ReachScope {
   projects: ReachProject[];
-  onOpen(path: string, selectId?: string): void;
+  onOpen(path: string, landing?: Landing): void;
 }
 
 /** Which projects a source outside any project actually reaches, and in what state. */
@@ -32,7 +33,12 @@ export function ReachSection({
           <button
             className="flex h-7 w-full items-center gap-2 rounded-control px-2 text-left hover:bg-hover"
             key={project.path}
-            onClick={() => reach.onOpen(project.path, match?.id)}
+            onClick={() =>
+              reach.onOpen(
+                project.path,
+                match ? { selectId: match.id } : undefined
+              )
+            }
           >
             {match ? (
               <StateMarker tier={match.tier} />

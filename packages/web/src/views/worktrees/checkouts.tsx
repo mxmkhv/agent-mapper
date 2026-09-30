@@ -1,31 +1,93 @@
-import { useState } from "react";
-import type { WorktreeRecord } from "@agent-mapper/core";
+import {
+  coverageProblems,
+  type InventorySnapshot,
+  type ToolId,
+  type WorktreeDifference,
+  type WorktreeRecord
+} from "@agent-mapper/core";
 import { GitBranch } from "lucide-react";
-import { Button } from "../../ui/button";
+import type { Landing } from "../../shell/view-bar";
+import { EmptyState } from "../../ui/empty-state";
 import { StateLabel, StateMarker } from "../../ui/marks";
 import { tildePath, type PathContext } from "../../model/paths";
-import { EmptyState } from "../../ui/empty-state";
-import { PathText } from "../../ui/path-text";
-import { DetailPane, ListPane } from "./panes";
+import { useFolderScans, type FolderScan } from "../../state/use-folder-scans";
+import { relevantDifferences } from "./difference-groups";
+import { ListPane, ListSection } from "./panes";
+
+type CheckoutScan = FolderScan<WorktreeDifference[]>;
+
+/** A scan without a comparison compared nothing; its scan problems say why instead of implying no drift. */
+function readDifferences(snapshot: InventorySnapshot): CheckoutScan {
+  if (snapshot.comparison) {
+    return { status: "ready", value: snapshot.comparison.differences };
+  }
+  const [problem] = coverageProblems(snapshot.coverage);
+  return {
+    status: "error",
+    message:
+      problem ??
+      "No comparison with the main checkout was returned. Rescan to try again."
+  };
+}
 
 const folderName = (path: string) => path.split("/").at(-1) ?? path;
 
 interface CheckoutsProps {
   worktrees: WorktreeRecord[];
   context: PathContext;
-  onSelectPath(path: string): void;
+  tool: ToolId;
+  refreshKey: number;
+  onSelectPath(path: string, landing?: Landing): void;
 }
 
-/** From the main checkout: every linked worktree Git knows about, including stale registrations. */
+function DifferenceCount({
+  scan,
+  tool
+}: {
+  scan?: CheckoutScan;
+  tool: ToolId;
+}) {
+  if (!scan) {
+    return <span className="text-caption text-ink-faint">…</span>;
+  }
+  if (scan.status === "error") {
+    return (
+      <span className="text-caption text-problem" title={scan.message}>
+        not compared · rescan
+      </span>
+    );
+  }
+  const count = relevantDifferences(scan.value, tool).length;
+  return (
+    <span className="text-caption whitespace-nowrap text-ink-muted tabular-nums">
+      {count
+        ? `${count} ${count === 1 ? "file differs" : "files differ"}`
+        : "no differences"}
+    </span>
+  );
+}
+
+/**
+ * From the main checkout: every linked worktree Git knows about, including stale registrations. Rows lead with
+ * the branch, as the sidebar does, and open that checkout's comparison.
+ */
 export function Checkouts({
   worktrees,
   context,
+  tool,
+  refreshKey,
   onSelectPath
 }: CheckoutsProps) {
   const linked = worktrees.filter((tree) => !tree.isMain);
-  const [selectedPath, setSelectedPath] = useState<string>();
-  const selected =
-    linked.find((tree) => tree.path === selectedPath) ?? linked[0];
+  const scans = useFolderScans(
+    {
+      paths: linked
+        .filter((tree) => tree.state === "available")
+        .map((tree) => tree.path),
+      refresh: refreshKey
+    },
+    readDifferences
+  );
   if (!linked.length) {
     return worktrees.length ? (
       <EmptyState title="No linked worktrees">
@@ -38,16 +100,18 @@ export function Checkouts({
     );
   }
   return (
-    <>
-      <ListPane title="Linked worktrees" count={linked.length}>
+    <ListPane>
+      <ListSection count={linked.length} title="Linked worktrees">
         {linked.map((tree) => {
           const available = tree.state === "available";
+          const folder = folderName(tree.path);
           return (
             <button
-              aria-current={tree === selected ? "true" : undefined}
-              className={`grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_minmax(0,1fr)_72px] items-center gap-2.5 px-3 text-left [&+&]:border-t [&+&]:border-wash ${tree === selected ? "bg-selected" : "hover:bg-hover"}`}
+              className="grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_minmax(0,1fr)_120px] items-center gap-2.5 px-3 text-left hover:bg-hover disabled:cursor-default disabled:hover:bg-transparent [&+&]:border-t [&+&]:border-wash"
+              disabled={!available}
               key={tree.path}
-              onClick={() => setSelectedPath(tree.path)}
+              onClick={() => onSelectPath(tree.path, { view: "worktrees" })}
+              title={tildePath(tree.path, context)}
             >
               <GitBranch
                 aria-hidden="true"
@@ -58,54 +122,29 @@ export function Checkouts({
               <span
                 className={`truncate font-semibold ${available ? "" : "text-ink-muted"}`}
               >
-                {folderName(tree.path)}
+                {tree.branch ?? folder}
               </span>
-              <span className="truncate font-mono text-mono text-ink-faint">
-                {tree.branch ?? "detached"}
+              {available ? (
+                <span className="truncate font-mono text-mono text-ink-faint">
+                  {tree.branch ? folder : "detached"}
+                </span>
+              ) : (
+                // Git still lists the checkout but its folder is gone; say where to look.
+                <span className="truncate text-caption text-ink-muted">
+                  Folder unavailable · check git worktree list
+                </span>
+              )}
+              <span className="truncate text-right">
+                {available ? (
+                  <DifferenceCount scan={scans.get(tree.path)} tool={tool} />
+                ) : (
+                  <StateLabel text={tree.state} tier="problem" />
+                )}
               </span>
-              <StateLabel
-                text={available ? undefined : tree.state}
-                tier="problem"
-              />
             </button>
           );
         })}
-      </ListPane>
-      {selected ? (
-        <DetailPane eyebrow="Worktree" title={folderName(selected.path)}>
-          <dl className="m-0 mt-4 grid grid-cols-[88px_minmax(0,1fr)] gap-x-2.5 gap-y-1.5 text-label">
-            <dt className="text-ink-muted">Git state</dt>
-            <dd className="m-0">{selected.state}</dd>
-            <dt className="text-ink-muted">Branch</dt>
-            {selected.branch ? (
-              <dd className="m-0 font-mono text-mono break-words">
-                <PathText path={selected.branch} />
-              </dd>
-            ) : (
-              <dd className="m-0">detached or unavailable</dd>
-            )}
-            <dt className="text-ink-muted">Path</dt>
-            <dd className="m-0 font-mono text-mono break-words">
-              <PathText path={tildePath(selected.path, context)} />
-            </dd>
-          </dl>
-          {selected.state === "available" ? (
-            <div className="mt-5.5 flex gap-2">
-              <Button
-                onClick={() => onSelectPath(selected.path)}
-                variant="primary"
-              >
-                Open checkout
-              </Button>
-            </div>
-          ) : (
-            <p className="mt-4 text-label text-problem" role="alert">
-              Git still lists this checkout, but its folder is unavailable.
-              Inspect it with git worktree list.
-            </p>
-          )}
-        </DetailPane>
-      ) : null}
-    </>
+      </ListSection>
+    </ListPane>
   );
 }

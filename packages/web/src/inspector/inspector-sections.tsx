@@ -39,9 +39,7 @@ export function Provenance({
   onSelect(id: string): void;
 }) {
   if (record.kind === "plugin") {
-    const marketplace = record.details.find(
-      (detail) => detail.label === "Marketplace"
-    )?.value;
+    const { marketplace } = record;
     return (
       <div className="mt-4 flex flex-wrap items-center gap-1 rounded-panel bg-wash px-3 py-2.5 text-label">
         <span className="font-semibold">{layerLabel[record.layer]}</span>
@@ -148,6 +146,31 @@ export function Contributions({
   );
 }
 
+const kilobyte = 1024;
+
+/** Token estimate when the characters are known, otherwise the file size in bytes. */
+function amountText({ characters, bytes }: InventoryRecord): string {
+  if (characters) {
+    return `~${Math.round(characters / charactersPerToken).toLocaleString()} tokens`;
+  }
+  if (bytes === undefined) {
+    return "";
+  }
+  return bytes < kilobyte
+    ? `${bytes} B`
+    : `${(bytes / kilobyte).toFixed(1)} KB`;
+}
+
+/** "36 lines · ~591 tokens", or "16 lines · 1.4 KB" for files measured in bytes. */
+export function sizeText(record: InventoryRecord): string | undefined {
+  const parts = [
+    record.lines ? `${record.lines} lines` : "",
+    amountText(record)
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : undefined;
+}
+
+/** Facts the header and breadcrumb do not already show; nothing when there are none. */
 export function Details({
   record,
   context
@@ -155,31 +178,20 @@ export function Details({
   record: InventoryRecord;
   context: PathContext;
 }) {
-  const rows = [
-    { label: "Scope", value: record.scope },
-    ...(record.loading ? [{ label: "Loading", value: record.loading }] : []),
-    ...(record.lines
-      ? [
-          {
-            label: "Size",
-            value: `${record.lines} lines${record.characters ? ` · ~${Math.round(record.characters / charactersPerToken).toLocaleString()} tokens` : ""}`
-          }
-        ]
-      : []),
-    ...record.details.map((detail) => ({
-      ...detail,
-      value: tildePath(detail.value, context)
-    }))
-  ];
+  if (!record.details.length) {
+    return null;
+  }
   return (
-    <dl className="m-0 grid grid-cols-[104px_minmax(0,1fr)] gap-x-2.5 gap-y-1.5 text-label">
-      {rows.map((row) => (
-        <div className="contents" key={row.label}>
-          <dt className="text-ink-muted">{row.label}</dt>
-          <dd className="m-0 break-words">{row.value}</dd>
-        </div>
-      ))}
-    </dl>
+    <Section title="Details">
+      <dl className="m-0 grid grid-cols-[104px_minmax(0,1fr)] gap-x-2.5 gap-y-1.5 text-label">
+        {record.details.map((row) => (
+          <div className="contents" key={`${row.label}\0${row.value}`}>
+            <dt className="text-ink-muted">{row.label}</dt>
+            <dd className="m-0 break-words">{tildePath(row.value, context)}</dd>
+          </div>
+        ))}
+      </dl>
+    </Section>
   );
 }
 

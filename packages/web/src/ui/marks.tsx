@@ -71,15 +71,18 @@ export function StateLabel({ tier, text }: { tier: Tier; text?: string }) {
 
 export function SymlinkBadge({
   target,
-  text = "symlink"
+  text = "symlink",
+  title
 }: {
   target?: string;
   text?: string;
+  /** Replaces the default "Symlink → target" tooltip. */
+  title?: string;
 }) {
   return (
     <span
       className="inline-flex h-[18px] items-center gap-[3px] rounded-pill border border-hairline bg-surface px-1.5 text-caption font-medium whitespace-nowrap text-ink-muted"
-      title={target ? `Symlink → ${target}` : undefined}
+      title={title ?? (target ? `Symlink → ${target}` : undefined)}
     >
       <Link2 aria-hidden="true" className="size-[11px]" strokeWidth={1.8} />
       {text}

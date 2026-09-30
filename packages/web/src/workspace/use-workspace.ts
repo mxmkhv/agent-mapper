@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import type { InventorySnapshot, ToolId } from "@agent-mapper/core";
 import { buildRecords } from "../model/build-records";
 import { pathContext } from "../model/paths";
+import { foldInactive } from "../model/plugin-versions";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
-import type { View } from "../shell/view-bar";
+import type { Landing, View } from "../shell/view-bar";
 import { useSearchShortcut } from "../use-search-shortcut";
 import { useDocumentView } from "./use-document-view";
 
@@ -13,14 +14,14 @@ interface WorkspaceInput {
   tool: ToolId;
   /** Records from other folders (Global reach), so links and rows from them can be inspected. */
   extraRecords: InventoryRecord[];
-  initialSelectedId?: string;
+  landing?: Landing;
   onTool(tool: ToolId): void;
 }
 
 const belongsTo = (record: InventoryRecord, tool: ToolId) =>
   record.tool === tool || record.tool === "unknown";
 
-/** Records for the selected tool; inactive ones only when the user asked to see them. */
+/** Records for the selected tool; inactive ones and background plugin versions only when asked for. */
 function forTool(
   records: InventoryRecord[],
   filter: { tool: ToolId; showInactive: boolean }
@@ -28,11 +29,28 @@ function forTool(
   const toolRecords = records.filter((record) =>
     belongsTo(record, filter.tool)
   );
-  const active = toolRecords.filter((record) => record.tier !== "inactive");
+  const { hidden, otherVersions } = foldInactive(toolRecords);
+  const shown = toolRecords.filter((record) => !hidden(record));
   return {
     toolRecords,
-    visible: filter.showInactive ? toolRecords : active,
-    inactiveCount: toolRecords.length - active.length
+    visible: filter.showInactive ? toolRecords : shown,
+    inactiveCount: toolRecords.length - shown.length,
+    otherVersions
+  };
+}
+
+/**
+ * Whether the list for the record's tool hides it until Show inactive. Uses the same records and fold as
+ * `forTool`; a record from another folder (Global reach) is hidden only when inactive.
+ */
+function foldedIn(records: readonly InventoryRecord[], tool: ToolId) {
+  return (record: InventoryRecord) => {
+    const own = records.filter((item) =>
+      belongsTo(item, record.tool === "unknown" ? tool : record.tool)
+    );
+    return own.some((item) => item.id === record.id)
+      ? foldInactive(own).hidden(record)
+      : record.tier === "inactive";
   };
 }
 
@@ -42,10 +60,15 @@ function useSelection(
   {
     tool,
     onTool,
-    initialSelectedId
-  }: Pick<WorkspaceInput, "tool" | "onTool" | "initialSelectedId">
+    landing,
+    isFolded
+  }: Pick<WorkspaceInput, "tool" | "onTool" | "landing"> & {
+    isFolded(record: InventoryRecord): boolean;
+  }
 ) {
-  const [selectedId, setSelectedId] = useState(initialSelectedId);
+  const [selectedId, setSelectedId] = useState(
+    landing && "selectId" in landing ? landing.selectId : undefined
+  );
   const [showInactive, setShowInactive] = useState(false);
   const [showCoverage, setShowCoverage] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -53,7 +76,7 @@ function useSelection(
   const selected = records.find((record) => record.id === selectedId);
 
   /**
-   * Selecting from a link, search, or finding may cross tools or reveal an inactive item.
+   * Selecting from a link, search, or finding may cross tools or reveal a folded item.
    * Views that already show the row (Reach) pass `reveal: false` so the list does not reflow.
    */
   function select(id: string, { reveal = true }: { reveal?: boolean } = {}) {
@@ -61,7 +84,7 @@ function useSelection(
     if (record && record.tool !== "unknown" && record.tool !== tool) {
       onTool(record.tool);
     }
-    if (reveal && record?.tier === "inactive") {
+    if (reveal && record && isFolded(record)) {
       setShowInactive(true);
     }
     setSelectedId(id);
@@ -85,11 +108,20 @@ function useSelection(
   };
 }
 
+/** The browsing view and kind filter; a landing from another folder can preset both. */
+function useViewFilter(isProject: boolean, landing?: Landing) {
+  const target = landing && "view" in landing ? landing : undefined;
+  const [view, setView] = useState<View>(
+    target?.view ?? (isProject ? "map" : "reach")
+  );
+  const [kind, setKind] = useState<RecordKind | "all">(target?.kind ?? "all");
+  return { view, setView, kind, setKind };
+}
+
 /** All per-folder UI state: view, filters, selection, and the records the views render. */
 export function useWorkspace(input: WorkspaceInput) {
   const { snapshot, isProject, tool } = input;
-  const [view, setView] = useState<View>(isProject ? "map" : "reach");
-  const [kind, setKind] = useState<RecordKind | "all">("all");
+  const filter = useViewFilter(isProject, input.landing);
   const records = useMemo(
     () => buildRecords(snapshot, isProject ? "project" : "global"),
     [snapshot, isProject]
@@ -102,7 +134,10 @@ export function useWorkspace(input: WorkspaceInput) {
     () => [...records, ...input.extraRecords],
     [records, input.extraRecords]
   );
-  const selection = useSelection(lookup, input);
+  const selection = useSelection(lookup, {
+    ...input,
+    isFolded: foldedIn(records, tool)
+  });
   const documents = useDocumentView();
   return {
     ...selection,
@@ -114,18 +149,18 @@ export function useWorkspace(input: WorkspaceInput) {
       }
       selection.select(...args);
     },
-    view,
+    view: filter.view,
     /** Choosing a view leaves any open document; its draft stays in the Drafts menu. */
     setView(next: View) {
       if (documents.documentView) {
         documents.closeDocument();
       }
-      setView(next);
+      filter.setView(next);
     },
-    kind,
+    kind: filter.kind,
     filterKind(next: RecordKind | "all") {
-      setKind(next);
-      setView("inventory");
+      filter.setKind(next);
+      filter.setView("inventory");
     },
     records,
     lookup,

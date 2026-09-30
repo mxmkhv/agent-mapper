@@ -92,14 +92,11 @@ export function Header(props: HeaderProps) {
           Search
           <kbd className="font-mono text-caption text-ink-faint">⌘K</kbd>
         </Button>
-        <span className="hidden text-caption whitespace-nowrap text-ink-faint xl:inline">
-          {props.refreshing ? "Rescanning…" : `Scanned ${time}`}
-        </span>
         <Button
           aria-label="Rescan"
           disabled={props.refreshing}
           onClick={props.onRescan}
-          title={`Rescan · scanned ${time}`}
+          title={props.refreshing ? "Rescanning…" : `Rescan · scanned ${time}`}
           variant="icon"
         >
           <RefreshCw

@@ -46,3 +46,40 @@ export function groupDifferences(
     };
   });
 }
+
+export interface DifferenceSection {
+  state: WorktreeDifference["state"];
+  groups: DifferenceGroup[];
+  files: number;
+}
+
+/**
+ * Files present in both checkouts that disagree matter most; files only in main are usually just an older
+ * branch. A rank per state, so a new state from core fails to compile instead of vanishing from the list.
+ */
+const sectionRank = {
+  "different-content": 0,
+  unknown: 1,
+  "only-here": 2,
+  "only-main": 3
+} satisfies Record<WorktreeDifference["state"], number>;
+
+const sectionOrder = (
+  Object.keys(sectionRank) as WorktreeDifference["state"][]
+).sort((a, b) => sectionRank[a] - sectionRank[b]);
+
+/** One section per state, so a long run of "only in main" never buries a content difference. */
+export function differenceSections(
+  rows: readonly WorktreeDifference[]
+): DifferenceSection[] {
+  return sectionOrder
+    .map((state) => {
+      const members = rows.filter((row) => row.state === state);
+      return {
+        state,
+        groups: groupDifferences(members),
+        files: members.length
+      };
+    })
+    .filter((section) => section.files > 0);
+}

@@ -1,4 +1,5 @@
 import type { ImpactAssociation, SourceImpact } from "@agent-mapper/core";
+import { tildePath, type PathContext } from "../model/paths";
 import { ToolGlyph } from "../ui/marks";
 
 /** What the current view knows about scan coverage, so impact is never overstated. */
@@ -12,42 +13,38 @@ export type ImpactCoverage =
     }
   | { mode: "project"; workingDirectory: string };
 
-const availabilityText: Record<ImpactAssociation["availability"], string> = {
-  expected: "Expected to apply",
-  shadowed: "Shadowed by another file",
-  "not-applicable": "Not used here",
-  unknown: "Unknown"
+const availabilityWord: Record<ImpactAssociation["availability"], string> = {
+  expected: "applies",
+  shadowed: "shadowed",
+  "not-applicable": "not used",
+  unknown: "unknown"
 };
 
-const projectName = (path: string) => path.split("/").at(-1) ?? path;
-const projects = (count: number) =>
-  `${count} discovered ${count === 1 ? "project" : "projects"}`;
+const baseName = (path: string) => path.split("/").at(-1) ?? path;
+const plural = (count: number, word: string) =>
+  `${count} ${word}${count === 1 ? "" : "s"}`;
 
-function coverageText(impact: SourceImpact, coverage: ImpactCoverage): string {
-  if (coverage.mode === "global") {
-    const counts = [
-      coverage.pending ? `${coverage.pending} still scanning` : "",
-      coverage.failed ? `${coverage.failed} failed to scan` : ""
-    ].filter(Boolean);
-    const base =
-      coverage.scanned === coverage.total
-        ? `Known impact across ${projects(coverage.total)}.`
-        : `Known impact across ${coverage.scanned} of ${projects(coverage.total)} scanned${counts.length ? ` (${counts.join(", ")})` : ""}.`;
-    return `${base} Discovery skips excluded folders and deep paths, so other projects may also use this file.`;
+/** The caveat behind every count: only scanned contexts are known. */
+function coverageNote(coverage: ImpactCoverage): string {
+  return coverage.mode === "global"
+    ? "Only scanned projects are known. Discovery skips excluded folders and deep paths, so other projects may also use this file."
+    : "Only this project and previously scanned projects are known. Projects that have not been scanned may also use this file.";
+}
+
+/** Scans still running or failed change what the list can claim, so they stay visible. */
+function scanGaps(coverage: ImpactCoverage): string | undefined {
+  if (coverage.mode !== "global") {
+    return undefined;
   }
-  const others = new Set(
-    impact.contexts
-      .filter(
-        (context) =>
-          context.scope === "project" &&
-          context.workingDirectory !== coverage.workingDirectory
-      )
-      .map((context) => context.workingDirectory)
-  ).size;
-  const previously = others
-    ? ` and ${others} previously scanned ${others === 1 ? "project" : "projects"}`
-    : "";
-  return `Known impact from this project${previously}. Projects that have not been scanned may also use this file.`;
+  const gaps = [
+    coverage.pending
+      ? `${plural(coverage.pending, "project")} still scanning`
+      : "",
+    coverage.failed
+      ? `${plural(coverage.failed, "project")} failed to scan`
+      : ""
+  ].filter(Boolean);
+  return gaps.length ? gaps.join(" · ") : undefined;
 }
 
 function groupByContext(contexts: readonly ImpactAssociation[]) {
@@ -59,63 +56,77 @@ function groupByContext(contexts: readonly ImpactAssociation[]) {
   return [...groups.values()];
 }
 
+function heading(groups: readonly ImpactAssociation[][]): string {
+  const projects = groups.filter((group) => group[0]?.scope === "project");
+  const parts = [
+    groups.length > projects.length ? "global configuration" : "",
+    projects.length ? `${plural(projects.length, "scanned project")}` : ""
+  ].filter(Boolean);
+  return parts.length
+    ? `Affects ${parts.join(" and ")}`
+    : "No scanned context uses this file";
+}
+
 export function ImpactSummary({
   impact,
-  coverage
+  coverage,
+  context
 }: {
   impact: SourceImpact;
   coverage: ImpactCoverage;
+  context: PathContext;
 }) {
   const groups = groupByContext(impact.contexts);
+  const gaps = scanGaps(coverage);
   return (
     <section aria-label="Known affected contexts">
-      <h3 className="m-0 mb-1 text-caption font-semibold text-ink-faint">
-        Known affected contexts
+      <h3
+        className="m-0 mb-1.5 text-caption font-semibold text-ink-faint"
+        title={coverageNote(coverage)}
+      >
+        {heading(groups)}
       </h3>
-      <p className="m-0 mb-2 text-label text-ink-muted">
-        {coverageText(impact, coverage)}
-      </p>
-      {impact.aliases.length > 1 ? (
-        <p className="m-0 mb-2 text-label">
-          Shared file: {impact.aliases.length} paths point here. Saving changes
-          all of them.
-        </p>
+      {gaps ? (
+        <p className="m-0 mb-1.5 text-caption text-ink-muted">{gaps}</p>
       ) : null}
-      <ul className="m-0 grid list-none gap-1.5 p-0 text-label">
+      <ul className="m-0 grid list-none gap-2 p-0 text-label">
         {groups.map((group) => {
           const first = group[0]!;
+          const scanned = new Date(first.scannedAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit"
+          });
           return (
             <li key={`${first.scope}:${first.workingDirectory}`}>
-              <strong className="font-semibold">
+              <strong
+                className="font-semibold"
+                title={`${tildePath(first.workingDirectory, context)} · scanned ${scanned}`}
+              >
                 {first.scope === "global"
                   ? "Global"
-                  : projectName(first.workingDirectory)}
+                  : baseName(first.workingDirectory)}
               </strong>
-              <span className="text-ink-faint">
-                {" "}
-                · scanned{" "}
-                {new Date(first.scannedAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit"
-                })}
-              </span>
               {group.map((item) => (
                 <span
-                  className="ml-3 flex items-center gap-1.5 text-ink-muted"
+                  className="flex items-center gap-1.5"
                   key={item.entryId}
-                  title={item.reason}
+                  title={`${tildePath(item.path, context)}\n${item.reason}`}
                 >
                   <ToolGlyph tool={item.tool} />
-                  {availabilityText[item.availability]}
+                  <span className="min-w-0 flex-1 truncate font-mono text-mono">
+                    {baseName(item.path)}
+                  </span>
+                  <span className="text-caption text-ink-muted">
+                    {availabilityWord[item.availability]}
+                  </span>
                 </span>
               ))}
             </li>
           );
         })}
       </ul>
-      <p className="mt-2 mb-0 text-caption text-ink-faint">
-        A saved file does not prove a running Claude Code or Codex session
-        reloaded it; restart those sessions to be sure.
+      <p className="mt-3 mb-0 text-caption text-ink-faint">
+        Restart running sessions to pick this up.
       </p>
     </section>
   );

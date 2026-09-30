@@ -2,6 +2,7 @@ import { Link2 } from "lucide-react";
 import { isLink, linkFolder, sharedLinkFolder } from "../../model/links";
 import { shortPath, tildePath, type PathContext } from "../../model/paths";
 import type { InventoryRecord, RecordKind } from "../../model/record-types";
+import { telltaleFolders } from "../../model/same-names";
 import { stateLabel, stateText } from "../../model/states";
 import { KindIcon, kindLabel } from "../../ui/kind-icon";
 import { StateLabel, StateMarker, SymlinkBadge } from "../../ui/marks";
@@ -27,41 +28,32 @@ export function chipClass(record: InventoryRecord, selectedId?: string) {
     : chipTone[record.tier];
 }
 
-/** Names that repeat within a group, so their chips can show what tells them apart. */
-export function repeatedNames(records: readonly InventoryRecord[]) {
-  const seen = new Map<string, number>();
-  for (const record of records) {
-    seen.set(record.name, (seen.get(record.name) ?? 0) + 1);
-  }
-  return new Set(
-    [...seen].filter(([, count]) => count > 1).map(([name]) => name)
-  );
-}
-
-const parentFolder = (path: string) =>
-  path.split("/").slice(0, -1).at(-1) ?? path;
-
 function Chip({
   record,
   showLink,
-  repeated,
+  folder,
+  quiet,
   ...props
 }: ItemProps & {
   record: InventoryRecord;
   showLink: boolean;
-  repeated: boolean;
+  /** For a name shared with another chip in the row: the folder that tells them apart. */
+  folder?: string;
+  /** The row already states this chip's state, so the chip draws as normal. */
+  quiet: boolean;
 }) {
+  const plain = quiet || record.tier === "active";
   return (
     <button
-      className={`inline-flex h-6 max-w-full items-center gap-1.5 rounded-control border px-2 text-label hover:border-hairline-strong ${chipClass(record, props.selectedId)}`}
+      className={`inline-flex h-6 max-w-full items-center gap-1.5 rounded-control border px-2 text-label hover:border-hairline-strong ${quiet && record.id !== props.selectedId ? chipTone.active : chipClass(record, props.selectedId)}`}
       onClick={() => props.onSelect(record.id)}
       title={stateText(record)}
     >
-      {record.tier === "active" ? null : <StateMarker tier={record.tier} />}
+      {plain ? null : <StateMarker tier={record.tier} />}
       <span className="truncate">{record.name}</span>
-      {repeated ? (
+      {folder ? (
         <span className="truncate font-mono text-caption text-ink-faint">
-          {parentFolder(record.path)}
+          {folder}
         </span>
       ) : null}
       {record.kind === "hook" || record.kind === "mcp" ? (
@@ -84,6 +76,22 @@ function Chip({
 
 const chipLimit = 16;
 
+/**
+ * When every item in a row is unknown for the same reason (Codex project trust, say), the row says it once
+ * instead of drawing the same dashed state on each chip.
+ */
+function sharedUnknownReason(
+  records: readonly InventoryRecord[]
+): string | undefined {
+  const [first] = records;
+  const shared =
+    records.length > 1 &&
+    records.every(
+      (record) => record.tier === "unknown" && record.reason === first?.reason
+    );
+  return shared ? first?.reason : undefined;
+}
+
 interface ChipRowProps extends ItemProps {
   kind: RecordKind;
   records: InventoryRecord[];
@@ -99,7 +107,8 @@ export function ChipRow({
   ...props
 }: ChipRowProps) {
   const shared = sharedLinkFolder(records);
-  const repeated = repeatedNames(records);
+  const folders = telltaleFolders(records, props.context);
+  const unknownReason = sharedUnknownReason(records);
   return (
     <div className="grid grid-cols-[22px_minmax(0,1fr)] gap-1.5 px-2 py-2 [&+&]:border-t [&+&]:border-wash">
       <span className="pt-0.5">
@@ -115,6 +124,14 @@ export function ChipRow({
               text={`${shared.count === records.length ? "all" : shared.count} symlinked → ${shortPath(shared.folder, props.context)}/`}
             />
           ) : null}
+          {unknownReason ? (
+            <span className="inline-flex min-w-0 items-center gap-1.5 text-caption text-ink-muted">
+              <StateMarker tier="unknown" />
+              <span className="truncate" title={unknownReason}>
+                {unknownReason}
+              </span>
+            </span>
+          ) : null}
         </div>
         {kind === "instruction" ? (
           <LoadList order={order} records={records} {...props} />
@@ -122,9 +139,10 @@ export function ChipRow({
           <div className="flex flex-wrap gap-1">
             {records.slice(0, chipLimit).map((record) => (
               <Chip
+                folder={folders.get(record.id)}
                 key={record.id}
+                quiet={Boolean(unknownReason)}
                 record={record}
-                repeated={repeated.has(record.name)}
                 showLink={!shared || linkFolder(record) !== shared.folder}
                 {...props}
               />

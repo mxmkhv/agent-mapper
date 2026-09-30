@@ -1,15 +1,20 @@
 import { ArrowLeft } from "lucide-react";
+import { tildePath, type PathContext } from "../model/paths";
 import { reviewDraft, saveReviewed } from "../state/document-actions";
 import { isDirty, type Draft } from "../state/draft-store";
 import { useDocuments } from "../state/use-document-drafts";
 import { Button } from "../ui/button";
-import { ToolGlyph } from "../ui/marks";
+import { SymlinkBadge, ToolGlyph } from "../ui/marks";
+import { ConfirmButton } from "./confirm-button";
 import type { DocumentMode } from "./source-document-panel";
-import { hasBlockingErrors } from "./source-review";
+import { hasBlockingErrors, metadataNote } from "./source-review";
 
 interface ToolbarProps {
   draft: Draft;
   mode: DocumentMode;
+  context: PathContext;
+  /** Where Back returns to, e.g. "map". */
+  backTo: string;
   onMode(mode: DocumentMode): void;
   onOpen(sourceKey: string): void;
   onBack(): void;
@@ -45,15 +50,12 @@ function ConflictActions({
   }
   return (
     <>
-      <Button
-        onClick={() => {
-          if (window.confirm("Discard your draft and use the current file?")) {
-            store.discard(draft.sourceKey);
-          }
-        }}
-      >
-        Use current file
-      </Button>
+      <ConfirmButton
+        confirmLabel="Discard draft"
+        label="Use current file"
+        onConfirm={() => store.discard(draft.sourceKey)}
+        question="Discard your draft?"
+      />
       <Button onClick={() => store.rebase(draft.sourceKey)} variant="primary">
         Continue editing
       </Button>
@@ -86,6 +88,7 @@ function PhaseActions(props: ToolbarProps) {
         <Button
           disabled={Boolean(draft.busy) || nothing || hasBlockingErrors(draft)}
           onClick={() => void saveReviewed({ ...context, onMutated })}
+          title={metadataNote}
           variant="primary"
         >
           {saveLabel(draft)}
@@ -98,20 +101,13 @@ function PhaseActions(props: ToolbarProps) {
     <>
       <Button onClick={() => props.onMode("history")}>History</Button>
       {dirty ? (
-        <Button
+        <ConfirmButton
+          confirmLabel="Discard"
           disabled={Boolean(draft.busy)}
-          onClick={() => {
-            if (
-              window.confirm(
-                `Discard unsaved changes to ${draft.document.source.name}?`
-              )
-            ) {
-              store.discard(draft.sourceKey);
-            }
-          }}
-        >
-          Discard changes
-        </Button>
+          label="Discard changes"
+          onConfirm={() => store.discard(draft.sourceKey)}
+          question="Discard unsaved changes?"
+        />
       ) : null}
       <Button
         disabled={!dirty || Boolean(draft.busy) || !draft.document.editable}
@@ -125,10 +121,33 @@ function PhaseActions(props: ToolbarProps) {
   );
 }
 
-export function DocumentToolbar(props: ToolbarProps) {
-  const { draft } = props;
+/**
+ * One `~` path for the file itself. Other paths that reach it (symlinks, the path it was opened through) sit in
+ * the badge's tooltip, since a save changes each of them.
+ */
+function PathBadge({ draft, context }: { draft: Draft; context: PathContext }) {
   const { document } = draft;
-  const aliases = document.impact.aliases.length;
+  const others = [
+    ...new Set([document.source.path, ...document.impact.aliases])
+  ].filter((path) => path !== document.canonicalPath);
+  if (!others.length) {
+    return null;
+  }
+  const count = others.length + 1;
+  return (
+    <SymlinkBadge
+      text={`${count} paths`}
+      title={[
+        `${count} paths point here; a save changes each of them.`,
+        ...others.map((path) => tildePath(path, context))
+      ].join("\n")}
+    />
+  );
+}
+
+export function DocumentToolbar(props: ToolbarProps) {
+  const { draft, context } = props;
+  const { document } = draft;
   return (
     <div className="flex flex-wrap items-start gap-x-4 gap-y-2 px-5 pt-3 pb-2">
       {/* Below ~24rem of room the actions wrap under the title instead of squeezing it. */}
@@ -139,23 +158,15 @@ export function DocumentToolbar(props: ToolbarProps) {
             {document.source.name}
           </h2>
           {isDirty(draft) ? (
-            <span className="text-label text-ink-muted">
+            <span className="text-label whitespace-nowrap text-ink-muted">
               <span aria-hidden="true">●</span> Unsaved changes
             </span>
           ) : null}
+          <PathBadge context={context} draft={draft} />
         </div>
         <p className="m-0 mt-1 font-mono text-caption break-all text-ink-muted">
-          {document.canonicalPath}
-          {document.source.path !== document.canonicalPath
-            ? ` (opened through ${document.source.path})`
-            : ""}
+          {tildePath(document.canonicalPath, context)}
         </p>
-        {aliases > 1 ? (
-          <p className="m-0 mt-1 text-caption text-ink-muted">
-            Shared file: {aliases} known paths point here, so a save changes
-            each of them.
-          </p>
-        ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <PhaseActions {...props} />
@@ -165,7 +176,7 @@ export function DocumentToolbar(props: ToolbarProps) {
             className="size-3.5"
             strokeWidth={1.8}
           />
-          Back to inventory
+          Back to {props.backTo}
         </Button>
       </div>
     </div>

@@ -24,11 +24,7 @@ export function FindingsView({
   onSelect
 }: FindingsViewProps) {
   if (!findings.length) {
-    return (
-      <EmptyState title={`No findings for ${toolName}`}>
-        Rescan after changing local configuration.
-      </EmptyState>
-    );
+    return <EmptyState title={`No findings for ${toolName}`} />;
   }
   const sorted = [...findings].sort(
     (a, b) => levelRank[a.level] - levelRank[b.level]

@@ -4,3 +4,4 @@ export * from "./context";
 export * from "./finding";
 export * from "./worktree";
 export * from "./source-document";
+export * from "./coverage";

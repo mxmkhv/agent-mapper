@@ -47,7 +47,7 @@ async function readJson(
   return result;
 }
 
-function launchOpen(args: string[]): Promise<void> {
+export function launchOpen(args: string[]): Promise<void> {
   return new Promise((finish, reject) => {
     const child = spawn("open", args, { stdio: "ignore" });
     child.once("error", reject);

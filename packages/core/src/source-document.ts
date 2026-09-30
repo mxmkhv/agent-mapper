@@ -105,6 +105,11 @@ export interface RevisionHistory {
   problems: string[];
 }
 
+/** Reply once Finder has been asked to show a document's saved-versions folder. */
+export interface HistoryReveal {
+  revealed: true;
+}
+
 export interface RevisionContent {
   revision: RevisionSummary;
   content: string;

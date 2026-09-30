@@ -1,6 +1,7 @@
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type {
+  HistoryReveal,
   MutationResult,
   RevisionContent,
   RevisionHistory,
@@ -152,4 +153,23 @@ it("does not snapshot an unchanged save", async () => {
     documentId: document.documentId
   });
   expect(history.body).toEqual({ revisions: [], problems: [] });
+});
+
+it("reveals the saved-versions folder once a version exists", async () => {
+  const { fixture, server } = await setup();
+  const document = (await server.open(".claude/CLAUDE.md")).body;
+  const early = await server.post<HistoryReveal>("reveal-history", {
+    documentId: document.documentId
+  });
+  expect(early.status).toBe(404);
+  expect(early.body.error?.message).toContain("no saved versions yet");
+  expect(server.launched).toEqual([]);
+  await save(server, { document, content: "changed\n" });
+  const reveal = await server.post<HistoryReveal>("reveal-history", {
+    documentId: document.documentId
+  });
+  expect(reveal.body).toEqual({ revealed: true });
+  expect(server.launched).toEqual([
+    ["-R", join(fixture.history, document.sourceKey)]
+  ]);
 });

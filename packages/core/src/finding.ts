@@ -7,7 +7,8 @@ export type FindingCode =
   | "long-instruction"
   | "repeated-instruction"
   | "missing-import"
-  | "missing-plugin";
+  | "missing-plugin"
+  | "duplicate-skill-name";
 
 export interface FindingSource {
   id: string;

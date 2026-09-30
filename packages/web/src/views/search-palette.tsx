@@ -43,7 +43,7 @@ export function SearchPalette({
     }
   }
   return (
-    <div className="fixed inset-0 z-20 grid place-items-start justify-center bg-black/20 pt-[12vh]">
+    <div className="fixed inset-0 z-40 grid place-items-start justify-center bg-black/20 pt-[12vh]">
       <button
         aria-label="Close search"
         className="absolute inset-0 cursor-default"

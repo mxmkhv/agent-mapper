@@ -8,6 +8,7 @@ import { Header } from "../shell/header";
 import { ViewBar } from "../shell/view-bar";
 import { useProjectSnapshots } from "../state/use-project-snapshots";
 import { toolName } from "../ui/marks";
+import type { ReachProject } from "../views/reach/reach-model";
 import { SearchPalette } from "../views/search-palette";
 import { useWorkspace } from "./use-workspace";
 import {
@@ -17,6 +18,27 @@ import {
   titleFor,
   type WorkspaceProps
 } from "./workspace-parts";
+
+/** What a document review may claim about other folders, given which scans have finished. */
+function impactCoverage(
+  props: WorkspaceProps,
+  scanned: ReachProject[]
+): ImpactCoverage {
+  if (props.isProject) {
+    return {
+      mode: "project",
+      workingDirectory: props.snapshot.workingDirectory
+    };
+  }
+  return {
+    mode: "global",
+    total: scanned.length,
+    scanned: scanned.filter((project) => project.records).length,
+    pending: scanned.filter((project) => !project.records && !project.error)
+      .length,
+    failed: scanned.filter((project) => project.error).length
+  };
+}
 
 export function Workspace(props: WorkspaceProps) {
   const scanned = useProjectSnapshots(
@@ -35,23 +57,20 @@ export function Workspace(props: WorkspaceProps) {
     )
   }));
   const parts = { props, state, reach };
-  const coverage: ImpactCoverage = props.isProject
-    ? { mode: "project", workingDirectory: props.snapshot.workingDirectory }
-    : {
-        mode: "global",
-        total: scanned.length,
-        scanned: scanned.filter((project) => project.records).length,
-        pending: scanned.filter((project) => !project.records && !project.error)
-          .length,
-        failed: scanned.filter((project) => project.error).length
-      };
-  const withInspector = state.view !== "worktrees";
+  const coverage = impactCoverage(props, scanned);
+  const tabs = tabsFor(parts);
   const detailOpen = Boolean(state.selected ?? state.showCoverage);
+  // Reach needs every column it can get, so its inspector appears only with something to show.
+  const withInspector =
+    state.view !== "worktrees" && (state.view !== "reach" || detailOpen);
+  const viewLabel =
+    tabs.find((tab) => tab.id === state.view)?.label ?? "inventory";
   return (
     <div className="grid min-h-0 min-w-0 grid-rows-[auto_auto_auto_minmax(0,1fr)]">
       <Header
         actions={
           <DraftsMenu
+            context={state.context}
             onOpen={(sourceKey) => state.openDocument(sourceKey, "edit")}
           />
         }
@@ -70,7 +89,7 @@ export function Workspace(props: WorkspaceProps) {
         onToggleInactive={state.toggleInactive}
         onView={state.setView}
         showInactive={state.showInactive}
-        tabs={tabsFor(parts)}
+        tabs={tabs}
         view={state.view}
       />
       {props.notice ? (
@@ -120,6 +139,8 @@ export function Workspace(props: WorkspaceProps) {
         {state.documentView ? (
           <div className="absolute inset-0 z-30 min-h-0">
             <DocumentWorkspace
+              backTo={viewLabel.toLocaleLowerCase()}
+              context={state.context}
               coverage={coverage}
               key={state.documentView.sourceKey}
               mode={state.documentView.mode}

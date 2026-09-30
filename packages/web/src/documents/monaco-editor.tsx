@@ -7,6 +7,7 @@ import {
   restoreViewState,
   saveViewState
 } from "./monaco-setup";
+import { diffStats, type DiffStats } from "./diff-stats";
 
 const sharedOptions = {
   minimap: { enabled: false },
@@ -104,11 +105,21 @@ interface SourceDiffProps {
   original: string;
   modified: string;
   label: string;
+  /** Undefined when Monaco gave up computing the diff (for example on a very large file). */
+  onStats?(stats: DiffStats | undefined): void;
 }
 
 /** Read-only comparison; side by side when there is room, inline when narrow. */
-export function SourceDiff({ original, modified, label }: SourceDiffProps) {
+export function SourceDiff({
+  original,
+  modified,
+  label,
+  ...props
+}: SourceDiffProps) {
   const host = useRef<HTMLDivElement>(null);
+  const reportStats = useEffectEvent((stats: DiffStats | undefined) =>
+    props.onStats?.(stats)
+  );
   useEditorTheme();
 
   useEffect(() => {
@@ -125,10 +136,23 @@ export function SourceDiff({ original, modified, label }: SourceDiffProps) {
       useInlineViewWhenSpaceIsLimited: true,
       renderSideBySideInlineBreakpoint: 760,
       diffWordWrap: "on",
+      // Review must show exactly what Save writes, including indentation-only edits.
+      ignoreTrimWhitespace: false,
       ariaLabel: label
     });
     diff.setModel({ original: originalModel, modified: modifiedModel });
+    // The diff is computed asynchronously; the first result scrolls to the first change instead of line 1.
+    let revealed = false;
+    const updates = diff.onDidUpdateDiff(() => {
+      if (!revealed) {
+        revealed = true;
+        diff.revealFirstDiff();
+      }
+      const changes = diff.getLineChanges();
+      reportStats(changes ? diffStats(changes) : undefined);
+    });
     return () => {
+      updates.dispose();
       diff.dispose();
       originalModel.dispose();
       modifiedModel.dispose();

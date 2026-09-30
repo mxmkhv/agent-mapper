@@ -3,6 +3,7 @@ import { useInventory, useProjects } from "./data";
 import { AppFailure } from "./documents/app-failure";
 import { DocumentErrorBoundary } from "./documents/document-error-boundary";
 import { Sidebar } from "./shell/sidebar";
+import type { Landing } from "./shell/view-bar";
 import { DraftStore } from "./state/draft-store";
 import { DocumentsContext, useUnloadGuard } from "./state/use-document-drafts";
 import { useTheme } from "./state/use-theme";
@@ -17,7 +18,7 @@ export function App() {
     () => window.localStorage.getItem(folderKey) ?? ""
   );
   const [refresh, setRefresh] = useState(0);
-  const [pendingSelection, setPendingSelection] = useState<string>();
+  const [landing, setLanding] = useState<Landing>();
   const [theme, setTheme] = useTheme();
   const [tool, setTool] = useTool();
   const projects = useProjects();
@@ -40,9 +41,9 @@ export function App() {
   const failedRescan = refreshAfterSave
     ? `Saved; inventory refresh failed: ${inventory.error}. Use Rescan to try again.`
     : `Could not rescan: ${inventory.error}`;
-  /** Opening a project from Global reach can carry the item to select there. */
-  function selectPath(path: string, selectId?: string) {
-    setPendingSelection(selectId);
+  /** Opening a folder from another view can carry the item, or the view and kind filter, to show there. */
+  function selectPath(path: string, next?: Landing) {
+    setLanding(next);
     setSelectedPath(path);
     window.localStorage.setItem(folderKey, path);
   }
@@ -66,7 +67,7 @@ export function App() {
           >
             {inventory.value ? (
               <Workspace
-                initialSelectedId={pendingSelection}
+                landing={landing}
                 isProject={Boolean(selectedPath)}
                 key={selectedPath || "global"}
                 notice={inventory.error ? failedRescan : undefined}

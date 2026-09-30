@@ -80,3 +80,34 @@ it("does not flag a shared heading or short fragment as repeated content", async
     snapshot.findings.some((finding) => finding.code === "repeated-instruction")
   ).toBe(false);
 });
+
+it("flags separate skill files that share a name, but not links to one file", async () => {
+  const home = realpathSync(
+    mkdtempSync(join(tmpdir(), "agent-mapper-findings-"))
+  );
+  roots.push(home);
+  const skill = (folder: string) => {
+    mkdirSync(folder, { recursive: true });
+    writeFileSync(
+      join(folder, "SKILL.md"),
+      "---\nname: react-render-skill\ndescription: Renders\n---\n"
+    );
+  };
+  skill(join(home, ".agents/skills/react-render-skill"));
+  skill(join(home, ".codex/skills/react-rendering"));
+  skill(join(home, "shared/solo"));
+  mkdirSync(join(home, ".claude/skills"), { recursive: true });
+  symlinkSync(join(home, "shared/solo"), join(home, ".claude/skills/solo"));
+  const snapshot = await buildSnapshot(home, {
+    home,
+    codexHome: join(home, ".codex")
+  });
+  const duplicates = snapshot.findings.filter(
+    (finding) => finding.code === "duplicate-skill-name"
+  );
+  expect(duplicates.map((finding) => finding.tool)).toEqual(["codex"]);
+  expect(duplicates[0]?.sources.map((source) => source.path)).toEqual([
+    join(home, ".agents/skills/react-render-skill/SKILL.md"),
+    join(home, ".codex/skills/react-rendering/SKILL.md")
+  ]);
+});

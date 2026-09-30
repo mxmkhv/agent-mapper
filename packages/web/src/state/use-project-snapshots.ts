@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { getInventory } from "../api";
+import { useMemo } from "react";
 import { buildRecords } from "../model/build-records";
 import type { ReachProject } from "../views/reach/reach-model";
+import { useFolderScans } from "./use-folder-scans";
 
 const projectName = (path: string) => path.split("/").at(-1) ?? path;
-const pending = (list: readonly string[]) =>
-  list.map((path) => ({ path, name: projectName(path) }));
 
 /**
  * Scans every discovered project in parallel for the Global reach view.
@@ -15,44 +13,26 @@ export function useProjectSnapshots(
   paths: readonly string[],
   refresh: number
 ): ReachProject[] {
+  const scans = useFolderScans({ paths, refresh }, (snapshot) => ({
+    status: "ready",
+    value: buildRecords(snapshot, "project")
+  }));
+  // Callers pass a fresh array each render; the joined paths are the stable identity.
   const pathsKey = paths.join("\n");
-  const list = useMemo(() => pathsKey.split("\n").filter(Boolean), [pathsKey]);
-  const key = `${refresh}\n${pathsKey}`;
-  const [state, setState] = useState<{ key: string; projects: ReachProject[] }>(
-    {
-      key: "",
-      projects: []
-    }
+  return useMemo(
+    () =>
+      pathsKey
+        .split("\n")
+        .filter(Boolean)
+        .map((path) => {
+          const scan = scans.get(path);
+          return {
+            path,
+            name: projectName(path),
+            records: scan?.status === "ready" ? scan.value : undefined,
+            error: scan?.status === "error" ? scan.message : undefined
+          };
+        }),
+    [pathsKey, scans]
   );
-  useEffect(() => {
-    const controller = new AbortController();
-    const stateKey = `${refresh}\n${list.join("\n")}`;
-    function update(path: string, result: Partial<ReachProject>) {
-      setState((previous) => {
-        const base =
-          previous.key === stateKey ? previous.projects : pending(list);
-        return {
-          key: stateKey,
-          projects: base.map((project) =>
-            project.path === path ? { ...project, ...result } : project
-          )
-        };
-      });
-    }
-    for (const path of list) {
-      getInventory(path, controller.signal).then(
-        (snapshot) =>
-          update(path, { records: buildRecords(snapshot, "project") }),
-        (error: unknown) => {
-          if (!controller.signal.aborted) {
-            update(path, {
-              error: error instanceof Error ? error.message : String(error)
-            });
-          }
-        }
-      );
-    }
-    return () => controller.abort();
-  }, [list, refresh]);
-  return state.key === key ? state.projects : pending(list);
 }

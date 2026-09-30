@@ -1,14 +1,9 @@
-import type { ReactNode } from "react";
 import { Folder } from "lucide-react";
+import type { RecordKind } from "../../model/record-types";
 import { KindIcon, kindLabel } from "../../ui/kind-icon";
-import { StateMarker, toolName } from "../../ui/marks";
+import { StateMarker } from "../../ui/marks";
 import { tildePath } from "../../model/paths";
-import {
-  buildReach,
-  projectOwn,
-  skillReach,
-  type ReachProject
-} from "./reach-model";
+import { buildReach, projectOwn, skillReach } from "./reach-model";
 import {
   ScanCell,
   SectionRows,
@@ -17,36 +12,42 @@ import {
 } from "./reach-rows";
 import { useHiddenColumns } from "./use-hidden-columns";
 
+/** Counts per project; each opens that project's Inventory filtered to the kind. */
 function CountRow({
   label,
-  icon,
+  kind,
   counts,
-  projects,
-  total
+  total,
+  props
 }: {
   label: string;
-  icon: ReactNode;
+  kind: RecordKind;
   counts: number[];
-  projects: ReachProject[];
   total?: number;
+  props: ReachViewProps;
 }) {
   return (
     <tr>
       <td className={`${stickySource} bg-surface`}>
         <span className="flex items-center gap-2 font-semibold">
-          {icon}
+          <KindIcon kind={kind} small />
           {label}
         </span>
       </td>
-      {projects.map((project, index) => {
+      {props.projects.map((project, index) => {
         const count = counts[index] ?? 0;
         return (
           <ScanCell key={project.path} project={project}>
-            <span
-              className={`text-label tabular-nums ${count ? "" : "text-ink-faint"}`}
+            <button
+              className={`rounded-control px-1.5 text-label tabular-nums hover:bg-hover hover:underline ${count ? "" : "text-ink-faint"}`}
+              onClick={() =>
+                props.onOpenProject(project.path, { view: "inventory", kind })
+              }
+              aria-label={`${count} ${kindLabel[kind].toLocaleLowerCase()} in ${project.name}. Open its inventory`}
+              title={`Open ${project.name} inventory: ${kindLabel[kind].toLocaleLowerCase()}`}
             >
               {total === undefined ? count || "–" : `${count}/${total}`}
-            </span>
+            </button>
           </ScanCell>
         );
       })}
@@ -73,13 +74,11 @@ export function ReachView(props: ReachViewProps) {
     useHiddenColumns<HTMLDivElement>();
   return (
     <div className="px-5 pt-4 pb-10">
-      <p className="mt-0 mb-3.5 max-w-[720px] text-ink-muted">
-        Each row is a {toolName[props.tool]} source outside your projects.
-        Columns show whether it reaches that project.
-        {scanning
-          ? ` Scanning ${scanning} ${scanning === 1 ? "project" : "projects"}…`
-          : ""}
-      </p>
+      {scanning ? (
+        <output className="mb-3 block text-label text-ink-muted">
+          Scanning {scanning} {scanning === 1 ? "project" : "projects"}…
+        </output>
+      ) : null}
       <div className="relative">
         {/* The table scrolls in both directions itself so the header and source column can stay pinned. */}
         <div
@@ -142,9 +141,9 @@ export function ReachView(props: ReachViewProps) {
                   </tr>
                   <CountRow
                     counts={skills.counts}
-                    icon={<KindIcon kind="skill" small />}
-                    projects={props.projects}
+                    kind="skill"
                     label={`${skills.total} skills`}
+                    props={props}
                     total={skills.total}
                   />
                 </>
@@ -167,10 +166,10 @@ export function ReachView(props: ReachViewProps) {
               {own.map((row) => (
                 <CountRow
                   counts={row.counts}
-                  icon={<KindIcon kind={row.kind} small />}
                   key={row.kind}
+                  kind={row.kind}
                   label={kindLabel[row.kind]}
-                  projects={props.projects}
+                  props={props}
                 />
               ))}
             </tbody>

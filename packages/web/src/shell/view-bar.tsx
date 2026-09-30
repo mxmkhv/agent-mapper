@@ -1,6 +1,10 @@
 import { Info } from "lucide-react";
+import type { RecordKind } from "../model/record-types";
 
 export type View = "map" | "reach" | "inventory" | "findings" | "worktrees";
+
+/** Where to land after switching folders: an item to select, or a view with an optional kind filter. */
+export type Landing = { selectId: string } | { view: View; kind?: RecordKind };
 
 export interface ViewTab {
   id: View;
@@ -64,8 +68,8 @@ export function ViewBar(props: ViewBarProps) {
         title={`${props.coverageCount} coverage notes`}
       >
         <Info aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
-        {props.coverageCount}
-        <span className="hidden xl:inline">coverage notes</span>
+        <span className="tabular-nums">{props.coverageCount}</span>
+        <span className="sr-only">coverage notes</span>
       </button>
     </nav>
   );

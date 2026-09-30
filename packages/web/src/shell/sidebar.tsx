@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Folder, GitBranch, Globe, Lock } from "lucide-react";
+import { Folder, GitBranch, Globe, Moon, Sun, SunMoon } from "lucide-react";
 import type { ProjectSuggestion } from "../api";
 import type { ThemeChoice } from "../state/use-theme";
 import { AddFolder } from "./add-folder";
@@ -123,25 +123,38 @@ function ProjectList({
   });
 }
 
-function ThemeSwitch({
+const nextTheme = {
+  auto: "light",
+  light: "dark",
+  dark: "auto"
+} satisfies Record<ThemeChoice, ThemeChoice>;
+
+const themeIcon = { auto: SunMoon, light: Sun, dark: Moon } satisfies Record<
+  ThemeChoice,
+  typeof Sun
+>;
+
+const themeName = {
+  auto: "Auto",
+  light: "Light",
+  dark: "Dark"
+} satisfies Record<ThemeChoice, string>;
+
+/** One button cycles Auto → Light → Dark; the icon shows the current choice. */
+function ThemeButton({
   theme,
   onTheme
 }: Pick<SidebarProps, "theme" | "onTheme">) {
-  const choices: ThemeChoice[] = ["auto", "light", "dark"];
+  const Icon = themeIcon[theme];
   return (
-    <fieldset className="mx-2 mt-2 flex min-w-0 gap-0.5 rounded-button border-0 bg-wash p-0.5">
-      <legend className="sr-only">Appearance</legend>
-      {choices.map((choice) => (
-        <button
-          key={choice}
-          aria-pressed={theme === choice}
-          className={`h-6 flex-1 rounded-control text-caption capitalize ${theme === choice ? "bg-surface text-ink shadow-raised" : "text-ink-muted"}`}
-          onClick={() => onTheme(choice)}
-        >
-          {choice}
-        </button>
-      ))}
-    </fieldset>
+    <button
+      aria-label={`Appearance: ${themeName[theme]}. Switch to ${themeName[nextTheme[theme]]}`}
+      className="ml-auto grid size-6 place-items-center rounded-control text-ink-muted hover:bg-hover hover:text-ink"
+      onClick={() => onTheme(nextTheme[theme])}
+      title={`Appearance: ${themeName[theme]}`}
+    >
+      <Icon aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+    </button>
   );
 }
 
@@ -154,6 +167,7 @@ export function Sidebar(props: SidebarProps) {
           am
         </span>
         agent-mapper
+        <ThemeButton onTheme={props.onTheme} theme={props.theme} />
       </div>
       <NavItem active={!selectedPath} onClick={() => onSelect("")}>
         <Globe aria-hidden="true" className={iconClass} strokeWidth={1.6} />
@@ -182,11 +196,6 @@ export function Sidebar(props: SidebarProps) {
       />
       <div className="mt-auto grid gap-0.5 pt-3">
         <AddFolder onAdd={onSelect} />
-        <ThemeSwitch theme={props.theme} onTheme={props.onTheme} />
-        <div className="flex items-center gap-1.5 px-2 pt-2 text-caption text-ink-faint">
-          <Lock aria-hidden="true" className="size-3" strokeWidth={1.6} />
-          Changes only files you save
-        </div>
       </div>
     </aside>
   );
