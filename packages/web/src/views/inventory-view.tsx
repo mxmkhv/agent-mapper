@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Layers, Plug } from "lucide-react";
 import type { PathContext } from "../model/paths";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
+import { repeatedNames } from "../model/same-names";
 import { HintText } from "../ui/hint-text";
 import { KindIcon, kindLabel } from "../ui/kind-icon";
 import {
@@ -16,7 +17,7 @@ interface InventoryViewProps {
   kind: RecordKind | "all";
   selectedId?: string;
   context: PathContext;
-  /** Background versions per plugin name, while they are folded into the selected version's row. */
+  /** Background versions per plugin name, while they are folded into the active version's row. */
   otherVersions?: ReadonlyMap<string, number>;
   hintFor(group: InventoryGroup): string | undefined;
   onKind(kind: RecordKind | "all"): void;
@@ -101,27 +102,31 @@ export function InventoryView(props: InventoryViewProps) {
           kind.
         </p>
       ) : null}
-      {groups.map((group) => (
-        <section className="mb-3.5" key={group.key}>
-          <GroupHead group={group} hint={props.hintFor(group)} />
-          <div className="overflow-hidden rounded-card border border-hairline bg-surface">
-            {group.records.map((record) => (
-              <InventoryRow
-                context={props.context}
-                key={record.id}
-                onSelect={props.onSelect}
-                otherVersions={
-                  record.kind === "plugin"
-                    ? props.otherVersions?.get(record.name)
-                    : undefined
-                }
-                record={record}
-                selected={record.id === props.selectedId}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
+      {groups.map((group) => {
+        const repeated = repeatedNames(group.records);
+        return (
+          <section className="mb-3.5" key={group.key}>
+            <GroupHead group={group} hint={props.hintFor(group)} />
+            <div className="overflow-hidden rounded-card border border-hairline bg-surface">
+              {group.records.map((record) => (
+                <InventoryRow
+                  context={props.context}
+                  key={record.id}
+                  onSelect={props.onSelect}
+                  otherVersions={
+                    record.kind === "plugin"
+                      ? props.otherVersions?.get(record.name)
+                      : undefined
+                  }
+                  record={record}
+                  selected={record.id === props.selectedId}
+                  sharesName={repeated.has(record.name)}
+                />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }

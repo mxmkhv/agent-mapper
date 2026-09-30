@@ -20,7 +20,6 @@ export function isConventionalPath(
   record: InventoryRecord,
   context: PathContext
 ): boolean {
-  // Nearest segments first: the file, its folder, then that folder's parent.
   const [file = "", folder, parent] = record.path.split("/").reverse();
   switch (record.kind) {
     case "skill":

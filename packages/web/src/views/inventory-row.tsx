@@ -13,10 +13,16 @@ interface RowProps {
   context: PathContext;
   /** Background versions of this plugin folded into its row. */
   otherVersions?: number;
+  /** Another row in the group has the same name, so the path is what tells them apart. */
+  sharesName?: boolean;
   onSelect(id: string): void;
 }
 
-function Detail({ record, context }: Pick<RowProps, "record" | "context">) {
+function Detail({
+  record,
+  context,
+  sharesName
+}: Pick<RowProps, "record" | "context" | "sharesName">) {
   if (record.kind === "hook" || record.kind === "mcp") {
     const text = record.details
       .filter((detail) =>
@@ -36,7 +42,7 @@ function Detail({ record, context }: Pick<RowProps, "record" | "context">) {
     );
   }
   // The row already names the item; a conventional path would only repeat the group and the name.
-  if (!isLink(record) && isConventionalPath(record, context)) {
+  if (!isLink(record) && !sharesName && isConventionalPath(record, context)) {
     return <span />;
   }
   return (
@@ -67,6 +73,7 @@ export function InventoryRow({
   selected,
   context,
   otherVersions,
+  sharesName,
   onSelect
 }: RowProps) {
   const inactive = record.tier === "inactive";
@@ -89,7 +96,7 @@ export function InventoryRow({
           <SymlinkBadge target={tildePath(record.realPath, context)} />
         ) : null}
       </span>
-      <Detail context={context} record={record} />
+      <Detail context={context} record={record} sharesName={sharesName} />
       {/* A fixed last column keeps every row's detail column aligned, labelled or not. */}
       <span className="truncate text-right">
         <RowLabel otherVersions={otherVersions} record={record} />

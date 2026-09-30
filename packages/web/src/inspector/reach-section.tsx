@@ -33,7 +33,12 @@ export function ReachSection({
           <button
             className="flex h-7 w-full items-center gap-2 rounded-control px-2 text-left hover:bg-hover"
             key={project.path}
-            onClick={() => reach.onOpen(project.path, { selectId: match?.id })}
+            onClick={() =>
+              reach.onOpen(
+                project.path,
+                match ? { selectId: match.id } : undefined
+              )
+            }
           >
             {match ? (
               <StateMarker tier={match.tier} />

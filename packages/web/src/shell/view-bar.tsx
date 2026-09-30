@@ -4,11 +4,7 @@ import type { RecordKind } from "../model/record-types";
 export type View = "map" | "reach" | "inventory" | "findings" | "worktrees";
 
 /** Where to land after switching folders: an item to select, or a view with an optional kind filter. */
-export interface Landing {
-  selectId?: string;
-  view?: View;
-  kind?: RecordKind;
-}
+export type Landing = { selectId: string } | { view: View; kind?: RecordKind };
 
 export interface ViewTab {
   id: View;

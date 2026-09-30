@@ -23,7 +23,7 @@ export function CoverageInspector({
       </h2>
       {problems.length ? (
         <Section
-          title={`${problems.length} ${problems.length === 1 ? "source" : "sources"} could not be read`}
+          title={`${problems.length} scan ${problems.length === 1 ? "problem" : "problems"}`}
         >
           <ul className="m-0 grid list-none gap-1.5 p-0 text-label text-problem">
             {problems.map((problem) => (

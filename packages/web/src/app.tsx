@@ -41,7 +41,7 @@ export function App() {
   const failedRescan = refreshAfterSave
     ? `Saved; inventory refresh failed: ${inventory.error}. Use Rescan to try again.`
     : `Could not rescan: ${inventory.error}`;
-  /** Opening a folder from another view can carry the item or view to show there. */
+  /** Opening a folder from another view can carry the item, or the view and kind filter, to show there. */
   function selectPath(path: string, next?: Landing) {
     setLanding(next);
     setSelectedPath(path);

@@ -123,7 +123,10 @@ function SourceRow({ row, props }: { row: ReachRow; props: ReachViewProps }) {
   );
 }
 
-/** Rows that apply everywhere draw one cell instead of a dot per project, once every scan has finished. */
+/**
+ * Rows that apply everywhere draw one cell instead of a dot per project, once every scan has succeeded.
+ * While any project is scanning or failed, each column keeps its own cell so no result is claimed for it.
+ */
 function UniformCells({ projects }: { projects: ReachProject[] }) {
   const settled = projects.every((project) => project.records);
   if (!settled) {

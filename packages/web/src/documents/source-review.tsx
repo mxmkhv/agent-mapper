@@ -4,7 +4,7 @@ import type { Draft } from "../state/draft-store";
 import { Diagnostics } from "./diagnostics";
 import { ImpactSummary, type ImpactCoverage } from "./impact-summary";
 import { SourceDiff } from "./lazy";
-import type { DiffStats } from "./monaco-editor";
+import type { DiffStats } from "./diff-stats";
 
 export const loadingEditor = (
   <output className="block p-5 text-ink-muted">Loading editor…</output>
@@ -25,10 +25,24 @@ export function hasBlockingErrors(draft: Draft): boolean {
   );
 }
 
+interface DiffResult {
+  text: string;
+  /** Undefined when the editor could not compute the diff. */
+  stats?: DiffStats;
+}
+
 /** "1 line changed +1 −1", once the diff has been computed. */
-function ChangeSize({ stats }: { stats?: DiffStats }) {
-  if (!stats) {
+function ChangeSize({ result }: { result?: DiffResult }) {
+  if (!result) {
     return <p className="m-0 mb-4 text-label text-ink-muted">Comparing…</p>;
+  }
+  const { stats } = result;
+  if (!stats) {
+    return (
+      <p className="m-0 mb-4 text-label text-ink-muted">
+        Could not count the changed lines. The diff still shows every change.
+      </p>
+    );
   }
   return (
     <p className="m-0 mb-4 text-label">
@@ -52,7 +66,7 @@ export function SourceReview({
   coverage: ImpactCoverage;
   context: PathContext;
 }) {
-  const [stats, setStats] = useState<{ text: string; stats: DiffStats }>();
+  const [diff, setDiff] = useState<DiffResult>();
   const review = draft.review;
   if (!review) {
     return null;
@@ -65,7 +79,7 @@ export function SourceReview({
           <SourceDiff
             label="Changes to review: file on disk on the left, your draft on the right"
             modified={review.text}
-            onStats={(next) => setStats({ text: review.text, stats: next })}
+            onStats={(stats) => setDiff({ text: review.text, stats })}
             original={draft.document.content}
           />
         </Suspense>
@@ -76,9 +90,7 @@ export function SourceReview({
             No changes: your draft matches the file on disk.
           </p>
         ) : (
-          <ChangeSize
-            stats={stats?.text === review.text ? stats.stats : undefined}
-          />
+          <ChangeSize result={diff?.text === review.text ? diff : undefined} />
         )}
         {review.result.unchanged && !nothing ? (
           <p className="m-0 mb-2 text-label text-ink-muted">

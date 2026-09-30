@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Button } from "../ui/button";
 
 interface ConfirmButtonProps {
@@ -12,6 +12,13 @@ interface ConfirmButtonProps {
 /** Asks in place instead of a native dialog: the button gives way to the question and its two answers. */
 export function ConfirmButton(props: ConfirmButtonProps) {
   const [asking, setAsking] = useState(false);
+  const keep = useRef<HTMLButtonElement>(null);
+  // The asking button unmounts as the question appears; move keyboard focus to the safe answer once.
+  useEffect(() => {
+    if (asking) {
+      keep.current?.focus();
+    }
+  }, [asking]);
   if (!asking) {
     return (
       <Button disabled={props.disabled} onClick={() => setAsking(true)}>
@@ -34,8 +41,7 @@ export function ConfirmButton(props: ConfirmButtonProps) {
       <Button
         onClick={() => setAsking(false)}
         onKeyDown={cancelOnEscape}
-        // The asking button just unmounted; keep keyboard focus on the safe answer.
-        ref={(node) => node?.focus()}
+        ref={keep}
       >
         Keep
       </Button>

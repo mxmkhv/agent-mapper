@@ -19,12 +19,20 @@ export function isBackgroundVersion(
   );
 }
 
+export interface InactiveFold {
+  hidden(record: InventoryRecord): boolean;
+  /** Background versions per plugin name. */
+  otherVersions: ReadonlyMap<string, number>;
+}
+
 /**
  * Records hidden until Show inactive: inactive items, background plugin versions and what those versions
  * declare. `otherVersions` counts the background versions per plugin name, so the shown row can mention them.
  * Expects one tool's records.
  */
-export function foldInactive(records: readonly InventoryRecord[]) {
+export function foldInactive(
+  records: readonly InventoryRecord[]
+): InactiveFold {
   const plugins = records.filter((record) => record.kind === "plugin");
   const background = new Set(
     plugins

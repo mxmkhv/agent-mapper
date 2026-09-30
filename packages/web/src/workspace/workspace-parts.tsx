@@ -58,7 +58,7 @@ export function tabsFor({ props, state }: PartsProps): ViewTab[] {
       ? [
           {
             id: "worktrees",
-            // Inside a linked checkout the tab counts files that differ from the main checkout.
+            // A linked checkout shows its differences from the main checkout here, counted in files.
             label: props.snapshot.comparison ? "Differences" : "Worktrees",
             count:
               (props.snapshot.comparison &&

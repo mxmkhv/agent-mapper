@@ -1,15 +1,34 @@
-import type { ToolId, WorktreeRecord } from "@agent-mapper/core";
+import {
+  coverageProblems,
+  type InventorySnapshot,
+  type ToolId,
+  type WorktreeDifference,
+  type WorktreeRecord
+} from "@agent-mapper/core";
 import { GitBranch } from "lucide-react";
 import type { Landing } from "../../shell/view-bar";
 import { EmptyState } from "../../ui/empty-state";
 import { StateLabel, StateMarker } from "../../ui/marks";
 import { tildePath, type PathContext } from "../../model/paths";
+import { useFolderScans, type FolderScan } from "../../state/use-folder-scans";
 import { relevantDifferences } from "./difference-groups";
 import { ListPane, ListSection } from "./panes";
-import {
-  useCheckoutDifferences,
-  type CheckoutScan
-} from "./use-checkout-differences";
+
+type CheckoutScan = FolderScan<WorktreeDifference[]>;
+
+/** A scan without a comparison compared nothing; its scan problems say why instead of implying no drift. */
+function readDifferences(snapshot: InventorySnapshot): CheckoutScan {
+  if (snapshot.comparison) {
+    return { status: "ready", value: snapshot.comparison.differences };
+  }
+  const [problem] = coverageProblems(snapshot.coverage);
+  return {
+    status: "error",
+    message:
+      problem ??
+      "No comparison with the main checkout was returned. Rescan to try again."
+  };
+}
 
 const folderName = (path: string) => path.split("/").at(-1) ?? path;
 
@@ -34,11 +53,11 @@ function DifferenceCount({
   if (scan.status === "error") {
     return (
       <span className="text-caption text-problem" title={scan.message}>
-        scan failed
+        not compared · rescan
       </span>
     );
   }
-  const count = relevantDifferences(scan.differences, tool).length;
+  const count = relevantDifferences(scan.value, tool).length;
   return (
     <span className="text-caption whitespace-nowrap text-ink-muted tabular-nums">
       {count
@@ -60,11 +79,14 @@ export function Checkouts({
   onSelectPath
 }: CheckoutsProps) {
   const linked = worktrees.filter((tree) => !tree.isMain);
-  const scans = useCheckoutDifferences(
-    linked
-      .filter((tree) => tree.state === "available")
-      .map((tree) => tree.path),
-    refreshKey
+  const scans = useFolderScans(
+    {
+      paths: linked
+        .filter((tree) => tree.state === "available")
+        .map((tree) => tree.path),
+      refresh: refreshKey
+    },
+    readDifferences
   );
   if (!linked.length) {
     return worktrees.length ? (
@@ -102,9 +124,16 @@ export function Checkouts({
               >
                 {tree.branch ?? folder}
               </span>
-              <span className="truncate font-mono text-mono text-ink-faint">
-                {tree.branch ? folder : "detached"}
-              </span>
+              {available ? (
+                <span className="truncate font-mono text-mono text-ink-faint">
+                  {tree.branch ? folder : "detached"}
+                </span>
+              ) : (
+                // Git still lists the checkout but its folder is gone; say where to look.
+                <span className="truncate text-caption text-ink-muted">
+                  Folder unavailable · check git worktree list
+                </span>
+              )}
               <span className="truncate text-right">
                 {available ? (
                   <DifferenceCount scan={scans.get(tree.path)} tool={tool} />

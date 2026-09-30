@@ -7,6 +7,7 @@ import {
   restoreViewState,
   saveViewState
 } from "./monaco-setup";
+import { diffStats, type DiffStats } from "./diff-stats";
 
 const sharedOptions = {
   minimap: { enabled: false },
@@ -100,38 +101,12 @@ export function SourceEditor(props: SourceEditorProps) {
   return <div className="h-full min-h-64" ref={host} />;
 }
 
-export interface DiffStats {
-  /** Lines touched, counting a replaced line once. */
-  changed: number;
-  added: number;
-  removed: number;
-}
-
-const lineCount = (start: number, end: number) => (end ? end - start + 1 : 0);
-
-function diffStats(changes: readonly monaco.editor.ILineChange[]): DiffStats {
-  const stats = { changed: 0, added: 0, removed: 0 };
-  for (const change of changes) {
-    const added = lineCount(
-      change.modifiedStartLineNumber,
-      change.modifiedEndLineNumber
-    );
-    const removed = lineCount(
-      change.originalStartLineNumber,
-      change.originalEndLineNumber
-    );
-    stats.added += added;
-    stats.removed += removed;
-    stats.changed += Math.max(added, removed);
-  }
-  return stats;
-}
-
 interface SourceDiffProps {
   original: string;
   modified: string;
   label: string;
-  onStats?(stats: DiffStats): void;
+  /** Undefined when Monaco gave up computing the diff (for example on a very large file). */
+  onStats?(stats: DiffStats | undefined): void;
 }
 
 /** Read-only comparison; side by side when there is room, inline when narrow. */
@@ -142,7 +117,7 @@ export function SourceDiff({
   ...props
 }: SourceDiffProps) {
   const host = useRef<HTMLDivElement>(null);
-  const reportStats = useEffectEvent((stats: DiffStats) =>
+  const reportStats = useEffectEvent((stats: DiffStats | undefined) =>
     props.onStats?.(stats)
   );
   useEditorTheme();
@@ -161,6 +136,8 @@ export function SourceDiff({
       useInlineViewWhenSpaceIsLimited: true,
       renderSideBySideInlineBreakpoint: 760,
       diffWordWrap: "on",
+      // Review must show exactly what Save writes, including indentation-only edits.
+      ignoreTrimWhitespace: false,
       ariaLabel: label
     });
     diff.setModel({ original: originalModel, modified: modifiedModel });
@@ -171,7 +148,8 @@ export function SourceDiff({
         revealed = true;
         diff.revealFirstDiff();
       }
-      reportStats(diffStats(diff.getLineChanges() ?? []));
+      const changes = diff.getLineChanges();
+      reportStats(changes ? diffStats(changes) : undefined);
     });
     return () => {
       updates.dispose();

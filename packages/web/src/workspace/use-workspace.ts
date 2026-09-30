@@ -39,12 +39,36 @@ function forTool(
   };
 }
 
+/**
+ * Whether the list for the record's tool hides it until Show inactive. Uses the same records and fold as
+ * `forTool`; a record from another folder (Global reach) is hidden only when inactive.
+ */
+function foldedIn(records: readonly InventoryRecord[], tool: ToolId) {
+  return (record: InventoryRecord) => {
+    const own = records.filter((item) =>
+      belongsTo(item, record.tool === "unknown" ? tool : record.tool)
+    );
+    return own.some((item) => item.id === record.id)
+      ? foldInactive(own).hidden(record)
+      : record.tier === "inactive";
+  };
+}
+
 /** Selection, inspector mode, and the search palette move together. */
 function useSelection(
   records: InventoryRecord[],
-  { tool, onTool, landing }: Pick<WorkspaceInput, "tool" | "onTool" | "landing">
+  {
+    tool,
+    onTool,
+    landing,
+    isFolded
+  }: Pick<WorkspaceInput, "tool" | "onTool" | "landing"> & {
+    isFolded(record: InventoryRecord): boolean;
+  }
 ) {
-  const [selectedId, setSelectedId] = useState(landing?.selectId);
+  const [selectedId, setSelectedId] = useState(
+    landing && "selectId" in landing ? landing.selectId : undefined
+  );
   const [showInactive, setShowInactive] = useState(false);
   const [showCoverage, setShowCoverage] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -60,9 +84,7 @@ function useSelection(
     if (record && record.tool !== "unknown" && record.tool !== tool) {
       onTool(record.tool);
     }
-    // Plugin versions fold against the other versions of the same tool.
-    const sameTool = records.filter((item) => item.tool === record?.tool);
-    if (reveal && record && foldInactive(sameTool).hidden(record)) {
+    if (reveal && record && isFolded(record)) {
       setShowInactive(true);
     }
     setSelectedId(id);
@@ -88,10 +110,11 @@ function useSelection(
 
 /** The browsing view and kind filter; a landing from another folder can preset both. */
 function useViewFilter(isProject: boolean, landing?: Landing) {
+  const target = landing && "view" in landing ? landing : undefined;
   const [view, setView] = useState<View>(
-    landing?.view ?? (isProject ? "map" : "reach")
+    target?.view ?? (isProject ? "map" : "reach")
   );
-  const [kind, setKind] = useState<RecordKind | "all">(landing?.kind ?? "all");
+  const [kind, setKind] = useState<RecordKind | "all">(target?.kind ?? "all");
   return { view, setView, kind, setKind };
 }
 
@@ -111,7 +134,10 @@ export function useWorkspace(input: WorkspaceInput) {
     () => [...records, ...input.extraRecords],
     [records, input.extraRecords]
   );
-  const selection = useSelection(lookup, input);
+  const selection = useSelection(lookup, {
+    ...input,
+    isFolded: foldedIn(records, tool)
+  });
   const documents = useDocumentView();
   return {
     ...selection,

@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 
-/** Disabled primary gets its own quiet colours: faded ink turns into a bright slab in dark mode. */
+/** Disabled primary gets its own quiet colours: 50% ink would read as a bright slab in dark mode. */
 const variants = {
   primary:
     "border-ink bg-ink px-2.5 text-canvas enabled:hover:opacity-90 disabled:border-hairline disabled:bg-wash disabled:text-ink-faint",

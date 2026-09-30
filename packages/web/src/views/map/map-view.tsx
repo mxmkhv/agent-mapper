@@ -6,7 +6,8 @@ import { stateText } from "../../model/states";
 import { KindIcon, kindLabel, kindOrder } from "../../ui/kind-icon";
 import { HintText } from "../../ui/hint-text";
 import { StateMarker, ToolGlyph, toolName } from "../../ui/marks";
-import { chipClass, ChipRow, repeatedNames } from "./map-items";
+import { repeatedNames } from "../../model/same-names";
+import { chipClass, ChipRow } from "./map-items";
 import { buildMap, loadOrder, type MapLayer } from "./map-model";
 import { StartupBudget } from "./startup-budget";
 

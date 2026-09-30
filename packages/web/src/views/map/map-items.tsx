@@ -2,6 +2,7 @@ import { Link2 } from "lucide-react";
 import { isLink, linkFolder, sharedLinkFolder } from "../../model/links";
 import { shortPath, tildePath, type PathContext } from "../../model/paths";
 import type { InventoryRecord, RecordKind } from "../../model/record-types";
+import { telltaleFolders } from "../../model/same-names";
 import { stateLabel, stateText } from "../../model/states";
 import { KindIcon, kindLabel } from "../../ui/kind-icon";
 import { StateLabel, StateMarker, SymlinkBadge } from "../../ui/marks";
@@ -27,45 +28,6 @@ export function chipClass(record: InventoryRecord, selectedId?: string) {
     : chipTone[record.tier];
 }
 
-/** Names that repeat within a group, so their chips can show what tells them apart. */
-export function repeatedNames(records: readonly InventoryRecord[]) {
-  const seen = new Map<string, number>();
-  for (const record of records) {
-    seen.set(record.name, (seen.get(record.name) ?? 0) + 1);
-  }
-  return new Set(
-    [...seen].filter(([, count]) => count > 1).map(([name]) => name)
-  );
-}
-
-/**
- * For names that repeat within a group, the nearest folder that tells the copies apart: two
- * `skills/react-render-skill/SKILL.md` files differ at `.agents` and `.codex`, not at their own folder.
- */
-function telltaleFolders(
-  records: readonly InventoryRecord[]
-): Map<string, string> {
-  const result = new Map<string, string>();
-  for (const name of repeatedNames(records)) {
-    const copies = records.filter((record) => record.name === name);
-    // Folder segments nearest first, so index 0 is the folder holding the file.
-    const folders = copies.map((record) =>
-      record.path.split("/").slice(0, -1).reverse()
-    );
-    const deepest = Math.max(...folders.map((segments) => segments.length));
-    const level = Array.from({ length: deepest }, (_, index) => index).find(
-      (index) => new Set(folders.map((segments) => segments[index])).size > 1
-    );
-    if (level === undefined) {
-      continue;
-    }
-    copies.forEach((record, index) => {
-      result.set(record.id, folders[index]?.[level] ?? "/");
-    });
-  }
-  return result;
-}
-
 function Chip({
   record,
   showLink,
@@ -75,7 +37,7 @@ function Chip({
 }: ItemProps & {
   record: InventoryRecord;
   showLink: boolean;
-  /** Shown when another chip in the row has the same name. */
+  /** For a name shared with another chip in the row: the folder that tells them apart. */
   folder?: string;
   /** The row already states this chip's state, so the chip draws as normal. */
   quiet: boolean;
@@ -145,7 +107,7 @@ export function ChipRow({
   ...props
 }: ChipRowProps) {
   const shared = sharedLinkFolder(records);
-  const folders = telltaleFolders(records);
+  const folders = telltaleFolders(records, props.context);
   const unknownReason = sharedUnknownReason(records);
   return (
     <div className="grid grid-cols-[22px_minmax(0,1fr)] gap-1.5 px-2 py-2 [&+&]:border-t [&+&]:border-wash">

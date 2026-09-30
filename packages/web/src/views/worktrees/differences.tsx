@@ -138,7 +138,8 @@ export function Differences(props: DifferencesProps) {
     );
   }
   return (
-    // The detail column opens only for a selected file, so the list keeps the full width until then.
+    // The detail column opens only for a selected file, so the list keeps the full width until then;
+    // narrow windows stack it under the list instead of squeezing both.
     <div
       className={`grid h-full min-h-0 ${selected ? "grid-rows-[minmax(0,3fr)_minmax(0,2fr)] lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_380px]" : ""}`}
     >
