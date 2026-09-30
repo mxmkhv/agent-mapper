@@ -8,6 +8,22 @@ export interface WorktreeRecord {
   head?: string;
 }
 
+/** The pull request that best describes a branch: an open or draft one first, then the newest merged or closed. */
+export interface PullRequestSummary {
+  number: number;
+  state: "open" | "draft" | "merged" | "closed";
+  title: string;
+  url: string;
+}
+
+/** Head branch name → its pull request. */
+export type PullRequestsByBranch = Record<string, PullRequestSummary>;
+
+/** Pull requests by head branch name, or why GitHub could not be asked. */
+export type PullRequestLookup =
+  | { status: "ready"; byBranch: PullRequestsByBranch }
+  | { status: "unavailable"; reason: string };
+
 export interface ComparisonSide {
   id: string;
   path: string;

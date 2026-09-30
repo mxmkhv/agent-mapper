@@ -1,4 +1,8 @@
-import type { InventorySnapshot, WorktreeRecord } from "@agent-mapper/core";
+import type {
+  InventorySnapshot,
+  PullRequestLookup,
+  WorktreeRecord
+} from "@agent-mapper/core";
 
 export interface ProjectSuggestion {
   path: string;
@@ -19,7 +23,11 @@ interface ActionRequest {
   action: "open" | "reveal";
 }
 type ApiPayload =
-  ProjectList | InventorySnapshot | { ok: true } | { error: string };
+  | ProjectList
+  | InventorySnapshot
+  | PullRequestLookup
+  | { ok: true }
+  | { error: string };
 
 export function sessionToken(): string {
   const token = window.location.hash.slice(1);
@@ -139,4 +147,22 @@ export async function removeWorktree(path: string): Promise<void> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ path })
   });
+}
+
+/** Pull requests for the repository that contains `path`, read through the user's gh login. */
+export async function getPullRequests(
+  path: string,
+  signal?: AbortSignal
+): Promise<PullRequestLookup> {
+  const value = await request(
+    `/api/worktrees/pull-requests?path=${encodeURIComponent(path)}`,
+    { signal }
+  );
+  if (!value || typeof value !== "object" || !("status" in value)) {
+    throw new Error(
+      "Pull request lookup returned an invalid response. Rescan or restart agent-mapper."
+    );
+  }
+  // The local API owns this payload; validate its top-level shape before using the shared contract.
+  return value as PullRequestLookup;
 }

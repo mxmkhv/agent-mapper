@@ -9,6 +9,7 @@ import type { Landing } from "../../shell/view-bar";
 import { EmptyState } from "../../ui/empty-state";
 import type { PathContext } from "../../model/paths";
 import { useFolderScans, type FolderScan } from "../../state/use-folder-scans";
+import { usePullRequests } from "../../state/use-pull-requests";
 import { CheckoutRow } from "./checkout-row";
 import { relevantDifferences } from "./difference-groups";
 import { ListPane, ListSection } from "./panes";
@@ -65,6 +66,23 @@ function DifferenceCount({
   );
 }
 
+/** Why pull requests are missing, when they are; silent while loading or when GitHub answered. */
+function PullRequestHint({
+  state
+}: {
+  state: ReturnType<typeof usePullRequests>;
+}) {
+  let message: string | undefined;
+  if (state.status === "error") {
+    message = `Could not load pull requests: ${state.message}`;
+  } else if (state.status === "done" && state.lookup.status === "unavailable") {
+    message = `Pull requests: ${state.lookup.reason}`;
+  }
+  return message ? (
+    <p className="m-0 px-2.5 text-caption text-ink-muted">{message}</p>
+  ) : null;
+}
+
 /**
  * From the main checkout: every linked worktree Git knows about, including stale registrations. Rows lead with
  * the branch, as the sidebar does, and open that checkout's comparison.
@@ -87,6 +105,14 @@ export function Checkouts({
     },
     readDifferences
   );
+  const pullRequests = usePullRequests(
+    worktrees.find((tree) => tree.isMain)?.path,
+    refreshKey
+  );
+  const byBranch =
+    pullRequests.status === "done" && pullRequests.lookup.status === "ready"
+      ? pullRequests.lookup.byBranch
+      : {};
   if (!linked.length) {
     return worktrees.length ? (
       <EmptyState title="No linked worktrees">
@@ -107,11 +133,13 @@ export function Checkouts({
             key={tree.path}
             onOpen={() => onSelectPath(tree.path, { view: "worktrees" })}
             onRemoved={onRemoved}
+            pullRequest={tree.branch ? byBranch[tree.branch] : undefined}
             status={<DifferenceCount scan={scans.get(tree.path)} tool={tool} />}
             tree={tree}
           />
         ))}
       </ListSection>
+      <PullRequestHint state={pullRequests} />
     </ListPane>
   );
 }

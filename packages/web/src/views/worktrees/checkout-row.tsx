@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from "react";
-import type { WorktreeRecord } from "@agent-mapper/core";
+import type { PullRequestSummary, WorktreeRecord } from "@agent-mapper/core";
 import { GitBranch } from "lucide-react";
 import { removeWorktree } from "../../api";
 import { ConfirmButton } from "../../documents/confirm-button";
 import { tildePath, type PathContext } from "../../model/paths";
 import { StateLabel, StateMarker } from "../../ui/marks";
+import { PullRequestBadge } from "./pull-request-badge";
 
 const folderName = (path: string) => path.split("/").at(-1) ?? path;
 
@@ -13,6 +14,7 @@ interface CheckoutRowProps {
   context: PathContext;
   /** The difference count for available checkouts. */
   status: ReactNode;
+  pullRequest?: PullRequestSummary;
   onOpen(): void;
   onRemoved(): void;
 }
@@ -51,6 +53,7 @@ export function CheckoutRow({
   tree,
   context,
   status,
+  pullRequest,
   onOpen,
   onRemoved
 }: CheckoutRowProps) {
@@ -109,6 +112,10 @@ export function CheckoutRow({
             )}
           </span>
         </button>
+        {/* Links cannot sit inside the row button, so the pull request gets its own always-visible cell. */}
+        <div className="flex h-9 w-[124px] shrink-0 items-center justify-end">
+          {pullRequest ? <PullRequestBadge pr={pullRequest} /> : null}
+        </div>
         {/* Beside the row button, not inside it; stays visible while its confirmation holds focus. */}
         <div
           className={`flex h-9 min-w-[84px] shrink-0 items-center justify-end pr-3 pl-2 ${removal.state === "removing" || error ? "" : "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"}`}

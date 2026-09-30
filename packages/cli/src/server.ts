@@ -7,20 +7,19 @@ import {
 } from "node:http";
 import type { AddressInfo } from "node:net";
 import { homedir } from "node:os";
-import type { InventorySnapshot } from "@agent-mapper/core";
+import type { InventorySnapshot, PullRequestLookup } from "@agent-mapper/core";
 import { ConfigStore, defaultConfigPath } from "./app-config";
 import { managedClaudeDirectory } from "./managed-claude-reader";
 import { projectRoute, type ProjectsPayload } from "./project-routes";
 import { buildGlobalSnapshot, buildSnapshot } from "./service";
 import { serveAsset } from "./server-assets";
-import { removeWorktree } from "./worktree-remove";
+import { worktreeRoute } from "./worktree-routes";
 import { defaultHistoryRoot } from "./source-document-history-folder";
 import { handleDocumentRoute, isDocumentRoute } from "./source-document-routes";
 import { SourceDocumentService } from "./source-document-service";
 import {
   launchOpen,
   performSourceAction,
-  readJson,
   sourcePathIndex,
   type SourcePathStore
 } from "./source-actions";
@@ -54,7 +53,11 @@ interface RequestContext {
 }
 
 type ApiPayload =
-  ProjectsPayload | InventorySnapshot | { error: string } | { ok: true };
+  | ProjectsPayload
+  | InventorySnapshot
+  | PullRequestLookup
+  | { error: string }
+  | { ok: true };
 interface JsonReply {
   response: ServerResponse;
   status: number;
@@ -106,25 +109,6 @@ async function inventoryPayload(
   return payload;
 }
 
-/** POST routes that act and answer `{ ok: true }`; failures throw an actionable message. */
-const postActions = new Map<string, (context: RequestContext) => Promise<void>>(
-  [
-    [
-      "/api/source-action",
-      (context) =>
-        performSourceAction({
-          request: context.request,
-          paths: context.sourcePaths,
-          launch: context.options.launchSource
-        })
-    ],
-    [
-      "/api/worktrees/remove",
-      async (context) => removeWorktree((await readJson(context.request)).path)
-    ]
-  ]
-);
-
 const sessionError = {
   error: "Session expired or missing. Reopen the URL printed by agent-mapper."
 };
@@ -135,14 +119,15 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
     sendJson({ response, status: status.unauthorized, payload: sessionError });
     return;
   }
-  const projects = await projectRoute({
-    request,
-    url,
-    config: context.config,
-    home: context.options.home ?? homedir()
-  });
-  if (projects) {
-    sendJson({ response, status: status.ok, payload: projects });
+  const routed =
+    (await projectRoute({
+      request,
+      url,
+      config: context.config,
+      home: context.options.home ?? homedir()
+    })) ?? (await worktreeRoute(request, url));
+  if (routed) {
+    sendJson({ response, status: status.ok, payload: routed });
     return;
   }
   if (request.method === "GET" && url.pathname === "/api/inventory") {
@@ -163,10 +148,12 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
     });
     return;
   }
-  const action =
-    request.method === "POST" ? postActions.get(url.pathname) : undefined;
-  if (action) {
-    await action(context);
+  if (request.method === "POST" && url.pathname === "/api/source-action") {
+    await performSourceAction({
+      request,
+      paths: context.sourcePaths,
+      launch: context.options.launchSource
+    });
     sendJson({ response, status: status.ok, payload: { ok: true } });
     return;
   }
