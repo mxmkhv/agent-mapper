@@ -45,6 +45,10 @@ function winningOverride(
   );
 }
 
+// Claude Code 2.1.285 reads AGENTS.md only as a fallback for the whole folder
+// chain: one project CLAUDE.md or CLAUDE.local.md anywhere from the working
+// directory up to / drops every AGENTS.md, including ones in other folders.
+// The user file (~/.claude/CLAUDE.md) does not count.
 function winningClaudeFile({
   entry,
   entries,
@@ -57,7 +61,6 @@ function winningClaudeFile({
   ) {
     return undefined;
   }
-  const directory = entry.path.slice(0, entry.path.lastIndexOf("/"));
   return entries.find(
     (candidate) =>
       candidate.tool === "claude" &&
@@ -66,10 +69,15 @@ function winningClaudeFile({
         candidate.name === "CLAUDE.local.md") &&
       candidate.readState === "readable" &&
       (candidate.characters ?? 0) > 0 &&
-      (candidate.path.slice(0, candidate.path.lastIndexOf("/")) === directory ||
-        candidate.path === `${directory}/.claude/CLAUDE.md`) &&
-      entryApplies(candidate, context.workingDirectory)
+      containsPath(claudeFileFolder(candidate.path), context.workingDirectory)
   );
+}
+
+function claudeFileFolder(path: string): string {
+  const directory = path.slice(0, path.lastIndexOf("/"));
+  return directory.endsWith("/.claude")
+    ? directory.slice(0, -"/.claude".length)
+    : directory;
 }
 
 interface ResolveInput {
@@ -105,7 +113,7 @@ function resolveEntry({
       resolution: {
         availability: "shadowed",
         loading: "not-applicable",
-        reason: `Claude Code uses project CLAUDE.md guidance here: ${claudeFile.path}`
+        reason: `Claude Code skips AGENTS.md because this folder chain has ${claudeFile.path}`
       }
     };
   }
