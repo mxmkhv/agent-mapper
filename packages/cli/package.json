@@ -1,8 +1,31 @@
 {
   "name": "agent-mapper",
-  "private": true,
   "version": "0.0.0",
+  "description": "Local inventory of Claude Code and Codex configuration: instructions, skills, agents, hooks, plugins, MCP servers, and memory",
+  "license": "MIT",
+  "author": "Max Kehayov",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mxmkhv/agent-mapper.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/mxmkhv/agent-mapper#readme",
+  "bugs": {
+    "url": "https://github.com/mxmkhv/agent-mapper/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "codex",
+    "agents",
+    "skills",
+    "mcp",
+    "hooks",
+    "cli"
+  ],
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "bin": {
     "agent-mapper": "dist/index.js"
   },
@@ -10,9 +33,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "bun build src/index.ts --target=node --outfile=dist/index.js && bun ../../scripts/copy-web.ts"
+    "build": "bun build src/index.ts --target=node --outfile=dist/index.js && bun ../../scripts/assemble-cli-package.ts"
   },
-  "dependencies": {
+  "devDependencies": {
     "@agent-mapper/core": "workspace:*",
     "smol-toml": "1.9.0",
     "yaml": "2.9.1"

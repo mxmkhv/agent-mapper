@@ -21,10 +21,13 @@
     "test:hooks": "vitest run tests/hooks",
     "knip": "knip --no-progress",
     "build": "bun run --cwd packages/core build && bun run --cwd packages/web build && bun run --cwd packages/cli build",
-    "test:smoke": "node packages/cli/dist/index.js --help",
+    "test:smoke": "node packages/cli/dist/index.js --help && node packages/cli/dist/index.js --version",
     "validate": "bun run format:check && bun run lint && bun run test:ts && bun run knip && bun run test --run && bun run build && bun run test:smoke",
     "prepare": "bun scripts/install-hooks.ts",
-    "lint:staged": "lint-staged"
+    "lint:staged": "lint-staged",
+    "release:patch": "bun scripts/release.ts patch",
+    "release:minor": "bun scripts/release.ts minor",
+    "release:major": "bun scripts/release.ts major"
   },
   "devDependencies": {
     "@oxlint/plugins": "1.85.0",

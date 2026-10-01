@@ -4,7 +4,7 @@
     ".": {
       "entry": [
         ".agent-hooks/{guard,lint-edited,stop-gate}.ts",
-        "scripts/{install-hooks,copy-web}.ts",
+        "scripts/{install-hooks,assemble-cli-package,release}.ts",
         "tests/**/*.test.ts"
       ],
       "project": [".agent-hooks/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"]

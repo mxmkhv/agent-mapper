@@ -2,6 +2,10 @@
 
 A local view of Claude Code and Codex configuration. The current build inventories local instructions, skills, agents, hooks, plugins, MCP declarations, memory files, and linked worktrees. Scans are read-only. agent-mapper writes only when you save a reviewed instruction or skill edit or restore a saved version, plus its private history and lock files.
 
+## Install
+
+Run `npx agent-mapper` (Node 22 or newer) to open the local inventory UI. Add `--tools codex` or `--tools claude` to filter by tool.
+
 ## Start
 
 1. Select Node **26.7.0** using your version manager. Tooling requires Node **22.22.1 or newer**. On this Mac, the Homebrew Node is available with `export PATH="/opt/homebrew/bin:$PATH"`.
@@ -60,6 +64,10 @@ The `prepare` script changes only this repository's `core.hooksPath`. CI skips i
 | `bun run validate`   | All gates, production builds, and Node CLI smoke test |
 
 After `bun run build`, run `node packages/cli/dist/index.js --help` to see CLI usage. The published CLI is designed to run under Node.
+
+## Release
+
+Run `bun run release:patch`, `release:minor`, or `release:major` from a clean tree. The script branches `release/x.y.z` from `origin/dev`, bumps `packages/cli/package.json`, pushes (the pre-push hook runs the full validate), and opens a PR into `main`. Merging it runs [the release workflow](.github/workflows/release.yml): validate, publish to npm with provenance through trusted publishing, create the `vx.y.z` GitHub release, and merge `main` back into `dev`.
 
 ## Agent setup
 
