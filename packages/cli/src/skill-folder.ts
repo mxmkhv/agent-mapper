@@ -5,7 +5,7 @@ import type { SkillTransferFile } from "@agent-mapper/core";
 import { errnoCode, ioError } from "./source-document-errors";
 
 /** A skill is a few documents and scripts; anything larger is likely a checkout or build output. */
-const maxItems = 1000;
+export const maxFolderItems = 1000;
 const maxBytes = 52_428_800;
 const permissionBits = 0o7777;
 const executableBits = 0o111;
@@ -101,7 +101,10 @@ async function readItem(
   return { item: { ...base, type: "file", bytes: info.size } };
 }
 
-async function fingerprintOf(items: readonly FolderItem[]): Promise<string> {
+/** Covers every path, type, executable bit, file content and link text, so any edit changes it. */
+export async function fingerprintOf(
+  items: readonly FolderItem[]
+): Promise<string> {
   const hash = createHash("sha256");
   for (const item of items) {
     hash.update(`${item.type}\0${item.path}\0${item.executable}\0`);
@@ -119,8 +122,8 @@ function sizeProblem(
   root: string,
   size: { count: number; totalBytes: number }
 ): string | undefined {
-  if (size.count >= maxItems) {
-    return `${root} holds more than ${maxItems} files and folders. Skills this large are not copied here; use Finder or the shell.`;
+  if (size.count >= maxFolderItems) {
+    return `${root} holds more than ${maxFolderItems} files and folders. Skills this large are not copied here; use Finder or the shell.`;
   }
   if (size.totalBytes > maxBytes) {
     return `${root} holds more than 50 MiB. Skills this large are not copied here; use Finder or the shell.`;
@@ -136,7 +139,7 @@ export async function readSkillFolder(root: string): Promise<SkillFolder> {
   const walk = async (directory: string): Promise<void> => {
     const names = (await readdir(directory)).sort();
     for (const name of names) {
-      if (items.length >= maxItems) {
+      if (items.length >= maxFolderItems) {
         return;
       }
       const read = await readItem({ root, realRoot }, join(directory, name));

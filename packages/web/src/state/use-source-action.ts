@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { sourceAction } from "../api";
+import { sourceAction, type SourceAction } from "../api";
 
 interface ActionError {
   id: string;
@@ -9,7 +9,7 @@ interface ActionError {
 /** Open in editor / Reveal in Finder for one record, keeping the error next to the record that failed. */
 export function useSourceAction(workingDirectory: string) {
   const [error, setError] = useState<ActionError>();
-  async function run(id: string, action: "open" | "reveal") {
+  async function run(id: string, action: SourceAction) {
     setError(undefined);
     try {
       await sourceAction({ path: workingDirectory, id, action });

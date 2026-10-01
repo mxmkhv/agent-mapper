@@ -57,21 +57,34 @@ function sourceTone(index: number): string {
   return sourceTones[index % sourceTones.length] ?? "";
 }
 
-/** Shape carries the state: solid is normal, hollow is inactive, dashed is unknown, red is a problem. A source tone (the repo's rank in its group) only recolors the normal dot. */
+/**
+ * Shape carries the state: solid is normal, hollow is inactive, dashed is unknown, red is a problem. Only the
+ * normal dot is recolored: by a source tone (the repo's rank in its group), or else link green for a symlink.
+ */
 export function StateMarker({
   tier,
   large,
-  tone
+  tone,
+  linked
 }: {
   tier: Tier;
   large?: boolean;
   tone?: number;
+  linked?: boolean;
 }) {
-  const toned = tier === "active" && tone !== undefined;
+  const color = () => {
+    if (tier !== "active") {
+      return markerStyle[tier];
+    }
+    if (tone !== undefined) {
+      return sourceTone(tone);
+    }
+    return linked ? "bg-link" : markerStyle.active;
+  };
   return (
     <span
       aria-hidden="true"
-      className={`inline-block shrink-0 rounded-full ${large ? "size-[9px]" : "size-[7px]"} ${toned ? sourceTone(tone) : markerStyle[tier]}`}
+      className={`inline-block shrink-0 rounded-full ${large ? "size-[9px]" : "size-[7px]"} ${color()}`}
     />
   );
 }
@@ -90,6 +103,20 @@ export function StateLabel({ tier, text }: { tier: Tier; text?: string }) {
   );
 }
 
+/** Link green tints the chip; the text stays muted ink, since the pastel alone would not be readable. */
+export const symlinkChip =
+  "inline-flex h-[18px] items-center gap-[3px] rounded-pill border border-link/45 bg-link/10 px-1.5 text-caption font-medium whitespace-nowrap text-ink-muted";
+
+export function SymlinkGlyph() {
+  return (
+    <Link2
+      aria-hidden="true"
+      className="size-[11px] text-link"
+      strokeWidth={2}
+    />
+  );
+}
+
 export function SymlinkBadge({
   target,
   text = "symlink",
@@ -102,10 +129,10 @@ export function SymlinkBadge({
 }) {
   return (
     <span
-      className="inline-flex h-[18px] items-center gap-[3px] rounded-pill border border-hairline bg-surface px-1.5 text-caption font-medium whitespace-nowrap text-ink-muted"
+      className={symlinkChip}
       title={title ?? (target ? `Symlink → ${target}` : undefined)}
     >
-      <Link2 aria-hidden="true" className="size-[11px]" strokeWidth={1.8} />
+      <SymlinkGlyph />
       {text}
     </span>
   );

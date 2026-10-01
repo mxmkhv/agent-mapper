@@ -7,6 +7,8 @@ export interface AgentRecord {
   scope: "global" | "project" | "unknown";
   format: "markdown" | "toml";
   sourcePath: string;
+  /** Where the file really is, when `sourcePath` reaches it through a symlink. */
+  realPath?: string;
   locator: string;
   descriptionPresent: boolean;
   characters?: number;

@@ -40,6 +40,9 @@ function finish(
     layer: layerOf(draft),
     tier: rest.problems.length ? "problem" : tierOf(draft.label, readState)
   };
+  if (readState && readState !== "readable") {
+    record.unreadable = true;
+  }
   if (!plugin) {
     return record;
   }
@@ -62,18 +65,22 @@ function finish(
   return record;
 }
 
-/** Instruction and skill entries backed by a file of their own, which can be opened as documents. */
+/**
+ * Instructions, skills and agents backed by a file of their own. They act through their scan: readable ones open
+ * as documents, and a broken one can still be deleted.
+ */
 function documentIds(snapshot: InventorySnapshot): Set<string> {
-  return new Set(
-    snapshot.items
+  return new Set([
+    ...snapshot.items
       .filter(
         ({ entry }) =>
           (entry.kind === "instruction" || entry.kind === "skill") &&
           !entry.inlineContent &&
           !entry.declarationOnly
       )
-      .map(({ entry }) => entry.id)
-  );
+      .map(({ entry }) => entry.id),
+    ...snapshot.agents.map((agent) => agent.id)
+  ]);
 }
 
 /**

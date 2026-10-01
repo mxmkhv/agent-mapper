@@ -157,14 +157,22 @@ export function Content({ props, state, reach }: PartsProps) {
               tool: props.tool
             })
       }
+      groupFocus={state.groupFocus}
+      onGroupFocused={state.groupFocused}
       isProject={props.isProject}
       kind={state.kind}
       onKind={state.filterKind}
+      onOpenDocument={state.openDocument}
       onSelect={state.select}
       otherVersions={state.showInactive ? undefined : state.otherVersions}
       records={state.visible}
       revealRequest={state.revealRequest}
       tool={props.tool}
+      transfer={{
+        workingDirectory: props.snapshot.workingDirectory,
+        scannedAt: props.snapshot.scannedAt,
+        copyTargets: props.copyTargets
+      }}
     />
   );
 }

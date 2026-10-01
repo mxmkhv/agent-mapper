@@ -56,3 +56,39 @@ it("validates CRLF text the same as LF and points at the frontmatter line", () =
   );
   expect(problem?.line).toBe(3);
 });
+
+it("checks a Claude Code agent's frontmatter like a skill's", () => {
+  const agent = (content: string) =>
+    validateDocument(content, "agent").map(
+      (item) => `${item.severity}:${item.code}`
+    );
+  expect(agent("---\nname: a\ndescription: b\n---\nBody\n")).toEqual([]);
+  expect(agent("---\nname: a\n---\n")).toEqual([
+    "warning:agent-description-missing"
+  ]);
+  expect(agent("---\nname: [x\n---\n")[0]).toMatch(/^error:frontmatter-/);
+});
+
+it("blocks a Codex agent whose TOML is broken or mistyped", () => {
+  const toml = (content: string) => validateDocument(content, "agent-toml");
+  const complete =
+    'name = "a"\ndescription = "b"\ndeveloper_instructions = "c"\n';
+  expect(toml(complete)).toEqual([]);
+  expect(toml('name = "a"\ndescription = [1,\n')).toEqual([
+    {
+      severity: "error",
+      code: "toml-syntax",
+      message: "Invalid TOML document: invalid value.",
+      line: 3,
+      column: 1
+    }
+  ]);
+  expect(
+    toml('name = 1\ndescription = "b"\n').map(
+      (item) => `${item.severity}:${item.code}`
+    )
+  ).toEqual([
+    "error:agent-name-type",
+    "warning:agent-developer_instructions-missing"
+  ]);
+});

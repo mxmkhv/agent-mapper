@@ -5,15 +5,13 @@ import { tildePath, tildeText, type PathContext } from "../model/paths";
 import type { CopyTarget } from "../model/copy-targets";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
 import { stateText } from "../model/states";
-import {
-  SourceDocumentPanel,
-  type DocumentMode
-} from "../documents/source-document-panel";
+import type { DocumentMode } from "../documents/source-document-panel";
 import { useSourceAction } from "../state/use-source-action";
 import { Button } from "../ui/button";
 import { PathText } from "../ui/path-text";
 import { KindIcon, kindSingular } from "../ui/kind-icon";
-import { StateMarker, SymlinkBadge, ToolGlyph } from "../ui/marks";
+import { StateMarker, ToolGlyph } from "../ui/marks";
+import { SymlinkPopover } from "../ui/symlink-popover";
 import {
   Contributions,
   Details,
@@ -24,7 +22,8 @@ import {
   sizeText
 } from "./inspector-sections";
 import { ReachSection, type ReachScope } from "./reach-section";
-import { SkillTransfer } from "./skill-transfer";
+import { pluginGroupKey } from "../views/inventory-groups";
+import { ItemFile } from "./item-actions";
 
 interface InspectorScope {
   records: InventoryRecord[];
@@ -39,7 +38,8 @@ interface RecordInspectorProps {
   record: InventoryRecord;
   scope: InspectorScope;
   onSelect(id: string, options?: { tool?: ToolId }): void;
-  onKind(kind: RecordKind): void;
+  /** Shows a plugin's contributions of one kind in the Inventory. */
+  onKind(kind: RecordKind, group: string): void;
   onOpenDocument(sourceKey: string, mode: DocumentMode): void;
   /** Present in the Global view: which projects this record reaches. */
   reach?: ReachScope;
@@ -104,7 +104,7 @@ function StateLine({
   return (
     <>
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-label">
-        <StateMarker tier={record.tier} />
+        <StateMarker linked={isLink(record)} tier={record.tier} />
         <strong
           className={record.tier === "problem" ? "text-problem" : ""}
           title={normal ? reason : undefined}
@@ -127,21 +127,26 @@ export function RecordInspector({
   reach
 }: RecordInspectorProps) {
   // An instruction or skill picked from Global reach carries its own project's scan; other kinds use this view's.
-  const action = useSourceAction(
-    record.sourceRef?.workingDirectory ?? scope.workingDirectory
-  );
+  const workingDirectory =
+    record.sourceRef?.workingDirectory ?? scope.workingDirectory;
+  const action = useSourceAction(workingDirectory);
   const imports = scope.imports.filter(
     (item) => item.sourceEntryId === record.id
   );
   const error = action.errorFor(record.id);
+  const linked = isLink(record);
   return (
     <div className="px-5 pt-4.5 pb-7">
       <div className="flex items-center gap-1.5 text-label text-ink-muted">
         <KindIcon kind={record.kind} small />
         {kindSingular[record.kind]}
         <ToolGlyph tool={record.tool} />
-        {isLink(record) ? (
-          <SymlinkBadge target={tildePath(record.realPath, scope.context)} />
+        {linked ? (
+          <SymlinkPopover
+            id={record.id}
+            target={tildePath(record.realPath, scope.context)}
+            workingDirectory={workingDirectory}
+          />
         ) : null}
       </div>
       <h2 className="mt-1.5 mb-1 text-headline font-semibold tracking-tight break-words">
@@ -159,18 +164,21 @@ export function RecordInspector({
       ))}
       <Provenance context={scope.context} onSelect={onSelect} record={record} />
       {record.sourceRef ? (
-        <div className="mt-5">
-          <SourceDocumentPanel
-            onOpen={onOpenDocument}
-            scannedAt={scope.scannedAt}
-            sourceRef={record.sourceRef}
-          />
-        </div>
+        <ItemFile
+          onOpenDocument={onOpenDocument}
+          onSelect={onSelect}
+          record={record}
+          scope={scope}
+          sourceRef={record.sourceRef}
+        />
       ) : null}
       <Links onSelect={onSelect} record={record} scope={scope} />
       {record.kind === "plugin" ? (
         <Section title="Contributes">
-          <Contributions onKind={onKind} record={record} />
+          <Contributions
+            onKind={(kind) => onKind(kind, pluginGroupKey(record.id))}
+            record={record}
+          />
         </Section>
       ) : null}
       {imports.length ? (
@@ -191,16 +199,6 @@ export function RecordInspector({
         <Button onClick={() => void action.run(record.id, "reveal")}>
           Reveal in Finder
         </Button>
-        {record.kind === "skill" && record.sourceRef ? (
-          <SkillTransfer
-            context={scope.context}
-            onSelect={onSelect}
-            copyTargets={scope.copyTargets}
-            record={record}
-            scannedAt={scope.scannedAt}
-            sourceRef={record.sourceRef}
-          />
-        ) : null}
       </div>
       {error ? (
         <p className="mt-2 mb-0 text-label text-problem" role="alert">

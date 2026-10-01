@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Folder, GitBranch, X } from "lucide-react";
 import type { ProjectSuggestion } from "../api";
+import { ConfirmButton } from "../documents/confirm-button";
 import { NavItem } from "./nav-item";
 
 const visibleWorktrees = 3;
@@ -97,14 +98,23 @@ export function ProjectList({
               </span>
             ) : null}
           </NavItem>
-          <button
-            aria-label={`Remove ${name} from the list`}
-            className="absolute top-[3px] right-1 grid size-6 place-items-center rounded-control text-ink-muted opacity-0 group-has-focus-visible:opacity-100 group-hover:opacity-100 hover:bg-hover hover:text-ink"
-            onClick={() => onRemove(project)}
-            title="Remove from list. Restore it under Removed."
-          >
-            <X aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
-          </button>
+          <ConfirmButton
+            confirmLabel="Remove"
+            label={`Remove ${name} from the list`}
+            onConfirm={() => onRemove(project)}
+            placement="over"
+            question={`Remove ${name} from the list?`}
+            trigger={(ask) => (
+              <button
+                aria-label={`Remove ${name} from the list`}
+                className="absolute top-[3px] right-1 grid size-6 place-items-center rounded-control text-ink-muted opacity-0 group-has-focus-visible:opacity-100 group-hover:opacity-100 hover:bg-hover hover:text-ink"
+                onClick={ask}
+                title="Remove from list. The folder stays; restore it under Removed."
+              >
+                <X aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+              </button>
+            )}
+          />
         </div>
         {containsSelection(project, selectedPath) && linked ? (
           <Worktrees

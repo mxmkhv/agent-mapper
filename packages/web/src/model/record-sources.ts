@@ -68,7 +68,7 @@ export function agentDraft(agent: AgentRecord, order: number): RecordDraft {
     tool: agent.tool,
     name: agent.name,
     path: agent.sourcePath,
-    realPath: agent.sourcePath,
+    realPath: agent.realPath ?? agent.sourcePath,
     scope: agent.scope,
     label: agent.availability,
     reason: agent.reason,

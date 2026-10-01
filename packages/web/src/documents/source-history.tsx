@@ -8,6 +8,7 @@ import { tildePath, type PathContext } from "../model/paths";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
 import { Diagnostics } from "./diagnostics";
+import { editorLanguage } from "./document-format";
 import { SourceDiff } from "./lazy";
 import { RevisionList } from "./revision-list";
 import {
@@ -40,6 +41,7 @@ function Comparison(props: {
       <Suspense fallback={loadingEditor}>
         <SourceDiff
           label="Current file on the left, selected version on the right"
+          language={editorLanguage(props.draft.document)}
           modified={selected.value.content}
           original={props.draft.document.content}
         />

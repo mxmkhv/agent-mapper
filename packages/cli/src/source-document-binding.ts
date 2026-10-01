@@ -11,7 +11,7 @@ import type {
   DocumentHandle,
   SourceDocumentRegistry
 } from "./source-document-registry";
-import { validateDocument } from "./source-document-validation";
+import { validateEntry } from "./source-document-validation";
 
 /** A document handle checked against the latest scan and the file currently on disk. */
 export interface Bound {
@@ -100,7 +100,7 @@ export async function describeDocument(
     lineEnding: target.decoded.lineEnding,
     editable: !reason,
     readOnlyReason: reason,
-    diagnostics: validateDocument(target.decoded.content, entry.kind),
+    diagnostics: validateEntry(target.decoded.content, entry),
     impact: context.registry.impact(target.canonicalPath),
     historyDirectory: join(context.historyRoot, handle.sourceKey)
   };

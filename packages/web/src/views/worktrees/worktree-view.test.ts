@@ -64,9 +64,9 @@ it("shows linked checkouts from the main view, including stale registrations", (
   expect(html).toContain("feature");
   expect(html).toContain("prunable");
   expect(html).toContain("linked");
-  // Only available checkouts offer removal; stale registrations point at git worktree prune instead.
+  // Only available checkouts offer removal; a stale registration offers Prune instead.
   expect(html.match(/>Remove</g)).toHaveLength(1);
-  expect(html).toContain("run git worktree prune");
+  expect(html.match(/>Prune</g)).toHaveLength(1);
 });
 
 it("explains when the selected folder is outside Git", () => {

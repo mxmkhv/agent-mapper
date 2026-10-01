@@ -8,6 +8,7 @@ import {
   saveViewState
 } from "./monaco-setup";
 import { diffStats, type DiffStats } from "./diff-stats";
+import type { EditorLanguage } from "./document-format";
 
 const sharedOptions = {
   minimap: { enabled: false },
@@ -35,6 +36,7 @@ function useEditorTheme(): void {
 interface SourceEditorProps {
   sourceKey: string;
   text: string;
+  language: EditorLanguage;
   readOnly: boolean;
   /** Unsaved text exists; the model (and its undo history) is kept while it does. */
   dirty: boolean;
@@ -45,7 +47,7 @@ interface SourceEditorProps {
 
 /** Wraps Monaco directly. The draft's model outlives this view, so typing undo survives navigation. */
 export function SourceEditor(props: SourceEditorProps) {
-  const { sourceKey, text, readOnly, label } = props;
+  const { sourceKey, text, language, readOnly, label } = props;
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor>(undefined);
   const change = useEffectEvent((value: string) => props.onChange(value));
@@ -58,7 +60,7 @@ export function SourceEditor(props: SourceEditorProps) {
     if (!host.current) {
       return;
     }
-    const model = draftModel(sourceKey, initialText());
+    const model = draftModel(sourceKey, { text: initialText(), language });
     const instance = monaco.editor.create(host.current, {
       ...sharedOptions,
       model,
@@ -84,7 +86,7 @@ export function SourceEditor(props: SourceEditorProps) {
         disposeDraftModel(sourceKey);
       }
     };
-  }, [sourceKey, label]);
+  }, [sourceKey, language, label]);
 
   useEffect(() => {
     editor.current?.updateOptions({ readOnly });
@@ -104,6 +106,7 @@ export function SourceEditor(props: SourceEditorProps) {
 interface SourceDiffProps {
   original: string;
   modified: string;
+  language: EditorLanguage;
   label: string;
   /** Undefined when Monaco gave up computing the diff (for example on a very large file). */
   onStats?(stats: DiffStats | undefined): void;
@@ -113,6 +116,7 @@ interface SourceDiffProps {
 export function SourceDiff({
   original,
   modified,
+  language,
   label,
   ...props
 }: SourceDiffProps) {
@@ -126,8 +130,8 @@ export function SourceDiff({
     if (!host.current) {
       return;
     }
-    const originalModel = monaco.editor.createModel(original, "markdown");
-    const modifiedModel = monaco.editor.createModel(modified, "markdown");
+    const originalModel = monaco.editor.createModel(original, language);
+    const modifiedModel = monaco.editor.createModel(modified, language);
     const diff = monaco.editor.createDiffEditor(host.current, {
       ...sharedOptions,
       readOnly: true,
@@ -157,7 +161,7 @@ export function SourceDiff({
       originalModel.dispose();
       modifiedModel.dispose();
     };
-  }, [original, modified, label]);
+  }, [original, modified, language, label]);
 
   return <div className="h-full min-h-64" ref={host} />;
 }

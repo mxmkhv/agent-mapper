@@ -20,8 +20,9 @@ The first release covers instructions, skills, commands, agents, hooks, memory, 
 The app is read-only with respect to agent configuration, with a few explicit exceptions. Files stay where they are. Actions are Open in editor, Reveal in Finder, navigation, filtering, and rescanning. The app may save its own preferences. The exceptions below always need a deliberate click:
 
 - Edit instructions and `SKILL.md` files in the app, with a diff review, conflict checks, and private revision history. Plugin and managed files stay read-only.
-- Remove a project from the sidebar. This is an app preference in `~/.config/agent-mapper/config.json` (under `$XDG_CONFIG_HOME` when that is set); the folder is untouched and can be restored.
+- Remove a project from the sidebar, after an inline confirmation. This is an app preference in `~/.config/agent-mapper/config.json` (under `$XDG_CONFIG_HOME` when that is set); the folder is untouched and can be restored.
 - Remove a linked worktree with `git worktree remove`, after an inline confirmation. The app never passes `--force`, so Git refuses checkouts with uncommitted changes or untracked files. Ignored files such as `.env` and `node_modules` are deleted with the folder, and the confirmation says so. The branch is kept.
+- Prune a stale worktree entry (Git marks it `prunable` once its folder is gone), after an inline confirmation. Only that entry's record under `.git/worktrees` is cleared; the branch and other stale entries are kept.
 
 The Worktrees view also shows each branch's pull request state. It is read-only and needs no click, and it is the app's only network read: `gh pr list`, through the user's own `gh` login, once per scan. A missing or logged-out `gh`, or a repository without a GitHub remote, leaves a hint; other `gh` failures show as errors.
 

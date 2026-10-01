@@ -45,7 +45,7 @@ export async function removeWorktree(value: string | undefined): Promise<void> {
   }
   if (target.state !== "available") {
     throw new Error(
-      `${basename(path)} is ${target.state}. Run git worktree prune in ${main.path} to clear stale entries.`
+      `${basename(path)} is ${target.state}, so there is no folder to remove. Use Prune to clear a stale entry.`
     );
   }
   try {
@@ -55,5 +55,45 @@ export async function removeWorktree(value: string | undefined): Promise<void> {
     throw new Error(refusal(basename(path), gitMessage(error)), {
       cause: error
     });
+  }
+}
+
+/**
+ * Clears Git's record of one linked worktree whose folder is already gone. Runs `git worktree remove` on that
+ * entry, which for a missing folder only deletes `.git/worktrees/<name>`; `git worktree prune` would clear every
+ * stale entry in the repository at once. The branch is kept.
+ * The folder no longer exists, so the request names a checkout of the repository as well; the stale path must
+ * be marked prunable in a fresh `git worktree list` there.
+ */
+export async function pruneWorktree(request: {
+  repository?: string;
+  path?: string;
+}): Promise<void> {
+  const { repository, path } = request;
+  if (!repository || !path || !isAbsolute(repository) || !isAbsolute(path)) {
+    throw new Error(
+      "Send the repository's folder and the stale worktree's absolute path."
+    );
+  }
+  const worktrees = await repositoryWorktrees(resolve(repository));
+  const target = worktrees.find((tree) => tree.path === resolve(path));
+  const main = worktrees.find((tree) => tree.isMain);
+  if (!target || !main || target.isMain) {
+    throw new Error(
+      `${path} is not a linked worktree of this repository. Rescan to refresh the worktree list.`
+    );
+  }
+  if (target.state !== "prunable") {
+    throw new Error(
+      `${basename(path)} is ${target.state}, not stale, so there is nothing to prune. Rescan to refresh the worktree list.`
+    );
+  }
+  try {
+    await git(main.path, ["worktree", "remove", target.path]);
+  } catch (error) {
+    throw new Error(
+      `Git did not prune ${basename(path)}: ${gitMessage(error)}`,
+      { cause: error }
+    );
   }
 }

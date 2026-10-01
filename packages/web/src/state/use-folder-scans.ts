@@ -12,8 +12,10 @@ const failed = (error: unknown): FolderScan<never> => ({
 
 /**
  * Scans several folders in parallel and keeps only what `read` takes from each snapshot. Results fill in as
- * each scan finishes; a missing entry is still scanning, and a failed scan keeps its error without blocking
+ * each scan finishes; a missing entry has never been scanned, and a failed scan keeps its error without blocking
  * the others. A new path list or refresh aborts the previous round, and late answers from it are dropped.
+ * A folder keeps its last result until the new round answers for it, so a rescan updates rows in place
+ * instead of blanking them.
  */
 export function useFolderScans<T>(
   { paths, refresh }: { paths: readonly string[]; refresh: number },
@@ -21,26 +23,16 @@ export function useFolderScans<T>(
 ): ReadonlyMap<string, FolderScan<T>> {
   const pathsKey = paths.join("\n");
   const list = useMemo(() => pathsKey.split("\n").filter(Boolean), [pathsKey]);
-  const key = `${refresh}\n${pathsKey}`;
-  const [state, setState] = useState<{
-    key: string;
-    scans: ReadonlyMap<string, FolderScan<T>>;
-  }>({ key: "", scans: new Map() });
+  const [scans, setScans] = useState<ReadonlyMap<string, FolderScan<T>>>(
+    new Map()
+  );
   const readSnapshot = useEffectEvent(read);
   useEffect(() => {
     const controller = new AbortController();
-    const stateKey = `${refresh}\n${list.join("\n")}`;
     function update(path: string, scan: FolderScan<T>) {
-      if (controller.signal.aborted) {
-        return;
+      if (!controller.signal.aborted) {
+        setScans((previous) => new Map(previous).set(path, scan));
       }
-      setState((previous) => ({
-        key: stateKey,
-        scans: new Map(previous.key === stateKey ? previous.scans : []).set(
-          path,
-          scan
-        )
-      }));
     }
     for (const path of list) {
       getInventory(path, controller.signal).then(
@@ -50,8 +42,9 @@ export function useFolderScans<T>(
     }
     return () => controller.abort();
   }, [list, refresh]);
+  // Only the folders asked for now; results for folders that left the list are not shown.
   return useMemo(
-    () => (state.key === key ? state.scans : new Map()),
-    [state, key]
+    () => new Map([...scans].filter(([path]) => list.includes(path))),
+    [scans, list]
   );
 }

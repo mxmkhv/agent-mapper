@@ -2,6 +2,7 @@ import { Suspense, useState } from "react";
 import type { PathContext } from "../model/paths";
 import type { Draft } from "../state/draft-store";
 import { Diagnostics } from "./diagnostics";
+import { editorLanguage } from "./document-format";
 import { ImpactSummary, type ImpactCoverage } from "./impact-summary";
 import { SourceDiff } from "./lazy";
 import type { DiffStats } from "./diff-stats";
@@ -78,6 +79,7 @@ export function SourceReview({
         <Suspense fallback={loadingEditor}>
           <SourceDiff
             label="Changes to review: file on disk on the left, your draft on the right"
+            language={editorLanguage(draft.document)}
             modified={review.text}
             onStats={(stats) => setDiff({ text: review.text, stats })}
             original={draft.document.content}
@@ -129,6 +131,7 @@ export function SourceConflict({ draft }: { draft: Draft }) {
         <Suspense fallback={loadingEditor}>
           <SourceDiff
             label="Conflict: current file on the left, your draft on the right"
+            language={editorLanguage(draft.document)}
             modified={draft.text}
             original={disk.content}
           />

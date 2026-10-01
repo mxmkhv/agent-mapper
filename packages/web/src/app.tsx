@@ -68,6 +68,7 @@ export function App() {
           projects={visibility.projects}
           selectedPath={selectedPath}
           theme={theme}
+          tool={tool}
         />
         <main className="grid min-h-0 min-w-0">
           <DocumentErrorBoundary

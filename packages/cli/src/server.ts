@@ -17,11 +17,9 @@ import {
   rememberProjects,
   type ServerServices
 } from "./server-services";
-import {
-  handleSkillTransferRoute,
-  isSkillTransferRoute
-} from "./skill-transfer-routes";
 import { worktreeRoute } from "./worktree-routes";
+import type { MoveToTrash } from "./source-delete";
+import { handleItemRoute } from "./source-delete-routes";
 import { handleDocumentRoute, isDocumentRoute } from "./source-document-routes";
 import {
   launchOpen,
@@ -39,6 +37,8 @@ export interface AppServerOptions {
   /** agent-mapper preferences such as removed projects; defaults to ~/.config/agent-mapper/config.json (XDG_CONFIG_HOME aware). */
   configPath?: string;
   launchSource?: (args: string[]) => Promise<void>;
+  /** Moves deleted skills and agents away; defaults to the macOS Trash. */
+  trash?: MoveToTrash;
 }
 export interface AppServer {
   token: string;
@@ -166,8 +166,7 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
     });
     return;
   }
-  if (isSkillTransferRoute(url.pathname)) {
-    await handleSkillTransferRoute(context.skills, { request, response, url });
+  if (await handleItemRoute(context, { request, response, url })) {
     return;
   }
   if (request.method === "POST" && url.pathname === "/api/source-action") {

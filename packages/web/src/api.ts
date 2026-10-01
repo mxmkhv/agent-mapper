@@ -17,10 +17,12 @@ export interface ProjectList {
   exclusions: string[];
   maxDepth: number;
 }
+/** "reveal-target" selects the file a symlink resolves to instead of the link itself. */
+export type SourceAction = "open" | "reveal" | "reveal-target";
 interface ActionRequest {
   path: string;
   id: string;
-  action: "open" | "reveal";
+  action: SourceAction;
 }
 type ApiPayload =
   | ProjectList
@@ -146,6 +148,18 @@ export async function removeWorktree(path: string): Promise<void> {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ path })
+  });
+}
+
+/** Clears Git's record of a worktree whose folder is gone; `repository` is any checkout that still exists. */
+export async function pruneWorktree(
+  repository: string,
+  path: string
+): Promise<void> {
+  await request("/api/worktrees/prune", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ repository, path })
   });
 }
 

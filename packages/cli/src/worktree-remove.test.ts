@@ -10,7 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
-import { removeWorktree } from "./worktree-remove";
+import { pruneWorktree, removeWorktree } from "./worktree-remove";
 
 const roots: string[] = [];
 afterEach(() => {
@@ -86,5 +86,34 @@ it("refuses the main checkout, unknown folders, and relative paths", async () =>
   );
   await expect(removeWorktree("app-feature")).rejects.toThrow(
     "Send the worktree's absolute folder path."
+  );
+});
+
+it("prunes one stale entry, keeping its branch and other stale entries", async () => {
+  const { main, linked } = repository();
+  const other = join(main, "..", "app-other");
+  git(main, "worktree", "add", "-b", "other", other);
+  rmSync(linked, { recursive: true });
+  rmSync(other, { recursive: true });
+  await pruneWorktree({ repository: main, path: linked });
+  const list = git(main, "worktree", "list");
+  expect(list).not.toContain(linked);
+  expect(list).toContain(other);
+  expect(git(main, "branch", "--list", "feature")).toContain("feature");
+});
+
+it("refuses to prune a worktree whose folder still exists", async () => {
+  const { main, linked } = repository();
+  await expect(
+    pruneWorktree({ repository: main, path: linked })
+  ).rejects.toThrow(
+    "app-feature is available, not stale, so there is nothing to prune. Rescan to refresh the worktree list."
+  );
+  expect(existsSync(linked)).toBe(true);
+  await expect(pruneWorktree({ repository: main, path: main })).rejects.toThrow(
+    "is not a linked worktree of this repository"
+  );
+  await expect(pruneWorktree({ path: linked })).rejects.toThrow(
+    "Send the repository's folder and the stale worktree's absolute path."
   );
 });
