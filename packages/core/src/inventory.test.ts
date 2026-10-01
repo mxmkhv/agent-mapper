@@ -67,6 +67,26 @@ it("keeps skills available on demand without counting their bodies as startup", 
   });
 });
 
+it("does not claim a skill with malformed frontmatter loads", () => {
+  const [result] = resolveInventory(
+    [
+      entry({
+        kind: "skill",
+        name: "writer",
+        path: "/work/.agents/skills/writer/SKILL.md",
+        projectPath: "/work",
+        error: "Frontmatter repeats a key. Keep one of them."
+      })
+    ],
+    { workingDirectory: "/work", tool: "codex" }
+  );
+  expect(result?.resolution).toMatchObject({
+    availability: "unknown",
+    loading: "unknown"
+  });
+  expect(result?.resolution.reason).toContain("Frontmatter repeats a key.");
+});
+
 it("shows Codex's same-folder override as the winner", () => {
   const results = resolveInventory(
     [

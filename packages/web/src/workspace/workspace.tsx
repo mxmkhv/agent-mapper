@@ -8,7 +8,11 @@ import { Header } from "../shell/header";
 import { ViewBar } from "../shell/view-bar";
 import { useProjectSnapshots } from "../state/use-project-snapshots";
 import { toolName } from "../ui/marks";
-import type { ReachProject } from "../views/reach/reach-model";
+import {
+  scanPending,
+  scanSettled,
+  type ReachProject
+} from "../views/reach/reach-model";
 import { SearchPalette } from "../views/search-palette";
 import { useWorkspace } from "./use-workspace";
 import {
@@ -33,10 +37,10 @@ function impactCoverage(
   return {
     mode: "global",
     total: scanned.length,
-    scanned: scanned.filter((project) => project.records).length,
-    pending: scanned.filter((project) => !project.records && !project.error)
-      .length,
-    failed: scanned.filter((project) => project.error).length
+    scanned: scanned.filter(scanSettled).length,
+    pending: scanned.filter(scanPending).length,
+    failed: scanned.filter((project) => project.error && !project.refreshing)
+      .length
   };
 }
 

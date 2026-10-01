@@ -79,7 +79,7 @@ Configuration comes from `~/.claude`, `~/.claude.json`, `~/.codex`, `~/.agents`,
 - Unsaved drafts survive switching views, tools, and projects within the tab. Reloading asks first. Copy your draft before restarting the server, which ends the session.
 - Saves and restores hold a `lock` in the file's history folder while writing. If an interrupted save leaves a lock behind, confirm no other agent-mapper process is saving that file before removing the lock and trying again.
 - Codex agents must be valid TOML with text `name`, `description`, and `developer_instructions` fields. Claude Code agent frontmatter is checked like skill frontmatter.
-- Delete moves an entire skill folder to the Trash. For a symlink, it moves only the link and leaves its target intact. The dialog lists other paths that would stop working. Plugin and managed items cannot be deleted, and deletion is blocked if the item changed after review. Use Finder's **Put Back** to restore a deleted item.
+- Delete moves an entire skill folder to the Trash. For a symlink, it moves only the link and leaves its target intact. The dialog lists other paths that would stop working. Plugin and managed items cannot be deleted, nor can skill folders holding 1,000 or more items or more than 50 MiB, which are too large to check. Deletion is also blocked if the item changed after review. Use Finder's **Put Back** to restore a deleted item.
 - Restart a running Claude Code or Codex session if it hasn't picked up a saved file.
 
 </details>

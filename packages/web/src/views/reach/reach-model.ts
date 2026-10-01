@@ -9,7 +9,17 @@ export interface ReachProject {
   /** Undefined while the project is still scanning or when its scan failed. */
   records?: InventoryRecord[];
   error?: string;
+  /** The records or error are from the previous scan; a rescan is still running. */
+  refreshing?: boolean;
 }
+
+/** The project's current scan has answered with records. */
+export const scanSettled = (project: ReachProject): boolean =>
+  project.records !== undefined && !project.refreshing;
+
+/** No current answer yet: never scanned, or rescanning. */
+export const scanPending = (project: ReachProject): boolean =>
+  Boolean(project.refreshing) || (!project.records && !project.error);
 
 export interface ReachRow {
   record: InventoryRecord;
@@ -112,7 +122,10 @@ export function buildReach(
               (cell) => cell && cell.tier !== "inactive"
             )
         );
-      const scanned = (index: number) => projects[index]?.records !== undefined;
+      const scanned = (index: number) => {
+        const project = projects[index];
+        return project !== undefined && scanSettled(project);
+      };
       const isUniform = (row: ReachRow) =>
         row.cells.every(
           (cell, index) => !scanned(index) || cell?.tier === "active"

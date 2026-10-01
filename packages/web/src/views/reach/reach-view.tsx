@@ -3,7 +3,7 @@ import type { RecordKind } from "../../model/record-types";
 import { KindIcon, kindLabel } from "../../ui/kind-icon";
 import { StateMarker } from "../../ui/marks";
 import { tildePath } from "../../model/paths";
-import { buildReach, projectOwn, skillReach } from "./reach-model";
+import { buildReach, projectOwn, scanPending, skillReach } from "./reach-model";
 import {
   ScanCell,
   SectionRows,
@@ -66,9 +66,7 @@ export function ReachView(props: ReachViewProps) {
   });
   const skills = skillReach(props.globalRecords, props.projects);
   const own = projectOwn(props.projects, props.showInactive);
-  const scanning = props.projects.filter(
-    (project) => !project.records && !project.error
-  ).length;
+  const scanning = props.projects.filter(scanPending).length;
   const columnCount = props.projects.length + 1;
   const { ref: tableRef, hidden: moreColumns } =
     useHiddenColumns<HTMLDivElement>();

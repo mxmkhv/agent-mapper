@@ -120,43 +120,52 @@ function resolveEntry({
   return expectedEntry(entry);
 }
 
+function unresolved(
+  entry: InventoryEntry,
+  input: { availability: "not-applicable" | "unknown"; reason: string }
+): ResolvedEntry {
+  return {
+    entry,
+    resolution: {
+      availability: input.availability,
+      loading: input.availability,
+      reason: input.reason
+    }
+  };
+}
+
 function unavailableEntry(
   entry: InventoryEntry,
   context: ResolutionContext
 ): ResolvedEntry | undefined {
   if (!entryApplies(entry, context.workingDirectory)) {
-    return {
-      entry,
-      resolution: {
-        availability: "not-applicable",
-        loading: "not-applicable",
-        reason: "Source is outside the selected folder's configuration path."
-      }
-    };
+    return unresolved(entry, {
+      availability: "not-applicable",
+      reason: "Source is outside the selected folder's configuration path."
+    });
   }
   if (entry.readState !== "readable") {
-    return {
-      entry,
-      resolution: {
-        availability: "unknown",
-        loading: "unknown",
-        reason: `Source is ${entry.readState}; loading cannot be determined.`
-      }
-    };
+    return unresolved(entry, {
+      availability: "unknown",
+      reason: `Source is ${entry.readState}; loading cannot be determined.`
+    });
+  }
+  // A readable skill carries an error only when its frontmatter is malformed, which a tool may refuse to load.
+  if (entry.kind === "skill" && entry.error) {
+    return unresolved(entry, {
+      availability: "unknown",
+      reason: `Frontmatter problem: ${entry.error} Whether the skill loads cannot be determined.`
+    });
   }
   if (
     entry.tool === "codex" &&
     entry.kind === "instruction" &&
     entry.characters === 0
   ) {
-    return {
-      entry,
-      resolution: {
-        availability: "not-applicable",
-        loading: "not-applicable",
-        reason: "Codex skips empty instruction files."
-      }
-    };
+    return unresolved(entry, {
+      availability: "not-applicable",
+      reason: "Codex skips empty instruction files."
+    });
   }
   return undefined;
 }

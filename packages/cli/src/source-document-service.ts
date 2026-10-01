@@ -184,7 +184,7 @@ export class SourceDocumentService {
       currentHash(handle.canonicalPath)
     ]);
     return {
-      revisions: listing.revisions.map(({ summary }) => ({
+      revisions: listing.revisions.map((summary) => ({
         ...summary,
         current: summary.hash === current.hash
       })),

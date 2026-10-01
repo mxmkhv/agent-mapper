@@ -136,7 +136,7 @@ export async function addFrontmatterHooks(
   for (const source of sources) {
     const events = await hookEvents(source.path, options);
     if (events) {
-      addGroups(hooks, { source, events });
+      addGroups(hooks, { source, events, errors: options.errors });
     }
   }
 }

@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { open, readFile, readdir, rename } from "node:fs/promises";
 import { join } from "node:path";
 import type { RevisionSummary } from "@agent-mapper/core";
+import { boundedMap } from "./bounded-map";
 import { hashBytes, type DocumentFormat } from "./source-document-bytes";
 import { documentError, errnoCode } from "./source-document-errors";
 
@@ -9,6 +10,7 @@ const privateFile = 0o600;
 const revisionIdBytes = 12;
 const revisionIdPattern = /^[a-f0-9]{24}$/;
 const snapshotFormat = 1;
+const maxConcurrentReads = 8;
 
 export interface StoredRevision {
   summary: Omit<RevisionSummary, "current">;
@@ -152,11 +154,15 @@ export async function readSnapshot(
   return readSnapshotFile(folder, input);
 }
 
-/** Newest first. A damaged snapshot is reported in `problems` without hiding the others. */
+/**
+ * Newest first. Each snapshot is read and checked against its hash, but only its summary is kept, and a few are
+ * read at a time, so listing a long history does not hold every saved version in memory. A damaged snapshot is
+ * reported in `problems` without hiding the others.
+ */
 export async function listSnapshots(
   folder: string,
   sourceKey: string
-): Promise<{ revisions: StoredRevision[]; problems: string[] }> {
+): Promise<{ revisions: StoredRevision["summary"][]; problems: string[] }> {
   let names: string[];
   try {
     names = await readdir(folder);
@@ -173,23 +179,22 @@ export async function listSnapshots(
     .filter((name) => name.endsWith(".json"))
     .map((name) => name.slice(0, -".json".length))
     .filter((id) => revisionIdPattern.test(id));
-  const results = await Promise.allSettled(
-    ids.map((revisionId) => readSnapshotFile(folder, { revisionId, sourceKey }))
-  );
+  const results = await boundedMap(ids, {
+    limit: maxConcurrentReads,
+    task: (revisionId) =>
+      readSnapshotFile(folder, { revisionId, sourceKey }).then(
+        ({ summary }) => ({ summary }),
+        (error: unknown) => ({
+          problem: error instanceof Error ? error.message : String(error)
+        })
+      )
+  });
   const revisions = results.flatMap((result) =>
-    result.status === "fulfilled" ? [result.value] : []
+    "summary" in result ? [result.summary] : []
   );
   const problems = results.flatMap((result) =>
-    result.status === "rejected"
-      ? [
-          result.reason instanceof Error
-            ? result.reason.message
-            : String(result.reason)
-        ]
-      : []
+    "problem" in result ? [result.problem] : []
   );
-  revisions.sort((a, b) =>
-    b.summary.capturedAt.localeCompare(a.summary.capturedAt)
-  );
+  revisions.sort((a, b) => b.capturedAt.localeCompare(a.capturedAt));
   return { revisions, problems };
 }

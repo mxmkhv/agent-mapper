@@ -5,6 +5,7 @@ import {
   symlinkSync,
   writeFileSync
 } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -148,6 +149,24 @@ it("shows a broken symlink instead of dropping it", async () => {
       path: join(project, "AGENTS.md")
     }
   ]);
+});
+
+it("reports a link to a pipe as unreadable instead of waiting on it", async () => {
+  const home = fixture();
+  const project = join(home, "app");
+  mkdirSync(project);
+  const pipe = join(home, "pipe");
+  execFileSync("mkfifo", [pipe]);
+  symlinkSync(pipe, join(project, "CLAUDE.md"));
+
+  const result = await scanInventory({ workingDirectory: project, home });
+  expect(result.entries).toContainEqual(
+    expect.objectContaining({
+      path: join(project, "CLAUDE.md"),
+      readState: "unreadable",
+      isSymlink: true
+    })
+  );
 });
 
 it("ignores skill-folder symlinks that point to regular files", async () => {

@@ -15,8 +15,11 @@ export interface SourceDeletePlan {
   broken?: boolean;
   /** Files inside the folder, or 1 for a file or link. */
   files: number;
-  /** The folder holds more than can be listed and checked, so the delete is blocked; counts are a lower bound. */
-  tooLarge?: boolean;
+  /**
+   * The folder holds more than can be checked, so the delete is blocked. Past the item cap the listing stops and
+   * counts are a lower bound; past the byte cap the counts are complete.
+   */
+  tooLarge?: "items" | "bytes";
   totalBytes: number;
   /** The delete stops if the target changed since this plan. */
   fingerprint: string;

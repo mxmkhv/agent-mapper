@@ -88,7 +88,7 @@ function Summary({
   return (
     <p className="m-0">
       Moves the folder <Path context={context} path={plan.path} /> and{" "}
-      {plan.tooLarge
+      {plan.tooLarge === "items"
         ? `more than ${plan.files} files (over ${bytesText(plan.totalBytes)})`
         : `its ${plan.files} ${plan.files === 1 ? "file" : "files"} (${bytesText(plan.totalBytes)})`}{" "}
       to the Trash.

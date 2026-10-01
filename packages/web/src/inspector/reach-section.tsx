@@ -57,6 +57,9 @@ export function ReachSection({
 }
 
 function reachLabel(project: ReachProject, match?: InventoryRecord): string {
+  if (project.refreshing) {
+    return "Rescanning…";
+  }
   if (project.error) {
     return "Scan failed";
   }

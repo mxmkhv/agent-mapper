@@ -18,7 +18,7 @@ import {
   type ServerServices
 } from "./server-services";
 import { worktreeRoute } from "./worktree-routes";
-import type { MoveToTrash } from "./source-delete";
+import type { MoveToTrash } from "./system-trash";
 import { handleItemRoute } from "./source-delete-routes";
 import { handleDocumentRoute, isDocumentRoute } from "./source-document-routes";
 import {

@@ -39,6 +39,12 @@ it("masks secret env assignments, flags, headers, and credential-shaped words", 
       "curl -u admin:hunter2 https://api.example.com",
       "curl -u ••• https://api.example.com/"
     ],
+    [
+      "curl --user=admin:hunter2 https://api.example.com",
+      "curl --user=••• https://api.example.com/"
+    ],
+    ["curl -uadmin:hunter2 x", "curl -u••• x"],
+    ['curl --user="admin:two words" x', 'curl --user="•••" x'],
     ["mysql -uroot -phunter2 app", "mysql -uroot -p••• app"],
     ['MY_TOKEN="abc def" ./run.sh', 'MY_TOKEN="•••" ./run.sh'],
     ["run --token 'two words' --fast", "run --token '•••' --fast"],
@@ -77,6 +83,8 @@ it("never lets a known secret through, whatever its shape", () => {
     `psql postgres://user:${secret}@db/app`,
     `API_KEY=${secret} run`,
     `run --password ${secret}`,
+    `curl --user=alice:${secret}`,
+    `curl -ualice:${secret}`,
     `curl -H "Authorization: Bearer ${secret}"`
   ];
   for (const shape of shapes) {

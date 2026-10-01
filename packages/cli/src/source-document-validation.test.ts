@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import {
   blockingDiagnostics,
+  declaredMetadata,
   validateDocument
 } from "./source-document-validation";
 
@@ -91,4 +92,35 @@ it("blocks a Codex agent whose TOML is broken or mistyped", () => {
     "error:agent-name-type",
     "warning:agent-developer_instructions-missing"
   ]);
+});
+
+it("reads skill metadata the same way across line endings and quoting", () => {
+  const variants = [
+    "---\nname: writer\ndescription: Drafts posts\n---\nBody\n",
+    "---\r\nname: writer\r\ndescription: Drafts posts\r\n---\r\nBody\r\n",
+    `---\nname: "writer"\ndescription: 'Drafts posts'\n---\nBody\n`
+  ];
+  for (const content of variants) {
+    expect(declaredMetadata(content, "skill")).toMatchObject({
+      name: "writer",
+      problem: undefined
+    });
+  }
+  const crlf = variants[1]!;
+  expect(declaredMetadata(crlf, "skill").characters).toBe(
+    crlf.indexOf("---\r\nBody") + "---".length
+  );
+});
+
+it("reports the blocking problem of malformed skill frontmatter", () => {
+  expect(
+    declaredMetadata("---\nname: a\nname: b\n---\n", "skill")
+  ).toMatchObject({
+    name: undefined,
+    problem: "Frontmatter repeats a key. Keep one of them."
+  });
+  expect(declaredMetadata("---\nname: [a]\n---\n", "command")).toMatchObject({
+    name: undefined,
+    problem: undefined
+  });
 });

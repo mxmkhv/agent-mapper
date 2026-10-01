@@ -45,7 +45,8 @@ export function addManagedHooks(
         unknownReason:
           "Declared in a local managed file; remote or device policy may take precedence."
       },
-      events
+      events,
+      errors: options.errors
     });
   }
 }
