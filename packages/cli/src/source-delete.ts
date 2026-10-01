@@ -77,9 +77,37 @@ async function linkTarget(path: string) {
   };
 }
 
+/** The folder that holds a SKILL.md entry; a skill link whose target is gone is listed at the link itself. */
+const skillFile = (entry: InventoryEntry) =>
+  entry.kind === "skill" && basename(entry.path) === "SKILL.md";
+
+/**
+ * The listing stops at a cap, so a larger folder cannot be checked for changes before it goes; it is reported
+ * as too large and the delete is refused rather than trashing files nobody reviewed.
+ */
+async function folderTarget(path: string) {
+  const folder = await readSkillFolder(path);
+  const files = folder.items.filter((item) => item.type !== "directory");
+  const tooLarge = folder.items.length >= maxFolderItems;
+  return {
+    path,
+    target: "folder" as const,
+    files: files.length,
+    tooLarge,
+    totalBytes: folder.totalBytes,
+    // Content, not just names and sizes: a same-size edit after the dialog opened must stop the delete.
+    // Too large to read is blocked anyway; the placeholder only keeps the request well-formed.
+    fingerprint: tooLarge
+      ? sha(`too-large:${path}`)
+      : await fingerprintOf(folder.items).catch((error: unknown) => {
+          throw ioError(error, `Reading the skill folder ${path}`);
+        })
+  };
+}
+
 /** A skill is its folder; an agent is its file. Either may be a link, which goes alone. */
 async function targetOf(entry: InventoryEntry) {
-  const path = entry.kind === "skill" ? dirname(entry.path) : entry.path;
+  const path = skillFile(entry) ? dirname(entry.path) : entry.path;
   let info;
   try {
     info = await lstat(path);
@@ -95,21 +123,14 @@ async function targetOf(entry: InventoryEntry) {
   if (info.isSymbolicLink()) {
     return linkTarget(path);
   }
+  if (entry.kind === "skill" && !skillFile(entry)) {
+    throw documentError(
+      "invalid_request",
+      `${path} is neither a skill folder nor a link to one. Rescan to update the inventory.`
+    );
+  }
   if (entry.kind === "skill") {
-    const folder = await readSkillFolder(path);
-    const files = folder.items.filter((item) => item.type !== "directory");
-    return {
-      path,
-      target: "folder" as const,
-      files: files.length,
-      // The listing stops at the cap, but the whole folder goes to the Trash.
-      moreFiles: folder.items.length >= maxFolderItems,
-      totalBytes: folder.totalBytes,
-      // Content, not just names and sizes: a same-size edit after the dialog opened must stop the delete.
-      fingerprint: await fingerprintOf(folder.items).catch((error: unknown) => {
-        throw ioError(error, `Reading the skill folder ${path}`);
-      })
-    };
+    return folderTarget(path);
   }
   const content = await readFile(path).catch((error: unknown) => {
     throw ioError(error, `Reading ${path}`);
@@ -134,6 +155,9 @@ async function blockedReason(
   }
   if (entry.scope !== "global" && entry.scope !== "project") {
     return "Only your own global and project files can be deleted here.";
+  }
+  if (input.target.target === "folder" && input.target.tooLarge) {
+    return `${input.target.path} holds more than ${maxFolderItems} files and folders, too many to check before deleting. Delete it in Finder instead.`;
   }
   // A link is removed from its folder; anything else is removed where it really lives.
   const touched =
@@ -189,12 +213,11 @@ export class SourceDeleteService {
     if (
       (entry.kind !== "skill" && entry.kind !== "agent") ||
       entry.inlineContent ||
-      entry.declarationOnly ||
-      (entry.kind === "skill" && basename(entry.path) !== "SKILL.md")
+      entry.declarationOnly
     ) {
       throw documentError(
         "invalid_request",
-        "Only skill folders with a SKILL.md and agent files can be deleted."
+        "Only skill folders, skill links and agent files can be deleted."
       );
     }
     const target = await targetOf(entry);

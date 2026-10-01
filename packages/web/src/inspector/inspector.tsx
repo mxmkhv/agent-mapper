@@ -5,10 +5,7 @@ import { tildePath, tildeText, type PathContext } from "../model/paths";
 import type { CopyTarget } from "../model/copy-targets";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
 import { stateText } from "../model/states";
-import {
-  SourceDocumentPanel,
-  type DocumentMode
-} from "../documents/source-document-panel";
+import type { DocumentMode } from "../documents/source-document-panel";
 import { useSourceAction } from "../state/use-source-action";
 import { Button } from "../ui/button";
 import { PathText } from "../ui/path-text";
@@ -26,7 +23,7 @@ import {
 } from "./inspector-sections";
 import { ReachSection, type ReachScope } from "./reach-section";
 import { pluginGroupKey } from "../views/inventory-groups";
-import { ItemActions } from "./item-actions";
+import { ItemFile } from "./item-actions";
 
 interface InspectorScope {
   records: InventoryRecord[];
@@ -167,21 +164,13 @@ export function RecordInspector({
       ))}
       <Provenance context={scope.context} onSelect={onSelect} record={record} />
       {record.sourceRef ? (
-        <div className="mt-5">
-          <SourceDocumentPanel
-            actions={
-              <ItemActions
-                onSelect={onSelect}
-                record={record}
-                scope={scope}
-                sourceRef={record.sourceRef}
-              />
-            }
-            onOpen={onOpenDocument}
-            scannedAt={scope.scannedAt}
-            sourceRef={record.sourceRef}
-          />
-        </div>
+        <ItemFile
+          onOpenDocument={onOpenDocument}
+          onSelect={onSelect}
+          record={record}
+          scope={scope}
+          sourceRef={record.sourceRef}
+        />
       ) : null}
       <Links onSelect={onSelect} record={record} scope={scope} />
       {record.kind === "plugin" ? (

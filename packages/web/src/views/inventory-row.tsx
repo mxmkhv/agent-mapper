@@ -1,6 +1,6 @@
 import { isConventionalPath } from "../model/conventional-path";
 import { Trash2 } from "lucide-react";
-import { canCopy, canDelete } from "../model/copyable";
+import { canCopy, canDelete, canEdit } from "../model/copyable";
 import { isLink } from "../model/links";
 import {
   shortPath,
@@ -125,13 +125,15 @@ function RowActions({
     <span
       className={`absolute inset-y-0 right-0 hidden items-center gap-1.5 pr-3 pl-3 group-focus-within:flex group-hover:flex group-aria-current:flex ${selected ? "bg-selected" : "bg-surface group-hover:bg-hover"}`}
     >
-      <Button
-        className="relative"
-        onClick={() => actions.onEdit(record)}
-        variant="primary"
-      >
-        Edit
-      </Button>
+      {canEdit(record) ? (
+        <Button
+          className="relative"
+          onClick={() => actions.onEdit(record)}
+          variant="primary"
+        >
+          Edit
+        </Button>
+      ) : null}
       {canCopy(record) ? (
         <Button className="relative" onClick={() => actions.onCopy(record)}>
           Copy
@@ -169,7 +171,7 @@ export function InventoryRow({
 }: RowProps) {
   const inactive = record.tier === "inactive";
   const linked = isLink(record);
-  const hasActions = Boolean(record.sourceRef);
+  const hasActions = canEdit(record) || canDelete(record);
   return (
     <div
       aria-current={selected ? "true" : undefined}
@@ -198,7 +200,10 @@ export function InventoryRow({
       </span>
       <Detail context={context} record={record} sharesName={sharesName} />
       {/* A fixed last column keeps every row's detail column aligned, labelled or not. */}
-      <span className="truncate text-right">
+      {/* The floating actions may be narrower than the label, so it steps aside instead of peeking out. */}
+      <span
+        className={`truncate text-right ${hasActions ? "group-focus-within:invisible group-hover:invisible group-aria-current:invisible" : ""}`}
+      >
         <RowLabel otherVersions={otherVersions} record={record} />
       </span>
       {hasActions ? (

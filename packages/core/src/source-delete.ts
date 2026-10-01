@@ -15,8 +15,8 @@ export interface SourceDeletePlan {
   broken?: boolean;
   /** Files inside the folder, or 1 for a file or link. */
   files: number;
-  /** The folder holds more than the listing counted; `files` and `totalBytes` are a lower bound. */
-  moreFiles?: boolean;
+  /** The folder holds more than can be listed and checked, so the delete is blocked; counts are a lower bound. */
+  tooLarge?: boolean;
   totalBytes: number;
   /** The delete stops if the target changed since this plan. */
   fingerprint: string;

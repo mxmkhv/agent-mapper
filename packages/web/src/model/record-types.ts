@@ -62,6 +62,8 @@ export interface InventoryRecord {
   problems: string[];
   contributions?: Partial<Record<RecordKind, number>>;
   installedFrom?: SkillSource;
+  /** The file could not be read (a broken link, missing permissions): it cannot be edited or copied, only deleted. */
+  unreadable?: boolean;
   /** The scan that owns this file-backed instruction or skill; documents open through it. */
   sourceRef?: SourceRef;
 }
