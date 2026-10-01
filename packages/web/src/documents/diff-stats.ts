@@ -1,3 +1,6 @@
+import type { Chunk } from "@codemirror/merge";
+import type { Text } from "@codemirror/state";
+
 export interface DiffStats {
   /** Lines touched, counting a replaced line once. */
   changed: number;
@@ -5,27 +8,32 @@ export interface DiffStats {
   removed: number;
 }
 
-/** The shape of Monaco's `ILineChange`: an end line of 0 means that side has no lines in the change. */
-export interface LineChange {
-  originalStartLineNumber: number;
-  originalEndLineNumber: number;
-  modifiedStartLineNumber: number;
-  modifiedEndLineNumber: number;
+interface ChunkedDiff {
+  chunks: readonly Chunk[];
+  original: Text;
+  modified: Text;
 }
 
-const lineCount = (start: number, end: number) => (end ? end - start + 1 : 0);
+/** A chunk's `to` sits one past its last line, or equals `from` when that side has no lines. */
+function lineCount(doc: Text, range: { from: number; to: number }): number {
+  return range.to > range.from
+    ? doc.lineAt(range.to - 1).number - doc.lineAt(range.from).number + 1
+    : 0;
+}
 
-export function diffStats(changes: readonly LineChange[]): DiffStats {
+/** Undefined when any chunk came from the imprecise fallback diff, whose line counts would overstate the change. */
+export function diffStats({
+  chunks,
+  original,
+  modified
+}: ChunkedDiff): DiffStats | undefined {
   const stats = { changed: 0, added: 0, removed: 0 };
-  for (const change of changes) {
-    const added = lineCount(
-      change.modifiedStartLineNumber,
-      change.modifiedEndLineNumber
-    );
-    const removed = lineCount(
-      change.originalStartLineNumber,
-      change.originalEndLineNumber
-    );
+  for (const chunk of chunks) {
+    if (!chunk.precise) {
+      return undefined;
+    }
+    const added = lineCount(modified, { from: chunk.fromB, to: chunk.toB });
+    const removed = lineCount(original, { from: chunk.fromA, to: chunk.toA });
     stats.added += added;
     stats.removed += removed;
     stats.changed += Math.max(added, removed);

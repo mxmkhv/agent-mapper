@@ -235,7 +235,7 @@ it("serves fonts and the editor content security policy", async () => {
   const response = await fetch(`${server.base}/codicon.ttf`);
   expect(response.headers.get("content-type")).toBe("font/ttf");
   const policy = response.headers.get("content-security-policy") ?? "";
-  expect(policy).toContain("worker-src 'self'");
+  expect(policy).toContain("worker-src 'none'");
   expect(policy).toContain("style-src 'self' 'unsafe-inline'");
   expect(policy).toContain("script-src 'self';");
   expect(policy).not.toContain("unsafe-eval");

@@ -12,11 +12,11 @@ const mimeTypes = {
 } as const;
 
 /**
- * Monaco injects generated `<style>` rules and runs same-origin module workers, so styles allow
- * inline rules and workers/fonts are same-origin. Scripts and connections stay same-origin only.
+ * CodeMirror injects generated `<style>` rules, so styles allow inline rules. Nothing runs workers.
+ * Scripts, fonts and connections stay same-origin only.
  */
 const contentSecurityPolicy =
-  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; worker-src 'self'; font-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'";
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; worker-src 'none'; font-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'";
 
 const status = { ok: 200, forbidden: 403, missing: 404, method: 405 } as const;
 

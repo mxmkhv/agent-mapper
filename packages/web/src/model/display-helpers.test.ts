@@ -1,3 +1,5 @@
+import { Chunk } from "@codemirror/merge";
+import { Text } from "@codemirror/state";
 import { expect, it } from "vitest";
 import { diffStats } from "../documents/diff-stats";
 import { sizeText } from "../inspector/inspector-sections";
@@ -26,28 +28,32 @@ function skill(id: string, path: string): InventoryRecord {
 }
 
 it("counts a replaced line once and pure inserts and deletes on one side", () => {
-  const replace = {
-    originalStartLineNumber: 4,
-    originalEndLineNumber: 5,
-    modifiedStartLineNumber: 4,
-    modifiedEndLineNumber: 6
-  };
-  const insert = {
-    originalStartLineNumber: 9,
-    originalEndLineNumber: 0,
-    modifiedStartLineNumber: 11,
-    modifiedEndLineNumber: 11
-  };
-  const remove = {
-    originalStartLineNumber: 20,
-    originalEndLineNumber: 21,
-    modifiedStartLineNumber: 21,
-    modifiedEndLineNumber: 0
-  };
-  expect(diffStats([replace, insert, remove])).toEqual({
+  const lines = (count: number) =>
+    Array.from({ length: count }, (_, index) => `line ${index + 1}`);
+  const before = lines(24);
+  const after = [...before];
+  // Replace two lines with three, insert one, delete two.
+  after.splice(3, 2, "new 4", "new 5", "new 6");
+  after.splice(10, 0, "inserted");
+  after.splice(20, 2);
+  const original = Text.of(before);
+  const modified = Text.of(after);
+  const chunks = Chunk.build(original, modified);
+  expect(diffStats({ chunks, original, modified })).toEqual({
     changed: 6,
     added: 4,
     removed: 4
+  });
+});
+
+it("counts a change on the last line, which has no line break after it", () => {
+  const original = Text.of(["a", "b"]);
+  const modified = Text.of(["a", "c"]);
+  const chunks = Chunk.build(original, modified);
+  expect(diffStats({ chunks, original, modified })).toEqual({
+    changed: 1,
+    added: 1,
+    removed: 1
   });
 });
 

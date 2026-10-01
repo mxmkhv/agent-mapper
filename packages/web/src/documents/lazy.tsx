@@ -1,14 +1,14 @@
 import { lazy } from "react";
 
-/** Monaco loads with the first editor or diff; the Markdown renderer with the first preview. */
+/** CodeMirror loads with the first editor or diff; the Markdown renderer with the first preview. */
 export const SourceEditor = lazy(() =>
-  import("./monaco-editor").then((module) => ({
+  import("./source-editor").then((module) => ({
     default: module.SourceEditor
   }))
 );
 
 export const SourceDiff = lazy(() =>
-  import("./monaco-editor").then((module) => ({ default: module.SourceDiff }))
+  import("./source-editor").then((module) => ({ default: module.SourceDiff }))
 );
 
 export const MarkdownPreview = lazy(() =>
