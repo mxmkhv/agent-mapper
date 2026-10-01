@@ -1,7 +1,7 @@
 import { Info } from "lucide-react";
 import type { RecordKind } from "../model/record-types";
 
-export type View = "map" | "reach" | "inventory" | "findings" | "worktrees";
+export type View = "projects" | "inventory" | "findings" | "worktrees";
 
 /** Where to land after switching folders: an item to select, or a view with an optional kind filter. */
 export type Landing = { selectId: string } | { view: View; kind?: RecordKind };

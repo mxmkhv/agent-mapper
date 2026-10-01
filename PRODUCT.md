@@ -18,7 +18,7 @@ agent-mapper is a local inventory of agent configuration for Claude Code and Cod
 
 Success means a developer can explain their setup and make a useful review or cleanup decision. Concretely, they can:
 
-- find the source of a surprising instruction or capability and open it from the map;
+- find the source of a surprising instruction or capability and open it from the inventory;
 - see which global sources reach which projects, and in what state;
 - trace a plugin to its contributions and each contribution back to its plugin;
 - see hooks, MCP servers, symlinks, worktree differences, inaccessible sources, and unsupported formats without anything being hidden.

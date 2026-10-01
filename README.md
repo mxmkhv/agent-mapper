@@ -33,16 +33,17 @@ Built and tested on macOS. Opening files in an editor, revealing them in Finder,
 ## Usage
 
 1. Choose **Global** to browse your shared configuration, or select a project in the sidebar. Use **Add folder** for a project that wasn't discovered.
-2. Open **Map** to see what a fresh session in that folder is expected to load. Select an item to see its source and the reason for its state.
+2. A project opens on **Inventory**. The summary on top shows what a fresh session in that folder is expected to load, in load order, with approximate context sizes. Select an item to see its source, the reason for its state, and what it overrides.
 3. Check **Findings** for broken links, shadowed instructions, missing plugin files, repeated startup text, and other review suggestions.
 
-**Inventory** lists the discovered items. **Reach** shows which global sources apply to each project. **Worktrees** compares project configuration across linked Git checkouts.
+In **Global**, **Projects** lists every project with its startup size, what it adds, where it differs from your global setup, and its findings. **Worktrees** compares project configuration across linked Git checkouts.
 
 Press `⌘K` to search by name or source path. Use **Open** to open a source file in your editor, **Reveal** to find it in Finder, and **Rescan** to refresh the inventory.
 
 ## Features
 
 - Trace instructions through parent folders, imports, and symlinks.
+- See which source overrides another, and which skills share a name.
 - Browse global, project, and plugin skills and agents.
 - Inspect hook declarations and MCP configuration without running them.
 - Follow a plugin to its installed versions and contributed items.

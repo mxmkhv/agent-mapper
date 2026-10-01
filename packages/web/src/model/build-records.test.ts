@@ -6,7 +6,7 @@ import type {
 } from "@agent-mapper/core";
 import { buildRecords } from "./build-records";
 import { layerHint } from "./layers";
-import { isLink, linkedFrom, linkTarget, sharedLinkFolder } from "./links";
+import { isLink, linkedFrom, linkTarget } from "./links";
 import { pathContext, shortPath } from "./paths";
 import { stateLabel, stateText } from "./states";
 
@@ -172,22 +172,6 @@ it("links symlinks and their sources in both directions", () => {
   expect(source && linkedFrom(source, records).map((item) => item.id)).toEqual([
     "link"
   ]);
-});
-
-it("summarizes a folder of linked skills once", () => {
-  const linked = ["a", "b", "c"].map((name) =>
-    entry({
-      id: name,
-      kind: "skill",
-      path: `${repo}/.claude/skills/${name}/SKILL.md`,
-      realPath: `${repo}/.agents/skills/${name}/SKILL.md`
-    })
-  );
-  const records = buildRecords(snapshot({ items: linked }), "project");
-  expect(sharedLinkFolder(records)).toEqual({
-    folder: `${repo}/.agents/skills`,
-    count: 3
-  });
 });
 
 it("describes where each layer lives for the selected tool", () => {

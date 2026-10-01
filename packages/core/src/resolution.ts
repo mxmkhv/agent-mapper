@@ -102,7 +102,8 @@ function resolveEntry({
       resolution: {
         availability: "shadowed",
         loading: "not-applicable",
-        reason: `AGENTS.override.md wins in this folder: ${override.path}`
+        reason: `AGENTS.override.md wins in this folder: ${override.path}`,
+        shadowedBy: override.id
       }
     };
   }
@@ -113,7 +114,8 @@ function resolveEntry({
       resolution: {
         availability: "shadowed",
         loading: "not-applicable",
-        reason: `Claude Code skips AGENTS.md because this folder chain has ${claudeFile.path}`
+        reason: `Claude Code skips AGENTS.md because this folder chain has ${claudeFile.path}`,
+        shadowedBy: claudeFile.id
       }
     };
   }

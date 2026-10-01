@@ -103,6 +103,7 @@ it("shows Codex's same-folder override as the winner", () => {
     ["override", "expected"]
   ]);
   expect(results[0]?.resolution.reason).toContain("AGENTS.override.md");
+  expect(results[0]?.resolution.shadowedBy).toBe("override");
 });
 
 it("skips empty Codex instruction files without letting an empty override win", () => {

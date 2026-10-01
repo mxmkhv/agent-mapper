@@ -55,6 +55,7 @@ it("reads Claude Markdown agents by scope and marks the lower priority name shad
     ["reviewer", "global", "shadowed"],
     ["reviewer", "project", "configured"]
   ]);
+  expect(snapshot.agents[0]?.shadowedBy).toBe(snapshot.agents[1]?.id);
   expect(snapshot.agents[1]).toMatchObject({
     tool: "claude",
     format: "markdown",

@@ -4,7 +4,7 @@ import type { InventoryRecord } from "./record-types";
  * A plugin version is a candidate, not a contribution, when it is inactive or when its selection is
  * unknown while another version of the same plugin is selected.
  */
-export function isBackgroundVersion(
+function isBackgroundVersion(
   plugin: InventoryRecord,
   plugins: readonly InventoryRecord[]
 ): boolean {

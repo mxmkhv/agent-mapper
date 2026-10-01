@@ -12,8 +12,8 @@ import {
   scanFailed,
   scanPending,
   scanSettled,
-  type ReachProject
-} from "../views/reach/reach-model";
+  type ScannedProject
+} from "../model/scanned-project";
 import { SearchPalette } from "../views/search-palette";
 import { useWorkspace } from "./use-workspace";
 import {
@@ -27,7 +27,7 @@ import {
 /** What a document review may claim about other folders, given which scans have finished. */
 function impactCoverage(
   props: WorkspaceProps,
-  scanned: ReachProject[]
+  scanned: ScannedProject[]
 ): ImpactCoverage {
   if (props.isProject) {
     return {
@@ -64,9 +64,9 @@ export function Workspace(props: WorkspaceProps) {
   const coverage = impactCoverage(props, scanned);
   const tabs = tabsFor(parts);
   const detailOpen = Boolean(state.selected ?? state.showCoverage);
-  // Reach needs every column it can get, so its inspector appears only with something to show.
+  // The Projects table needs the width, so its inspector appears only with something to show.
   const withInspector =
-    state.view !== "worktrees" && (state.view !== "reach" || detailOpen);
+    state.view !== "worktrees" && (state.view !== "projects" || detailOpen);
   const viewLabel =
     tabs.find((tab) => tab.id === state.view)?.label ?? "inventory";
   return (

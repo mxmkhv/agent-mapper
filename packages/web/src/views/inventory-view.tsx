@@ -29,6 +29,10 @@ interface InventoryViewProps extends RowActionScope {
   selectedId?: string;
   /** Changes on every selection that should be shown, including picking the selected item again. */
   revealRequest: number;
+  /** Shown above the list: what a fresh session in the project starts with. */
+  summary?: ReactNode;
+  /** Row labels for records that win an override or share a name, by record id. */
+  relations: ReadonlyMap<string, string>;
   /** Background versions per plugin name, while they are folded into the active version's row. */
   otherVersions?: ReadonlyMap<string, number>;
   hintFor(group: InventoryGroup): string | undefined;
@@ -158,6 +162,7 @@ export function InventoryView(props: InventoryViewProps) {
                             : undefined
                         }
                         record={record}
+                        relation={props.relations.get(record.id)}
                         selected={record.id === props.selectedId}
                         sharesName={repeated.has(record.name)}
                         tone={source?.tone}
@@ -174,6 +179,7 @@ export function InventoryView(props: InventoryViewProps) {
   };
   return (
     <div className="px-5 pt-3 pb-10">
+      {props.summary ? <div className="pt-1">{props.summary}</div> : null}
       <div className="sticky top-0 z-10 -mx-1 mb-3 flex flex-wrap gap-1.5 bg-canvas px-1 pt-1 pb-2">
         <Facet
           active={props.kind === "all"}

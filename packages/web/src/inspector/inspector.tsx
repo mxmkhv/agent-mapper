@@ -1,4 +1,4 @@
-import type { InstructionImport, ToolId } from "@agent-mapper/core";
+import type { Finding, InstructionImport, ToolId } from "@agent-mapper/core";
 import { Layers } from "lucide-react";
 import { isLink, linkedFrom, linkTarget } from "../model/links";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
@@ -21,12 +21,14 @@ import {
   Section,
   sizeText
 } from "./inspector-sections";
+import { PrecedenceSection } from "./precedence-section";
 import { ReachSection, type ReachScope } from "./reach-section";
 import { pluginGroupKey } from "../views/inventory-groups";
 import { ItemFile } from "./item-actions";
 
 interface InspectorScope {
   records: InventoryRecord[];
+  findings: Finding[];
   imports: InstructionImport[];
   context: PathContext;
   workingDirectory: string;
@@ -172,6 +174,7 @@ export function RecordInspector({
           sourceRef={record.sourceRef}
         />
       ) : null}
+      <PrecedenceSection onSelect={onSelect} record={record} scope={scope} />
       <Links onSelect={onSelect} record={record} scope={scope} />
       {record.kind === "plugin" ? (
         <Section title="Contributes">

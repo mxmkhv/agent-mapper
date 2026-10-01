@@ -12,7 +12,7 @@ interface WorkspaceInput {
   snapshot: InventorySnapshot;
   isProject: boolean;
   tool: ToolId;
-  /** Records from other folders (Global reach), so links and rows from them can be inspected. */
+  /** Records from other folders (the Global view), so links and rows from them can be inspected. */
   extraRecords: InventoryRecord[];
   landing?: Landing;
   onTool(tool: ToolId): void;
@@ -41,7 +41,7 @@ function forTool(
 
 /**
  * Whether the list for the record's tool hides it until Show inactive. Uses the same records and fold as
- * `forTool`; a record from another folder (Global reach) is hidden only when inactive.
+ * `forTool`; a record from another folder (the Global view) is hidden only when inactive.
  */
 function foldedIn(records: readonly InventoryRecord[], tool: ToolId) {
   return (record: InventoryRecord) => {
@@ -55,7 +55,7 @@ function foldedIn(records: readonly InventoryRecord[], tool: ToolId) {
 }
 
 interface SelectOptions {
-  /** Views that already show the row (Reach) pass false so the list does not reflow. */
+  /** Views that do not list the record (Projects) pass false so nothing unfolds behind them. */
   reveal?: boolean;
   /** An item the next scan adds (a moved skill) is not listed yet, so it names its tool. */
   tool?: ToolId;
@@ -141,7 +141,7 @@ export interface GroupFocus {
 function useViewFilter(isProject: boolean, landing?: Landing) {
   const target = landing && "view" in landing ? landing : undefined;
   const [view, setView] = useState<View>(
-    target?.view ?? (isProject ? "map" : "reach")
+    target?.view ?? (isProject ? "inventory" : "projects")
   );
   const [kind, setKind] = useState<RecordKind | "all">(target?.kind ?? "all");
   const [groupFocus, setGroupFocus] = useState<GroupFocus>();

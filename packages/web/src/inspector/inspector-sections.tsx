@@ -93,22 +93,27 @@ export function Provenance({
 export function LinkRow({
   record,
   context,
-  onSelect
+  onSelect,
+  symlink = true
 }: {
   record: InventoryRecord;
   context: PathContext;
   onSelect(id: string): void;
+  /** False for a related record that is not a symlink, which drops the link icon. */
+  symlink?: boolean;
 }) {
   return (
     <button
       className="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left hover:bg-hover"
       onClick={() => onSelect(record.id)}
     >
-      <Link2
-        aria-hidden="true"
-        className="size-3.5 shrink-0 text-ink-muted"
-        strokeWidth={1.6}
-      />
+      {symlink ? (
+        <Link2
+          aria-hidden="true"
+          className="size-3.5 shrink-0 text-ink-muted"
+          strokeWidth={1.6}
+        />
+      ) : null}
       <ToolGlyph tool={record.tool} />
       <span className="min-w-0 flex-1 font-mono text-mono break-words">
         <PathText path={shortPath(record.path, context)} />

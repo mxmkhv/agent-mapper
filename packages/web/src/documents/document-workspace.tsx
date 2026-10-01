@@ -22,7 +22,7 @@ interface DocumentWorkspaceProps {
   mode: DocumentMode;
   coverage: ImpactCoverage;
   context: PathContext;
-  /** Where Back returns to, e.g. "map". */
+  /** Where Back returns to, e.g. "inventory". */
   backTo: string;
   onMode(mode: DocumentMode): void;
   onOpen(sourceKey: string): void;

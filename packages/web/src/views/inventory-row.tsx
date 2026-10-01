@@ -28,6 +28,8 @@ interface RowProps {
   context: PathContext;
   /** Background versions of this plugin folded into its row. */
   otherVersions?: number;
+  /** How the record relates to its competitors, e.g. "overrides AGENTS.md"; shown when it has no state label. */
+  relation?: string;
   /** Another row in the group has the same name, so the path is what tells them apart. */
   sharesName?: boolean;
   /** Rank of the shared repo this skill was installed from; picks the dot color. */
@@ -99,15 +101,20 @@ function Detail({
 
 function RowLabel({
   record,
+  relation,
   otherVersions
-}: Pick<RowProps, "record" | "otherVersions">) {
+}: Pick<RowProps, "record" | "relation" | "otherVersions">) {
   const label = stateLabel(record);
-  if (label || !otherVersions) {
+  const versions = otherVersions
+    ? `+${otherVersions} other ${otherVersions === 1 ? "version" : "versions"}`
+    : undefined;
+  const note = relation ?? versions;
+  if (label || !note) {
     return <StateLabel text={label} tier={record.tier} />;
   }
   return (
     <span className="text-caption whitespace-nowrap text-ink-faint">
-      +{otherVersions} other {otherVersions === 1 ? "version" : "versions"}
+      {note}
     </span>
   );
 }
@@ -164,6 +171,7 @@ export function InventoryRow({
   context,
   workingDirectory,
   otherVersions,
+  relation,
   sharesName,
   tone,
   actions,
@@ -175,7 +183,7 @@ export function InventoryRow({
   return (
     <div
       aria-current={selected ? "true" : undefined}
-      className={`group relative grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_minmax(0,1fr)_112px] items-center gap-2.5 px-3 text-left [&+&]:border-t [&+&]:border-wash ${selected ? "bg-selected" : "hover:bg-hover"}`}
+      className={`group relative grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_minmax(0,1fr)_132px] items-center gap-2.5 px-3 text-left [&+&]:border-t [&+&]:border-wash ${selected ? "bg-selected" : "hover:bg-hover"}`}
       title={stateText(record)}
     >
       <KindIcon kind={record.kind} />
@@ -198,13 +206,21 @@ export function InventoryRow({
           />
         ) : null}
       </span>
-      <Detail context={context} record={record} sharesName={sharesName} />
+      <Detail
+        context={context}
+        record={record}
+        sharesName={sharesName || Boolean(relation)}
+      />
       {/* A fixed last column keeps every row's detail column aligned, labelled or not. */}
       {/* The floating actions may be narrower than the label, so it steps aside instead of peeking out. */}
       <span
         className={`truncate text-right ${hasActions ? "group-focus-within:invisible group-hover:invisible group-aria-current:invisible" : ""}`}
       >
-        <RowLabel otherVersions={otherVersions} record={record} />
+        <RowLabel
+          otherVersions={otherVersions}
+          record={record}
+          relation={relation}
+        />
       </span>
       {hasActions ? (
         <RowActions actions={actions} record={record} selected={selected} />

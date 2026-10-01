@@ -140,6 +140,7 @@ function markClaudeShadowing(records: McpRecord[], projectPath: string): void {
     if (winner) {
       record.availability = "shadowed";
       record.reason = `Higher-priority Claude declaration: ${winner.sourcePath}`;
+      record.shadowedBy = winner.id;
     }
   }
 }

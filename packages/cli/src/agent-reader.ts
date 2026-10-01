@@ -176,6 +176,7 @@ function markShadowed(agents: AgentRecord[]): void {
     if (previous) {
       previous.availability = "shadowed";
       previous.reason = `A nearer ${agent.scope} agent named ${agent.name} takes precedence.`;
+      previous.shadowedBy = agent.id;
     }
     winners.set(key, agent);
   }
