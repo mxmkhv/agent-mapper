@@ -1,11 +1,21 @@
 # agent-mapper
 
-Read-only local configuration inventory for Claude Code and Codex. Product scope: [MVP v2](docs/mvp-v2.md).
+The goal of this project is to give developers a bird's-eye view of their local harness configuration: what exists, where it comes from, what is expected to apply in a project, and what deserves review.
+
+It covers instructions (CLAUDE.md / AGENTS.md), skills, agents, hooks, memory, plugins, and MCP server configuration for Claude Code and Codex.
+
+## Product
+
+Users, principles, and vocabulary live in [PRODUCT.md](PRODUCT.md); the visual system lives in [DESIGN.md](DESIGN.md). User-facing behavior is documented in [README.md](README.md), which is also the npm package page. Update it when behavior changes.
+
+- Scans are read-only. Writes happen only through explicit, reviewed user actions (save, restore, copy, delete) plus agent-mapper's own history and lock files.
+- Never execute hooks or commands, start or contact MCP servers, or send secrets to the UI.
+- Never claim more than local evidence supports. Every state carries its reason and source; unknown and unreadable sources stay visible.
 
 ## Workspace
 
 - `packages/core`: shared model and resolution logic. No Node, Bun, or UI imports.
-- `packages/cli`: Node-compatible CLI, filesystem access, and eventually the local server.
+- `packages/cli`: Node-compatible CLI, filesystem readers, and the local server.
 - `packages/web`: React + Vite + Tailwind UI.
 - `.agent-hooks`: shared quality-gate scripts for Claude Code and Codex.
 
@@ -23,7 +33,7 @@ Run targeted tests for changed behavior. Avoid repeating full checks when hooks 
 
 Gate configuration and `tools/oxlint/` are protected against common accidental writes. Ask Max before changing rules or the hooks themselves. Do not add suppression comments to make failures disappear. Add new rules only to address an agreed need.
 
-Hook protocols and shell protection have limits. See [quality gates](docs/quality-gates.md). Codex project hooks require project trust and hook review via `/hooks`; hook installation alone does not establish trust.
+Hook protocols and shell protection have limits. See [quality gates](CONTRIBUTING.md#quality-gates). Codex project hooks require project trust and hook review via `/hooks`; hook installation alone does not establish trust.
 
 ## Code
 
@@ -34,3 +44,4 @@ Use strict TypeScript and named exports for application code. Keep interfaces sp
 Commit: `<type>: <description>`, lowercase imperative, no period.
 Types: feat, fix, refactor, chore, docs, style, test, perf, ci, build.
 Branches: `<type>/<short-slug>` in kebab-case. PRs target `dev`; squash on merge.
+Release PRs into `main` are the exception: merge them with a merge commit. See [release](CONTRIBUTING.md#release).

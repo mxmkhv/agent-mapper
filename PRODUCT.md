@@ -14,7 +14,7 @@ Their job is a periodic audit, weekly or monthly rather than daily. They need to
 
 ## Product Purpose
 
-agent-mapper is a read-only local inventory of agent configuration for Claude Code and Codex. It shows what exists, where it comes from, what is expected to apply in a selected folder, and what deserves review.
+agent-mapper is a local inventory of agent configuration for Claude Code and Codex. It shows what exists, where it comes from, what is expected to apply in a selected folder, and what deserves review.
 
 Success means a developer can explain their setup and make a useful review or cleanup decision. Concretely, they can:
 
@@ -23,7 +23,7 @@ Success means a developer can explain their setup and make a useful review or cl
 - trace a plugin to its contributions and each contribution back to its plugin;
 - see hooks, MCP servers, symlinks, worktree differences, inaccessible sources, and unsupported formats without anything being hidden.
 
-Product scope and acceptance criteria live in [docs/mvp-v2.md](docs/mvp-v2.md).
+User-facing behavior is documented in [README.md](README.md).
 
 ## Positioning
 
@@ -34,11 +34,11 @@ agent-mapper resolves configuration per tool and per folder, with a reason for e
 - Launched with `npx agent-mapper`. A local server binds to `127.0.0.1` with a session token and opens the browser UI.
 - Reads configuration roots such as `~/.claude`, `~/.claude.json`, `~/.codex`, `~/.agents`, `CODEX_HOME`, project `.claude/`, `.codex/`, `.agents/`, `.mcp.json`, `CLAUDE.md`, `AGENTS.md`, and `*.local` files.
 - Discovers projects under home, enumerates Git worktrees, and watches selected sources. Rescan is always available.
-- The only actions are Open in editor, Reveal in Finder, navigation, filtering, and rescanning.
+- Actions are Open in editor, Reveal in Finder, navigation, filtering, and rescanning, plus reviewed edits, history restores, copies, and moves to the Trash for instructions, skills, and agents.
 
 ## Capabilities and Constraints
 
-- **Read-only.** The app never edits agent configuration, never runs hooks or commands, never starts or probes MCP servers, and never contacts marketplaces.
+- **Read-only scans, explicit writes.** Scanning never changes anything. Writes happen only after the user reviews them: saving an edit, restoring a version, copying, or moving to the Trash. The app never runs hooks or commands, never starts or probes MCP servers, and never contacts marketplaces. The only network call is an optional `gh pr list` for linked worktrees.
 - **Tools.** Claude Code and Codex. The UI shows one tool at a time. Links between symlinked files cross tools, and following one switches the tool.
 - **Item kinds.** Instructions, skills, commands, agents, hooks, plugins, MCP servers, memory, rules, config.
 - **Layers** (product terminology, used everywhere in the UI):
@@ -63,7 +63,6 @@ agent-mapper resolves configuration per tool and per folder, with a reason for e
 ## Evidence on Hand
 
 - Real local scans of the maintainer's machine: four projects (agent-mapper, pinchi-mobile, claude-skills, telegram-console), 45 plugin records, 24 MCP declarations, and symlinked instruction and skill files.
-- UI direction screenshots in [docs/design/screenshots/](docs/design/screenshots/), taken from a throwaway prototype built on that data.
 - There are no users, testimonials, benchmarks, or adoption numbers. Do not fabricate them.
 
 ## Product Principles
@@ -72,7 +71,7 @@ agent-mapper resolves configuration per tool and per folder, with a reason for e
 2. **Never claim more than the evidence.** Every state carries its reason and source. Unknown is a valid answer.
 3. **Normal is quiet.** Only differences, inactive items the user asked to see, and verified problems ask for attention.
 4. **One tool at a time.** Links bridge the tools; side-by-side is not the default.
-5. **Safe by construction.** The app is read-only, executes nothing, contacts nothing, and exposes no secrets.
+5. **Safe by construction.** Scans are read-only and writes are reviewed. The app executes nothing, contacts nothing beyond the optional GitHub CLI lookup, and exposes no secrets.
 
 ## Accessibility & Inclusion
 
