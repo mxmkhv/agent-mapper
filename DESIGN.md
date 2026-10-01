@@ -344,9 +344,10 @@ A 7px marker leads every item. Its shape carries the state, so no colored badge 
 
 One card above a project's Inventory ("A new session starts with") and above the Projects table ("Your global setup loads"). The Global title describes the global sources only: a project can disable some of them, which its row then shows.
 
-- **Numbers:** "Startup ~7.4k · On demand ~102k", then the visible note "Estimated tokens: characters ÷ 4". Values always carry "~".
+- **Head:** the title as a muted label, with the findings link at the right end.
+- **Numbers:** their own line under the title: "~7.4k startup" at headline size in ink, then a quieter "~102k on demand" (the bar does not include it). Values always carry "~".
 - **Bar:** a 6px segmented bar with one gray segment per startup instruction file (toned by layer) plus a tool-colored skill-index segment.
-- **Load list:** under the bar, each startup instruction in load order as a button: swatch, load number, name, the folder that tells same-named files apart (mono, or "repo root"), and its estimate. Selecting one opens it in the inspector. The skill index closes the list.
+- **Load list:** under the bar, each startup instruction in load order as a button: swatch, its estimate (ink, semibold), then its path in mono. The path tells same-named files apart: global files read from `~`, project files lead with the project's folder name ("agent-mapper/CLAUDE.md"). Selecting one opens it in the inspector. The skill index closes the list, and the visible note "Estimated tokens: characters ÷ 4" sits at the right end of the row.
 - **Findings link:** in a project, the right end links to Findings with "2 problems · 3 other" (only problems are red). Absent when there are none.
 
 ### Symlink Badge and Links (signature)
