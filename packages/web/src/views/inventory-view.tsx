@@ -1,5 +1,6 @@
 import { Fragment, useState, type ReactNode } from "react";
 import type { ToolId } from "@agent-mapper/core";
+import type { GroupFocus } from "../workspace/use-workspace";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
 import { repeatedNames } from "../model/same-names";
 import { KindIcon, kindLabel } from "../ui/kind-icon";
@@ -16,6 +17,7 @@ import {
   type InventoryGroup
 } from "./inventory-groups";
 import { InventoryRow } from "./inventory-row";
+import { groupElementId, useGroupFocus } from "./use-group-focus";
 import { useRowActions, type RowActionScope } from "./use-row-actions";
 
 interface InventoryViewProps extends RowActionScope {
@@ -30,6 +32,8 @@ interface InventoryViewProps extends RowActionScope {
   /** Background versions per plugin name, while they are folded into the active version's row. */
   otherVersions?: ReadonlyMap<string, number>;
   hintFor(group: InventoryGroup): string | undefined;
+  /** A group to scroll to, such as a plugin's after its contributions were picked in the inspector. */
+  groupFocus?: GroupFocus;
   onKind(kind: RecordKind | "all"): void;
 }
 
@@ -97,6 +101,12 @@ export function InventoryView(props: InventoryViewProps) {
       toggleSource(key);
     }
   }
+  useGroupFocus(props.groupFocus, (key) => {
+    const group = groups.find((item) => item.key === key);
+    if (group && isInherited(group)) {
+      setInheritedChoice(true);
+    }
+  });
   // Collapsed by default, unless that would hide the selection or leave the pane empty.
   const inheritedOpen =
     inheritedChoice ??
@@ -106,7 +116,11 @@ export function InventoryView(props: InventoryViewProps) {
     const repeated = repeatedNames(group.records);
     const isOwn = props.isProject && isLocalGroup(group);
     return (
-      <section className="mb-3.5" key={group.key}>
+      <section
+        className="mb-3.5 scroll-mt-24"
+        id={groupElementId(group.key)}
+        key={group.key}
+      >
         <GroupHead
           group={group}
           hint={props.hintFor(group)}
@@ -196,6 +210,7 @@ export function InventoryView(props: InventoryViewProps) {
       ) : null}
       {listed.map(renderGroup)}
       {rowActions.dialog}
+      {rowActions.deleteDialog}
     </div>
   );
 }

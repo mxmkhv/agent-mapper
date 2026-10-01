@@ -265,7 +265,7 @@ Every neutral and signal token has a `-dark` twin in the frontmatter. Dark mode 
 
 **The No-Success-Green Rule.** Green never means active, healthy or done. "Active" is the absence of a badge, not a green pill. The only green is the soft link green, which marks symlinks.
 
-**The Glyph-Plus-Color Rule.** A tool is always marked with its letter glyph (`C` for Claude Code, `X` for Codex) as well as its color, so color is never the only signal. The favicon is the one exception: a 16px tab icon has no room for the letter.
+**The Glyph-Plus-Color Rule.** A tool is always marked with its letter glyph (`C` for Claude Code, `X` for Codex) as well as its color, so color is never the only signal. The favicon and the sidebar brand mark that repeats it are the exception: they mark the app, and the tool switch beside the header already names the tool.
 
 ## Typography
 
@@ -386,7 +386,7 @@ Above the layers: "Startup ~7.4k · On demand ~102k", then a 6px segmented bar w
 
 ### Inventory Rows
 
-A 36px row: kind icon, state marker, name (body-strong), a symlink badge slot, a detail slot (path, matcher, or version, in faint mono), and a right-aligned state label. The hover fill is Hover and the selected fill is Selected. Group heads sit above each card: layer icon, label, count, and a mono location hint. Plugin groups show the plugin name and version. In a project, its own groups swap the layer icon for the tool glyph and use an ink label. Skills that share a source repo sit under a 32px wash row (chevron, source-tone dot, repo in mono, count) that folds them away. The name is the row's button, stretched over the row; two things sit above it as buttons of their own. The symlink chip opens a popover (native `popover`, anchored under the chip) with the folder the link resolves into and **Open in Finder**. Rows for files the app can edit swap the state label for two 28px buttons while hovered, focused or selected: primary **Edit** and, on skills and agents, secondary **Copy**. In a project, everything inherited (Global and plugins) sits inside one wash panel whose head row folds it away, so the groups read as its contents; it is closed by default.
+A 36px row: kind icon, state marker, name (body-strong), a symlink badge slot, a detail slot (path, matcher, or version, in faint mono), and a right-aligned state label. The hover fill is Hover and the selected fill is Selected. Group heads sit above each card: layer icon, label, count, and a mono location hint. Plugin groups show the plugin name and version. In a project, its own groups swap the layer icon for the tool glyph and use an ink label. Skills that share a source repo sit under a 32px wash row (chevron, source-tone dot, repo in mono, count) that folds them away. The name is the row's button, stretched over the row; two things sit above it as buttons of their own. The symlink chip opens a popover (native `popover`, anchored under the chip) with the folder the link resolves into and **Open in Finder**. Rows for files the app can edit show 28px buttons while hovered, focused or selected: primary **Edit**, then on skills and agents secondary **Copy** and a Delete icon button (not on plugin or managed items). They float over the right end of the row on the row's own fill, so the columns keep their widths. In a project, everything inherited (Global and plugins) sits inside one wash panel whose head row folds it away, so the groups read as its contents; it is closed by default.
 
 ### Facets
 
@@ -404,6 +404,11 @@ Rows are sources outside projects, grouped by kind in section rows (Wash fill, 1
 - Global skills collapse to one count row ("12/12" per project).
 - A final section, "Added by the project itself", counts project-local items per kind.
 
+### Confirmations
+
+- **Inline question** (worktree Remove and Prune, the project list's remove, Discard changes): the button gives way to the question, **Keep** and a red-text answer, without a dialog. In table rows and the sidebar the question floats as a raised strip (Sheet White, hairline border, raised shadow) over the row, so nothing moves: in a table it grows left from the action cell; in the sidebar it starts at the row's left edge and extends past the sidebar over the content, so the full question fits. Escape, a click elsewhere, or scrolling keeps.
+- **Delete dialog** (skills and agents): a modal titled "Delete name?" with one sentence on what goes to the Trash (a folder with its file count and size, a file, or only a symlink while its target stays), warnings for other paths that will break or installer records left behind, and a note that Put Back restores it. Cancel and a red-text **Delete**.
+
 ### Inspector
 
 A white sheet on the right, 18–20px padding:
@@ -413,14 +418,14 @@ A white sheet on the right, 18–20px padding:
 - a state line (marker plus bold state text) and the reason in muted body text;
 - a provenance breadcrumb on Wash (`Global › ~/.claude/CLAUDE.md`, or `Plugins › plugin version › skills/x/SKILL.md › locator`);
 - symlink sections, contributions grid (plugins), a Details key-value list, and "Reaches N of M projects";
-- for files the app can edit, a document block: an action row (primary **Edit**, **Copy** on skills and agents, and a History icon button at the far end), then the Preview/Source toggle on its own row above the text (a Codex agent is TOML, which has no preview, so it shows source only);
+- for files the app can edit, a document block: an action row (primary **Edit**; **Copy** and **Delete** on skills and agents; a History icon button at the far end), then the Preview/Source toggle on its own row above the text (a Codex agent is TOML, which has no preview, so it shows source only);
 - the actions (Open in editor, Reveal in Finder).
 
 When nothing is selected, it shows a centered hint and the active/inactive counts. Coverage notes open here too.
 
 ### Navigation (sidebar)
 
-- The brand mark and "agent-mapper", then Global (globe icon), then a "Projects" caption and project rows (folder icon, name, and a branch icon with worktree count).
+- The brand mark (the favicon: the Agents bot icon in white on a 22px disc of the selected tool's hue) and "agent-mapper", then Global (globe icon), then a "Projects" caption and project rows (folder icon, name, and a branch icon with worktree count).
 - The selected project expands to show its first three worktrees and "N more worktrees".
 - Rows are 30px with a 6px radius. The active row gets the Selected fill and 550 weight.
 - The footer holds Add folder…, the Auto / Light / Dark switch, and "Read-only · nothing is modified".

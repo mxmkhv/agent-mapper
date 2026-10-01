@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Globe, Moon, Sun, SunMoon } from "lucide-react";
+import type { ToolId } from "@agent-mapper/core";
+import { Bot, Globe, Moon, Sun, SunMoon } from "lucide-react";
 import type { ProjectSuggestion } from "../api";
 import type { ThemeChoice } from "../state/use-theme";
 import { AddFolder } from "./add-folder";
@@ -14,6 +15,8 @@ interface SidebarProps {
   loading: boolean;
   error?: string;
   theme: ThemeChoice;
+  /** Colors the brand mark, matching the favicon. */
+  tool: ToolId;
   onSelect(path: string): void;
   onTheme(choice: ThemeChoice): void;
   onSetHidden(path: string, hidden: boolean): Promise<void>;
@@ -56,6 +59,23 @@ function ThemeButton({
   );
 }
 
+const brandColor = {
+  claude: "bg-claude",
+  codex: "bg-codex"
+} satisfies Record<ToolId, string>;
+
+/** The favicon in the page: the Agents icon on a disc in the selected tool's hue. */
+function BrandMark({ tool }: { tool: ToolId }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`grid size-[22px] shrink-0 place-items-center rounded-full ${brandColor[tool]}`}
+    >
+      <Bot className="size-[13px] text-white" strokeWidth={2.5} />
+    </span>
+  );
+}
+
 export function Sidebar(props: SidebarProps) {
   const { selectedPath, onSelect, loading, error } = props;
   const [actionError, setActionError] = useState<string>();
@@ -84,9 +104,7 @@ export function Sidebar(props: SidebarProps) {
   return (
     <aside className="flex min-h-0 flex-col overflow-auto border-r border-hairline bg-sidebar px-2.5 pt-3.5 pb-2.5">
       <div className="flex items-center gap-2 px-2 pb-4 font-semibold tracking-tight">
-        <span className="grid size-[22px] place-items-center rounded-control bg-ink text-[11px] font-bold text-canvas">
-          am
-        </span>
+        <BrandMark tool={props.tool} />
         agent-mapper
         <ThemeButton onTheme={props.onTheme} theme={props.theme} />
       </div>

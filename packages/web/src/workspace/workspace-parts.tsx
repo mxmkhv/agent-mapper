@@ -157,6 +157,7 @@ export function Content({ props, state, reach }: PartsProps) {
               tool: props.tool
             })
       }
+      groupFocus={state.groupFocus}
       isProject={props.isProject}
       kind={state.kind}
       onKind={state.filterKind}

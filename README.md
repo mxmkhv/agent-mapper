@@ -1,6 +1,6 @@
 # agent-mapper
 
-A local view of Claude Code and Codex configuration. The current build inventories local instructions, skills, agents, hooks, plugins, MCP declarations, memory files, and linked worktrees. Scans are read-only. agent-mapper writes only when you save a reviewed instruction, skill or agent edit, restore a saved version, or copy a skill or agent, plus its private history and lock files.
+A local view of Claude Code and Codex configuration. The current build inventories local instructions, skills, agents, hooks, plugins, MCP declarations, memory files, and linked worktrees. Scans are read-only. agent-mapper writes only when you save a reviewed instruction, skill or agent edit, restore a saved version, copy a skill or agent, or move one to the Trash, plus its private history and lock files.
 
 ## Start
 
@@ -40,6 +40,7 @@ Select an instruction (`CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md`, `AGENTS.over
 - **Drafts:** unsaved edits survive switching views, tools, and projects (see **Drafts** in the header), but live only in the open tab. Reloading asks first; restarting the server ends the session, so copy a draft before reopening the new URL.
 - **Locks:** each save or restore holds `lock` in the file's history folder only while it writes, and the lock records the pid that created it. If a save reports that lock as busy and no other agent-mapper process is saving that file, an interrupted save left it behind: delete the lock and save again. Your session and drafts can stay open.
 - **Agents:** a Codex agent must parse as TOML with text `name`, `description` and `developer_instructions` before it saves; a Claude Code agent's frontmatter is checked like a skill's. **Copy** puts an agent into another project for either tool. The other tool gets a rewritten file (Markdown frontmatter and body ↔ TOML keys) carrying the name, description and instructions; tool-specific settings such as `tools`, `model` or `sandbox_mode` are listed and left out. Existing files are never overwritten.
+- **Delete:** a skill or agent goes to the macOS Trash (macOS 15 or later), where Put Back restores it. A skill folder goes whole; a symlinked one loses only the link, and the folder it points to stays. The dialog names other paths that will stop working. Plugin and managed items cannot be deleted here. If the item changed since the dialog opened, nothing is deleted.
 - Running Claude Code or Codex sessions may need a restart to pick up a saved file.
 
 This extends the read-only [product brief](docs/mvp-v2.md) with explicit writes, as agreed in [#10](https://github.com/mxmkhv/agent-mapper/issues/10).

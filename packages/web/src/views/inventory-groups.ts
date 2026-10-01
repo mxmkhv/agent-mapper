@@ -20,6 +20,9 @@ const layerRank = {
 } satisfies Record<Layer, number>;
 const installedRank = 2;
 
+/** The group that holds one plugin's skills, agents and other contributions. */
+export const pluginGroupKey = (pluginId: string) => `plugin:${pluginId}`;
+
 function groupFor(record: InventoryRecord): Omit<InventoryGroup, "records"> {
   if (record.kind === "plugin") {
     return {
@@ -31,7 +34,7 @@ function groupFor(record: InventoryRecord): Omit<InventoryGroup, "records"> {
   if (record.plugin) {
     const { name, version } = record.plugin;
     return {
-      key: `plugin:${record.plugin.id}`,
+      key: pluginGroupKey(record.plugin.id),
       label: name,
       layer: "plugins",
       plugin: { name, version }

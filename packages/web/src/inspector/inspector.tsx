@@ -1,6 +1,5 @@
 import type { InstructionImport, ToolId } from "@agent-mapper/core";
 import { Layers } from "lucide-react";
-import { canCopy } from "../model/copyable";
 import { isLink, linkedFrom, linkTarget } from "../model/links";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
 import type { CopyTarget } from "../model/copy-targets";
@@ -26,7 +25,8 @@ import {
   sizeText
 } from "./inspector-sections";
 import { ReachSection, type ReachScope } from "./reach-section";
-import { SkillTransfer } from "./skill-transfer";
+import { pluginGroupKey } from "../views/inventory-groups";
+import { ItemActions } from "./item-actions";
 
 interface InspectorScope {
   records: InventoryRecord[];
@@ -41,7 +41,8 @@ interface RecordInspectorProps {
   record: InventoryRecord;
   scope: InspectorScope;
   onSelect(id: string, options?: { tool?: ToolId }): void;
-  onKind(kind: RecordKind): void;
+  /** Shows a plugin's contributions of one kind in the Inventory. */
+  onKind(kind: RecordKind, group: string): void;
   onOpenDocument(sourceKey: string, mode: DocumentMode): void;
   /** Present in the Global view: which projects this record reaches. */
   reach?: ReachScope;
@@ -169,16 +170,12 @@ export function RecordInspector({
         <div className="mt-5">
           <SourceDocumentPanel
             actions={
-              canCopy(record) ? (
-                <SkillTransfer
-                  context={scope.context}
-                  copyTargets={scope.copyTargets}
-                  onSelect={onSelect}
-                  record={record}
-                  scannedAt={scope.scannedAt}
-                  sourceRef={record.sourceRef}
-                />
-              ) : null
+              <ItemActions
+                onSelect={onSelect}
+                record={record}
+                scope={scope}
+                sourceRef={record.sourceRef}
+              />
             }
             onOpen={onOpenDocument}
             scannedAt={scope.scannedAt}
@@ -189,7 +186,10 @@ export function RecordInspector({
       <Links onSelect={onSelect} record={record} scope={scope} />
       {record.kind === "plugin" ? (
         <Section title="Contributes">
-          <Contributions onKind={onKind} record={record} />
+          <Contributions
+            onKind={(kind) => onKind(kind, pluginGroupKey(record.id))}
+            record={record}
+          />
         </Section>
       ) : null}
       {imports.length ? (

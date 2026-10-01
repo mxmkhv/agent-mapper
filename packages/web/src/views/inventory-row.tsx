@@ -1,5 +1,6 @@
 import { isConventionalPath } from "../model/conventional-path";
-import { canCopy } from "../model/copyable";
+import { Trash2 } from "lucide-react";
+import { canCopy, canDelete } from "../model/copyable";
 import { isLink } from "../model/links";
 import {
   shortPath,
@@ -18,6 +19,7 @@ import { SymlinkPopover } from "../ui/symlink-popover";
 export interface RowActionHandlers {
   onEdit(record: InventoryRecord): void;
   onCopy(record: InventoryRecord): void;
+  onDelete(record: InventoryRecord): void;
 }
 
 interface RowProps {
@@ -110,10 +112,19 @@ function RowLabel({
   );
 }
 
-/** Edit and Copy buttons for a file the app can open, shown in place of the state label while the row is hovered, focused or selected. */
-function RowActions({ record, actions }: Pick<RowProps, "record" | "actions">) {
+/**
+ * Edit, Copy and Delete for a file the app can open, shown while the row is hovered, focused or selected. They
+ * float over the right end of the row on the row's own fill, so the columns keep their widths.
+ */
+function RowActions({
+  record,
+  actions,
+  selected
+}: Pick<RowProps, "record" | "actions" | "selected">) {
   return (
-    <span className="hidden justify-end gap-1.5 group-focus-within:flex group-hover:flex group-aria-current:flex">
+    <span
+      className={`absolute inset-y-0 right-0 hidden items-center gap-1.5 pr-3 pl-3 group-focus-within:flex group-hover:flex group-aria-current:flex ${selected ? "bg-selected" : "bg-surface group-hover:bg-hover"}`}
+    >
       <Button
         className="relative"
         onClick={() => actions.onEdit(record)}
@@ -124,6 +135,17 @@ function RowActions({ record, actions }: Pick<RowProps, "record" | "actions">) {
       {canCopy(record) ? (
         <Button className="relative" onClick={() => actions.onCopy(record)}>
           Copy
+        </Button>
+      ) : null}
+      {canDelete(record) ? (
+        <Button
+          aria-label={`Delete ${record.name}`}
+          className="relative"
+          onClick={() => actions.onDelete(record)}
+          title="Delete…"
+          variant="icon"
+        >
+          <Trash2 aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
         </Button>
       ) : null}
     </span>
@@ -177,17 +199,11 @@ export function InventoryRow({
       <Detail context={context} record={record} sharesName={sharesName} />
       {/* A fixed last column keeps every row's detail column aligned, labelled or not. */}
       <span className="truncate text-right">
-        <span
-          className={
-            hasActions
-              ? "group-focus-within:hidden group-hover:hidden group-aria-current:hidden"
-              : ""
-          }
-        >
-          <RowLabel otherVersions={otherVersions} record={record} />
-        </span>
-        {hasActions ? <RowActions actions={actions} record={record} /> : null}
+        <RowLabel otherVersions={otherVersions} record={record} />
       </span>
+      {hasActions ? (
+        <RowActions actions={actions} record={record} selected={selected} />
+      ) : null}
     </div>
   );
 }

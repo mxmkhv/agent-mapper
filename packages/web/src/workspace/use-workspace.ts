@@ -132,6 +132,11 @@ function useRevealingSelection(...input: Parameters<typeof useSelection>) {
   };
 }
 
+export interface GroupFocus {
+  key: string;
+  request: number;
+}
+
 /** The browsing view and kind filter; a landing from another folder can preset both. */
 function useViewFilter(isProject: boolean, landing?: Landing) {
   const target = landing && "view" in landing ? landing : undefined;
@@ -139,7 +144,25 @@ function useViewFilter(isProject: boolean, landing?: Landing) {
     target?.view ?? (isProject ? "map" : "reach")
   );
   const [kind, setKind] = useState<RecordKind | "all">(target?.kind ?? "all");
-  return { view, setView, kind, setKind };
+  const [groupFocus, setGroupFocus] = useState<GroupFocus>();
+  return {
+    view,
+    setView,
+    kind,
+    /** The Inventory group to scroll to; `request` changes on every ask, so asking twice still scrolls. */
+    groupFocus,
+    /** Shows one kind in the Inventory; a group key, such as a plugin's, also scrolls to that group. */
+    filterKind(next: RecordKind | "all", group?: string) {
+      setKind(next);
+      setView("inventory");
+      if (group) {
+        setGroupFocus((current) => ({
+          key: group,
+          request: (current?.request ?? 0) + 1
+        }));
+      }
+    }
+  };
 }
 
 /** All per-folder UI state: view, filters, selection, and the records the views render. */
@@ -182,10 +205,8 @@ export function useWorkspace(input: WorkspaceInput) {
       filter.setView(next);
     },
     kind: filter.kind,
-    filterKind(next: RecordKind | "all") {
-      filter.setKind(next);
-      filter.setView("inventory");
-    },
+    groupFocus: filter.groupFocus,
+    filterKind: filter.filterKind,
     records,
     lookup,
     ...forTool(records, { tool, showInactive: selection.showInactive }),

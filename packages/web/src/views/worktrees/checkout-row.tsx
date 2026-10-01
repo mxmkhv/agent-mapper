@@ -61,7 +61,7 @@ function RowAction({
     <span title={action.title}>
       <ConfirmButton
         confirmLabel={action.label}
-        floating
+        placement="end"
         label={action.label}
         onConfirm={onConfirm}
         question={action.question(name)}

@@ -3,6 +3,7 @@ import type { DiscoveryResult } from "./discovery";
 import { configRoots } from "./inventory";
 import { managedClaudeDirectory } from "./managed-claude-reader";
 import { SkillTransferService } from "./skill-transfer";
+import { SourceDeleteService, type MoveToTrash } from "./source-delete";
 import type { SourcePathStore } from "./source-actions";
 import { defaultHistoryRoot } from "./source-document-history-folder";
 import { SourceDocumentRegistry } from "./source-document-registry";
@@ -13,6 +14,7 @@ export interface ServerServices {
   registry: SourceDocumentRegistry;
   documents: SourceDocumentService;
   skills: SkillTransferService;
+  deletes: SourceDeleteService;
   /** Projects and worktrees from the latest discovery; skills may be copied into them. */
   discovered: Set<string>;
 }
@@ -23,6 +25,7 @@ export function createServices(options: {
   codexHome?: string;
   managedClaudeDir?: string;
   historyRoot?: string;
+  trash?: MoveToTrash;
 }): ServerServices {
   const home = options.home ?? homedir();
   const registry = new SourceDocumentRegistry(managedClaudeDirectory(options));
@@ -35,6 +38,7 @@ export function createServices(options: {
       registry,
       historyRoot: options.historyRoot ?? defaultHistoryRoot(home)
     }),
+    deletes: new SourceDeleteService({ registry, trash: options.trash }),
     skills: new SkillTransferService({
       registry,
       roots: () => ({

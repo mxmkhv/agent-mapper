@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ToolId } from "@agent-mapper/core";
 import type { DocumentMode } from "../documents/source-document-panel";
+import { DeleteDialog } from "../inspector/delete-dialog";
 import { SkillTransferDialog } from "../inspector/skill-transfer";
 import type { CopyTarget } from "../model/copy-targets";
 import type { PathContext } from "../model/paths";
@@ -20,13 +21,15 @@ export interface RowActionScope {
   onOpenDocument(sourceKey: string, mode: DocumentMode): void;
 }
 
-/** Edit and Copy for the Inventory's rows: the handlers, plus the failure line and dialog the view places once. */
+/** Edit, Copy and Delete for the Inventory's rows: the handlers, plus the failure line and dialog the view places once. */
 export function useRowActions(scope: RowActionScope) {
   const [copying, setCopying] = useState<InventoryRecord>();
+  const [deleting, setDeleting] = useState<InventoryRecord>();
   const editing = useEditRecord(scope.onOpenDocument);
   const handlers: RowActionHandlers = {
     onEdit: (record) => void editing.edit(record),
-    onCopy: setCopying
+    onCopy: setCopying,
+    onDelete: setDeleting
   };
   return {
     handlers,
@@ -44,6 +47,14 @@ export function useRowActions(scope: RowActionScope) {
         record={copying}
         scannedAt={scope.transfer.scannedAt}
         sourceRef={copying.sourceRef}
+      />
+    ) : null,
+    deleteDialog: deleting?.sourceRef ? (
+      <DeleteDialog
+        context={scope.context}
+        onClose={() => setDeleting(undefined)}
+        record={deleting}
+        sourceRef={deleting.sourceRef}
       />
     ) : null
   };

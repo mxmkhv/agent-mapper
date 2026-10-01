@@ -12,7 +12,7 @@ const megabyte = kilobyte * kilobyte;
 const tools: ToolId[] = ["claude", "codex"];
 const fieldLabel = "text-caption font-semibold text-ink-muted";
 
-function bytesText(bytes: number): string {
+export function bytesText(bytes: number): string {
   if (bytes < kilobyte) {
     return `${bytes} B`;
   }
@@ -154,11 +154,12 @@ function Files({ plan }: { plan: SkillTransferPlan }) {
   );
 }
 
-function Warnings({
-  plan,
+/** Things that will still happen, or break, if the user goes ahead. */
+export function Warnings({
+  warnings,
   context
 }: {
-  plan: SkillTransferPlan;
+  warnings: readonly string[];
   context: PathContext;
 }) {
   return (
@@ -169,7 +170,7 @@ function Warnings({
         strokeWidth={1.8}
       />
       <ul className="m-0 grid list-none gap-1 p-0">
-        {plan.warnings.map((warning) => (
+        {warnings.map((warning) => (
           <li key={warning}>{tildeText(warning, context)}</li>
         ))}
       </ul>
@@ -202,7 +203,9 @@ function Plan({
           {tildeText(plan.blocked, context)}
         </p>
       ) : null}
-      {plan.warnings.length ? <Warnings context={context} plan={plan} /> : null}
+      {plan.warnings.length ? (
+        <Warnings context={context} warnings={plan.warnings} />
+      ) : null}
     </>
   );
 }

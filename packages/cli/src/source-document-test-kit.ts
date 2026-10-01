@@ -113,7 +113,10 @@ function documentClient(base: string, headers: Record<string, string>) {
   return { base, headers, scan, post, open };
 }
 
-export async function startDocumentServer(fixture: DocumentFixture) {
+export async function startDocumentServer(
+  fixture: DocumentFixture,
+  options: { trash?: (path: string) => Promise<void> } = {}
+) {
   vi.stubEnv("CLAUDE_CONFIG_DIR", "");
   vi.stubEnv("CODEX_HOME", "");
   mkdirSync(join(fixture.home, "web"), { recursive: true });
@@ -125,6 +128,7 @@ export async function startDocumentServer(fixture: DocumentFixture) {
     managedClaudeDir: join(fixture.home, "managed"),
     historyRoot: fixture.history,
     webRoot: join(fixture.home, "web"),
+    trash: options.trash,
     launchSource: async (args) => {
       launched.push(args);
     }
