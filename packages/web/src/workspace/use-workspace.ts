@@ -116,6 +116,22 @@ function useSelection(
   };
 }
 
+/** Selection that also counts the picks asking to be shown, so picking the selected item again still reveals its row. */
+function useRevealingSelection(...input: Parameters<typeof useSelection>) {
+  const selection = useSelection(...input);
+  const [revealRequest, setRevealRequest] = useState(0);
+  return {
+    ...selection,
+    revealRequest,
+    select(id: string, options: SelectOptions = {}) {
+      if (options.reveal ?? true) {
+        setRevealRequest((count) => count + 1);
+      }
+      selection.select(id, options);
+    }
+  };
+}
+
 /** The browsing view and kind filter; a landing from another folder can preset both. */
 function useViewFilter(isProject: boolean, landing?: Landing) {
   const target = landing && "view" in landing ? landing : undefined;
@@ -142,7 +158,7 @@ export function useWorkspace(input: WorkspaceInput) {
     () => [...records, ...input.extraRecords],
     [records, input.extraRecords]
   );
-  const selection = useSelection(lookup, {
+  const selection = useRevealingSelection(lookup, {
     ...input,
     isFolded: foldedIn(records, tool)
   });

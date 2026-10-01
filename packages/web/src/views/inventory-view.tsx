@@ -25,6 +25,8 @@ interface InventoryViewProps {
   /** A project splits into its own groups and a collapsible section for everything it inherits. */
   isProject: boolean;
   selectedId?: string;
+  /** Changes on every selection that should be shown, including picking the selected item again. */
+  revealRequest: number;
   context: PathContext;
   /** Background versions per plugin name, while they are folded into the active version's row. */
   otherVersions?: ReadonlyMap<string, number>;
@@ -82,9 +84,9 @@ export function InventoryView(props: InventoryViewProps) {
     group.records.some((record) => record.id === props.selectedId)
   );
   // A selection made elsewhere (search, the inspector) unfolds whatever hides its row.
-  const [revealedId, setRevealedId] = useState(props.selectedId);
-  if (props.selectedId !== revealedId) {
-    setRevealedId(props.selectedId);
+  const [revealed, setRevealed] = useState(props.revealRequest);
+  if (props.revealRequest !== revealed) {
+    setRevealed(props.revealRequest);
     const repo = selectedGroup?.records.find(
       (record) => record.id === props.selectedId
     )?.installedFrom?.repo;

@@ -174,15 +174,21 @@ it("reports lock files and entries with an unexpected shape", async () => {
   writeSkill(join(project, ".claude", "skills"), "good");
   writeSkill(join(project, ".claude", "skills"), "bad");
 
-  writeFileSync(lockPath, JSON.stringify({ skills: ["good"] }));
-  const wrongShape = await scanInventory({ workingDirectory: project, home });
-  expect(wrongShape.entries.map((entry) => entry.installedFrom)).toEqual([
-    undefined,
-    undefined
-  ]);
-  expect(wrongShape.errors).toEqual([
-    `${lockPath}: The skills lock file has an unexpected structure (no "skills" object), so installed skills show no source repo. Reinstall the skills or update agent-mapper.`
-  ]);
+  for (const lock of [{ skills: ["good"] }, { version: 1 }]) {
+    writeFileSync(lockPath, JSON.stringify(lock));
+    const wrongShape = await scanInventory({ workingDirectory: project, home });
+    expect(wrongShape.entries.map((entry) => entry.installedFrom)).toEqual([
+      undefined,
+      undefined
+    ]);
+    expect(wrongShape.errors).toEqual([
+      `${lockPath}: The skills lock file has an unexpected structure (no "skills" object), so installed skills show no source repo. Reinstall the skills or update agent-mapper.`
+    ]);
+  }
+
+  writeFileSync(lockPath, JSON.stringify({ skills: {} }));
+  const empty = await scanInventory({ workingDirectory: project, home });
+  expect(empty.errors).toEqual([]);
 
   writeFileSync(
     lockPath,

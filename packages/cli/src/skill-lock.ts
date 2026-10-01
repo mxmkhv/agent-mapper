@@ -19,14 +19,14 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 function lockedSkills(parsed: unknown): ParsedLock {
   const skills = new Map<string, SkillSource>();
   const listed = isRecord(parsed) ? parsed.skills : undefined;
-  if (!isRecord(parsed) || (listed !== undefined && !isRecord(listed))) {
+  if (!isRecord(listed)) {
     return {
       skills,
       problem: `The skills lock file has an unexpected structure (no "skills" object), ${noSources}. Reinstall the skills or update agent-mapper.`
     };
   }
   const unreadable: string[] = [];
-  for (const [name, value] of Object.entries(listed ?? {})) {
+  for (const [name, value] of Object.entries(listed)) {
     const source = isRecord(value) ? value.source : undefined;
     const ref = isRecord(value) ? value.ref : undefined;
     if (typeof source === "string" && source) {

@@ -163,6 +163,7 @@ export function Content({ props, state, reach }: PartsProps) {
       onSelect={state.select}
       otherVersions={state.showInactive ? undefined : state.otherVersions}
       records={state.visible}
+      revealRequest={state.revealRequest}
       tool={props.tool}
     />
   );
