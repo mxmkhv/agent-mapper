@@ -2,8 +2,8 @@ import { SearchQuery } from "@codemirror/search";
 import type { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 
-/** Counting stops here; Monaco also caps its count on very large files. */
-const matchLimit = 1000;
+/** Counting stops past this many matches to keep the label short. Monaco capped its count too, at 19,999. */
+const countLimit = 999;
 
 export function matchCount(state: EditorState, query: SearchQuery): string {
   if (!query.valid) {
@@ -15,11 +15,11 @@ export function matchCount(state: EditorState, query: SearchQuery): string {
   let current = 0;
   for (let next = cursor.next(); !next.done; next = cursor.next()) {
     total += 1;
+    if (total > countLimit) {
+      return `${current || "?"} of ${countLimit}+`;
+    }
     if (next.value.from === from && next.value.to === to) {
       current = total;
-    }
-    if (total === matchLimit) {
-      return `${current || "?"} of ${matchLimit - 1}+`;
     }
   }
   return total ? `${current || "?"} of ${total}` : "No results";

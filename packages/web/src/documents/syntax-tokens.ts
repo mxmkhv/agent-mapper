@@ -34,13 +34,20 @@ export interface Rule<State> {
   token: Token;
   /** State changes when the rule matches, like Monarch's `next`. */
   enter?: Partial<State>;
+  /** Monarch's leading `\b`: the match must not continue a word. */
+  wordStart?: boolean;
 }
 
+/** The matching rule's token (`null` when it has no color), or `undefined` when no rule matches. */
 export function firstMatch<State extends object>(
   stream: StringStream,
   { state, rules }: { state: State; rules: readonly Rule<State>[] }
 ): Token | undefined {
+  const continuesWord = /\w/.test(stream.string.charAt(stream.pos - 1));
   for (const rule of rules) {
+    if (rule.wordStart && continuesWord) {
+      continue;
+    }
     if (stream.match(rule.match)) {
       Object.assign(state, rule.enter);
       return rule.token;
@@ -55,7 +62,11 @@ export interface Brackets {
 
 const depthTokens = ["bracket0", "bracket1", "bracket2"] as const;
 
-/** Brackets outside strings and comments, colored by depth like Monaco's bracket pair colorization. */
+/**
+ * Brackets in plain text and INI values, colored by depth like Monaco's bracket pair colorization.
+ * Monaco also colored brackets inside headings, emphasis and code; the port leaves those in the token's color.
+ * Undefined when the next character is not a bracket.
+ */
 export function bracket(
   stream: StringStream,
   state: Brackets

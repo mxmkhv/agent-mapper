@@ -44,7 +44,7 @@ const lineStartRules: readonly Rule<MarkdownState>[] = [
     token: "string",
     enter: { block: "code" }
   },
-  // Monaco hands a named block to that language; unregistered ones render as plain text.
+  // Monaco handed a named block to that language, so its own `markdown` and `ini` blocks were colored; here every named block is plain.
   {
     match: /^\s*```\s*[\w/\-#]+.*$/,
     token: "string",
@@ -59,13 +59,14 @@ const inlineRules: readonly Rule<MarkdownState>[] = [
   { match: new RegExp(`^${escape}`), token: null },
   {
     match: new RegExp(String.raw`^__(?:[^\\_]|${escape}|_(?!_))+__\b`),
-    token: "strong"
+    token: "strong",
+    wordStart: true
   },
   {
     match: new RegExp(String.raw`^\*\*(?:[^\\*]|${escape}|\*(?!\*))+\*\*`),
     token: "strong"
   },
-  { match: /^_[^_]+_\b/, token: "emphasis" },
+  { match: /^_[^_]+_\b/, token: "emphasis", wordStart: true },
   {
     match: new RegExp(String.raw`^\*(?:[^\\*]|${escape})+\*`),
     token: "emphasis"
@@ -117,10 +118,14 @@ function inline(stream: StringStream, state: MarkdownState): Token {
     stream.match(linkText);
     return null;
   }
-  const token =
-    firstMatch(stream, { state, rules: inlineRules }) ?? bracket(stream, state);
+  // `null` is a match without color (an escape), so only `undefined` falls through to the next check.
+  const token = firstMatch(stream, { state, rules: inlineRules });
   if (token !== undefined) {
     return token;
+  }
+  const brace = bracket(stream, state);
+  if (brace !== undefined) {
+    return brace;
   }
   // Plain text up to the next character a rule could start with; table cells also stop where a divider could start.
   const plain =
@@ -211,7 +216,10 @@ const blocks: Record<
   }
 };
 
-/** Port of Monaco's `markdown` Monarch tokenizer. `^` rules apply only at the start of a line, as in Monarch. */
+/**
+ * Port of Monaco's `markdown` Monarch tokenizer. `^` rules apply only at the start of a line, as in Monarch.
+ * Not ported: the embedded CSS and JavaScript Monarch colored inside inline `<style>` and `<script>` tags.
+ */
 export const markdownParser: StreamParser<MarkdownState> = {
   name: "markdown",
   startState: () => ({

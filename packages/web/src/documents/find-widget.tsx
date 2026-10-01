@@ -90,7 +90,7 @@ function FindWidget({ view, state }: FindWidgetProps) {
           aria-label="Toggle replace"
           className="absolute top-1 bottom-1 left-[5px] flex w-[18px] items-center justify-center rounded-[5px] hover:bg-(--monaco-toolbar-hover)"
           onClick={() => {
-            // Like Monaco, opening the replace row puts the cursor in it.
+            // Opening the replace row puts the cursor in it, ready to type the replacement.
             flushSync(() => setReplacing(!replacing));
             replaceInput.current?.focus();
           }}
@@ -109,6 +109,7 @@ function FindWidget({ view, state }: FindWidgetProps) {
           <input
             aria-label="Find"
             className={input}
+            // @codemirror/search focuses and selects the `main-field` input when Cmd/Ctrl+F is pressed again.
             main-field="true"
             onChange={(event) => setQuery({ search: event.target.value })}
             onKeyDown={(event) =>

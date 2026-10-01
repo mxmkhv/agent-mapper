@@ -4,6 +4,7 @@ import {
   MergeView,
   unifiedMergeView
 } from "@codemirror/merge";
+import { closeSearchPanel } from "@codemirror/search";
 import { Compartment, EditorState, Prec, StateEffect } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import {
@@ -22,7 +23,7 @@ import {
   keepDraftSession,
   readOnlyExtensions
 } from "./codemirror-setup";
-import { diffStats, type DiffStats } from "./diff-stats";
+import { diffConfig, diffStats, type DiffStats } from "./diff-stats";
 import type { EditorLanguage } from "./document-format";
 
 interface SourceEditorProps {
@@ -51,7 +52,8 @@ export function SourceEditor(props: SourceEditorProps) {
   const isReadOnly = useEffectEvent(() => readOnly);
   const keepSession = useEffectEvent(() => props.dirty);
 
-  useEffect(() => {
+  // A layout effect: its cleanup runs while the editor is still on the page, so the saved scroll position is real.
+  useLayoutEffect(() => {
     if (!host.current) {
       return;
     }
@@ -64,6 +66,8 @@ export function SourceEditor(props: SourceEditorProps) {
         keymap.of([
           {
             key: "Mod-s",
+            // Also from the find widget, which sits inside the editor as Monaco's did.
+            scope: "editor search-panel",
             run: () => {
               review();
               return true;
@@ -99,6 +103,8 @@ export function SourceEditor(props: SourceEditorProps) {
     view.focus();
     return () => {
       if (keepSession()) {
+        // Like Monaco, find does not stay open across visits; restoring it would also mount its widget mid-render.
+        closeSearchPanel(view);
         keepDraftSession(sourceKey, view);
       } else {
         dropDraftSession(sourceKey);
@@ -149,7 +155,7 @@ interface SourceDiffProps {
   modified: string;
   language: EditorLanguage;
   label: string;
-  /** Undefined when the diff fell back to imprecise chunks (for example on a very large file). */
+  /** Undefined when the diff ran past its time budget and fell back to coarser chunks. */
   onStats?(stats: DiffStats | undefined): void;
 }
 
@@ -178,7 +184,7 @@ export function SourceDiff({
         extensions: [
           baseExtensions(language, label),
           readOnlyExtensions,
-          unifiedMergeView({ original, mergeControls: false })
+          unifiedMergeView({ original, mergeControls: false, diffConfig })
         ]
       });
       const chunks = getChunks(view.state)?.chunks ?? [];
@@ -200,7 +206,8 @@ export function SourceDiff({
       parent: host.current,
       a: { doc: original, extensions: side("left side") },
       b: { doc: modified, extensions: side("right side") },
-      gutter: true
+      gutter: true,
+      diffConfig
     });
     reportStats(
       diffStats({

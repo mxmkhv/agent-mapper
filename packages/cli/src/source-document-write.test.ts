@@ -231,8 +231,8 @@ it("lets only one of two racing aliases write", async () => {
 
 it("serves fonts and the editor content security policy", async () => {
   const { fixture, server } = await setup();
-  writeFileSync(join(fixture.home, "web", "codicon.ttf"), "font");
-  const response = await fetch(`${server.base}/codicon.ttf`);
+  writeFileSync(join(fixture.home, "web", "font.ttf"), "font");
+  const response = await fetch(`${server.base}/font.ttf`);
   expect(response.headers.get("content-type")).toBe("font/ttf");
   const policy = response.headers.get("content-security-policy") ?? "";
   expect(policy).toContain("worker-src 'none'");

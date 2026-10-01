@@ -13,7 +13,10 @@ function indentation(text: string): number | undefined {
   return leading.length === text.length ? undefined : leading.length;
 }
 
-/** Monaco folds both languages by indentation: a line folds the deeper-indented lines below it. */
+/**
+ * Monaco folded both languages by indentation: a line folds the deeper-indented lines below it. Simplified here: Monaco
+ * also folded Markdown `<!-- #region -->` markers and kept trailing blank lines inside a fold.
+ */
 const indentationFolding = foldService.of((state, lineStart) => {
   const line = state.doc.lineAt(lineStart);
   const indent = indentation(line.text);
@@ -38,6 +41,7 @@ const markdown = new LanguageSupport(StreamLanguage.define(markdownParser), [
   indentationFolding
 ]);
 // Monaco ships no TOML tokenizer, so TOML used INI, which colors its keys, strings, tables and `#` comments well enough.
+// Multi-line strings and inline tables are where it falls short.
 const ini = new LanguageSupport(StreamLanguage.define(iniParser), [
   indentationFolding
 ]);
