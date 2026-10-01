@@ -232,7 +232,7 @@ Warm neutral grays carry the whole interface. Saturated color is reserved for to
 
 ### Secondary
 
-- **Claude Terracotta** (`claude`): Claude Code identity only. Used for the tool glyph, the skill-index segment of the startup budget bar, the border of the open project's own Inventory groups, and nothing else.
+- **Claude Terracotta** (`claude`): Claude Code identity only. Used for the tool glyph, the skill-index segment of the startup budget bar, the border of the open project's own Inventory groups, the favicon, and nothing else.
 - **Codex Blue** (`codex`): Codex identity only, in the same places. It is never green, so it cannot be confused with a success state.
 - **Favicon**: a disc filled with the selected tool's hue (the light-theme value in both color schemes) and a white bot icon at 60% in its center. It swaps when the tool toggle changes.
 
