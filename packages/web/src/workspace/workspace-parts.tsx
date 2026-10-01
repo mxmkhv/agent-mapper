@@ -14,6 +14,7 @@ import type { ReachProject } from "../views/reach/reach-model";
 import { ReachView } from "../views/reach/reach-view";
 import { relevantDifferences } from "../views/worktrees/difference-groups";
 import { WorktreeView } from "../views/worktrees/worktree-view";
+import type { CopyTarget } from "../model/copy-targets";
 import type { WorkspaceState } from "./use-workspace";
 
 export interface WorkspaceProps {
@@ -23,6 +24,8 @@ export interface WorkspaceProps {
   refreshing: boolean;
   refreshKey: number;
   projectPaths: string[];
+  /** Folders a skill can be copied into, worktrees included. */
+  copyTargets: CopyTarget[];
   landing?: Landing;
   notice?: string;
   onTool(tool: ToolId): void;
@@ -186,7 +189,8 @@ export function Inspector({ props, state, reach }: PartsProps) {
     imports: props.snapshot.imports,
     context: state.context,
     workingDirectory: props.snapshot.workingDirectory,
-    scannedAt: props.snapshot.scannedAt
+    scannedAt: props.snapshot.scannedAt,
+    copyTargets: props.copyTargets
   };
   return (
     <RecordInspector

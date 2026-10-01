@@ -1,14 +1,12 @@
 import { join } from "node:path";
 import type {
   ContentRequest,
-  InventorySnapshot,
   MutationResult,
   RestoreRequest,
   RevisionContent,
   RevisionHistory,
   SourceDocument,
   SourceRef,
-  SourceScope,
   ValidationResult
 } from "@agent-mapper/core";
 import {
@@ -32,7 +30,7 @@ import {
   readOnlyReason,
   readTarget
 } from "./source-document-reader";
-import { SourceDocumentRegistry } from "./source-document-registry";
+import type { SourceDocumentRegistry } from "./source-document-registry";
 import {
   blockingDiagnostics,
   validateDocument
@@ -67,13 +65,12 @@ export class SourceDocumentService {
   private readonly busy = new Set<string>();
 
   constructor(
-    private readonly options: { managedRoot: string; historyRoot: string }
+    private readonly options: {
+      registry: SourceDocumentRegistry;
+      historyRoot: string;
+    }
   ) {
-    this.registry = new SourceDocumentRegistry(options.managedRoot);
-  }
-
-  register(scope: SourceScope, snapshot: InventorySnapshot): void {
-    this.registry.register(scope, snapshot);
+    this.registry = options.registry;
   }
 
   async open(ref: SourceRef): Promise<SourceDocument> {

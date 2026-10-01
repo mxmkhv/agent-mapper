@@ -80,6 +80,22 @@ export class SourceDocumentRegistry {
       : undefined;
   }
 
+  /** Plugin and managed roots from every scan; nothing inside them may be written. */
+  protectedRoots(): string[] {
+    return [
+      ...new Set(
+        [...this.contexts.values()].flatMap((context) => context.readOnlyRoots)
+      )
+    ];
+  }
+
+  /** Project folders this server has scanned. */
+  projectDirectories(): string[] {
+    return [...this.contexts.values()]
+      .filter((context) => context.scope === "project")
+      .map((context) => context.workingDirectory);
+  }
+
   /** Every known entry, in any scanned context, whose real path is this file. */
   impact(canonicalPath: string): SourceImpact {
     const contexts: ImpactAssociation[] = [];

@@ -1,16 +1,15 @@
-import { createHash } from "node:crypto";
 import { readdir, stat } from "node:fs/promises";
 import { basename, join, relative, sep } from "node:path";
 import type { InventoryEntry } from "@agent-mapper/core";
 import {
+  candidateKey,
+  entryIdFor,
   lineCount,
   makeEntry,
   readSource,
   type Candidate,
   type SourceRead
 } from "./source-entry";
-
-const idLength = 20;
 
 export class SourceCollector {
   readonly entries: InventoryEntry[] = [];
@@ -24,7 +23,7 @@ export class SourceCollector {
   }
 
   async add(candidate: Candidate): Promise<void> {
-    const key = `${candidate.tool}:${candidate.kind}:${candidate.path}:${candidate.locator ?? candidate.name ?? ""}`;
+    const key = candidateKey(candidate);
     if (this.seen.has(key)) {
       return;
     }
@@ -48,13 +47,13 @@ export class SourceCollector {
   }
 
   addInline(candidate: Candidate, content: string): void {
-    const key = `${candidate.tool}:${candidate.kind}:${candidate.path}:${candidate.locator ?? candidate.name ?? ""}`;
+    const key = candidateKey(candidate);
     if (this.seen.has(key)) {
       return;
     }
     this.seen.add(key);
     this.entries.push({
-      id: createHash("sha256").update(key).digest("hex").slice(0, idLength),
+      id: entryIdFor(key),
       tool: candidate.tool,
       kind: candidate.kind,
       name: candidate.name ?? basename(candidate.path),

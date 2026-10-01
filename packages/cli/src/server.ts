@@ -9,19 +9,24 @@ import type { AddressInfo } from "node:net";
 import { homedir } from "node:os";
 import type { InventorySnapshot, PullRequestLookup } from "@agent-mapper/core";
 import { ConfigStore, defaultConfigPath } from "./app-config";
-import { managedClaudeDirectory } from "./managed-claude-reader";
 import { projectRoute, type ProjectsPayload } from "./project-routes";
 import { buildGlobalSnapshot, buildSnapshot } from "./service";
 import { serveAsset } from "./server-assets";
+import {
+  createServices,
+  rememberProjects,
+  type ServerServices
+} from "./server-services";
+import {
+  handleSkillTransferRoute,
+  isSkillTransferRoute
+} from "./skill-transfer-routes";
 import { worktreeRoute } from "./worktree-routes";
-import { defaultHistoryRoot } from "./source-document-history-folder";
 import { handleDocumentRoute, isDocumentRoute } from "./source-document-routes";
-import { SourceDocumentService } from "./source-document-service";
 import {
   launchOpen,
   performSourceAction,
-  sourcePathIndex,
-  type SourcePathStore
+  sourcePathIndex
 } from "./source-actions";
 
 export interface AppServerOptions {
@@ -41,14 +46,12 @@ export interface AppServer {
   close(): Promise<void>;
 }
 
-interface RequestContext {
+interface RequestContext extends ServerServices {
   request: IncomingMessage;
   response: ServerResponse;
   server: Server;
   token: string;
   options: AppServerOptions;
-  sourcePaths: SourcePathStore;
-  documents: SourceDocumentService;
   config: ConfigStore;
 }
 
@@ -105,7 +108,7 @@ async function inventoryPayload(
     ...previous,
     [scope]: sourcePathIndex(payload)
   });
-  context.documents.register(scope, payload);
+  context.registry.register(scope, payload);
   return payload;
 }
 
@@ -113,12 +116,12 @@ const sessionError = {
   error: "Session expired or missing. Reopen the URL printed by agent-mapper."
 };
 
-async function handleApi(context: RequestContext, url: URL): Promise<void> {
+/** Projects, removal, and worktrees. A fresh project list also updates where skills may be copied. */
+async function handleProjectRoute(
+  context: RequestContext,
+  url: URL
+): Promise<boolean> {
   const { request, response } = context;
-  if (request.headers.authorization !== `Bearer ${context.token}`) {
-    sendJson({ response, status: status.unauthorized, payload: sessionError });
-    return;
-  }
   const routed =
     (await projectRoute({
       request,
@@ -126,8 +129,23 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
       config: context.config,
       home: context.options.home ?? homedir()
     })) ?? (await worktreeRoute(request, url));
-  if (routed) {
-    sendJson({ response, status: status.ok, payload: routed });
+  if (!routed) {
+    return false;
+  }
+  if ("projects" in routed) {
+    rememberProjects(context.discovered, routed);
+  }
+  sendJson({ response, status: status.ok, payload: routed });
+  return true;
+}
+
+async function handleApi(context: RequestContext, url: URL): Promise<void> {
+  const { request, response } = context;
+  if (request.headers.authorization !== `Bearer ${context.token}`) {
+    sendJson({ response, status: status.unauthorized, payload: sessionError });
+    return;
+  }
+  if (await handleProjectRoute(context, url)) {
     return;
   }
   if (request.method === "GET" && url.pathname === "/api/inventory") {
@@ -146,6 +164,10 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
       url,
       launch
     });
+    return;
+  }
+  if (isSkillTransferRoute(url.pathname)) {
+    await handleSkillTransferRoute(context.skills, { request, response, url });
     return;
   }
   if (request.method === "POST" && url.pathname === "/api/source-action") {
@@ -199,12 +221,7 @@ async function handleRequest(context: RequestContext): Promise<void> {
 
 export function createAppServer(options: AppServerOptions): AppServer {
   const token = randomBytes(tokenBytes).toString("hex");
-  const sourcePaths: SourcePathStore = new Map();
-  const documents = new SourceDocumentService({
-    managedRoot: managedClaudeDirectory(options),
-    historyRoot:
-      options.historyRoot ?? defaultHistoryRoot(options.home ?? homedir())
-  });
+  const services = createServices(options);
   const config = new ConfigStore(
     options.configPath ?? defaultConfigPath(options.home ?? homedir())
   );
@@ -215,8 +232,7 @@ export function createAppServer(options: AppServerOptions): AppServer {
       server,
       token,
       options,
-      sourcePaths,
-      documents,
+      ...services,
       config
     }).catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);

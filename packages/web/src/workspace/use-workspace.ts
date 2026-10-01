@@ -54,6 +54,16 @@ function foldedIn(records: readonly InventoryRecord[], tool: ToolId) {
   };
 }
 
+interface SelectOptions {
+  /** Views that already show the row (Reach) pass false so the list does not reflow. */
+  reveal?: boolean;
+  /** An item the next scan adds (a moved skill) is not listed yet, so it names its tool. */
+  tool?: ToolId;
+}
+
+const toolFor = (record: InventoryRecord | undefined, hint?: ToolId) =>
+  record && record.tool !== "unknown" ? record.tool : hint;
+
 /** Selection, inspector mode, and the search palette move together. */
 function useSelection(
   records: InventoryRecord[],
@@ -75,16 +85,14 @@ function useSelection(
   useSearchShortcut(setSearchOpen);
   const selected = records.find((record) => record.id === selectedId);
 
-  /**
-   * Selecting from a link, search, or finding may cross tools or reveal a folded item.
-   * Views that already show the row (Reach) pass `reveal: false` so the list does not reflow.
-   */
-  function select(id: string, { reveal = true }: { reveal?: boolean } = {}) {
+  /** Selecting from a link, search, or finding may cross tools or reveal a folded item. */
+  function select(id: string, options: SelectOptions = {}) {
     const record = records.find((item) => item.id === id);
-    if (record && record.tool !== "unknown" && record.tool !== tool) {
-      onTool(record.tool);
+    const target = toolFor(record, options.tool);
+    if (target && target !== tool) {
+      onTool(target);
     }
-    if (reveal && record && isFolded(record)) {
+    if ((options.reveal ?? true) && record && isFolded(record)) {
       setShowInactive(true);
     }
     setSelectedId(id);

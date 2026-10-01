@@ -2,7 +2,6 @@ import { stat } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type {
   ContentRequest,
-  DocumentError,
   HistoryReveal,
   MutationResult,
   RestoreRequest,
@@ -20,7 +19,7 @@ import type { SourceDocumentService } from "./source-document-service";
 const maxBodyBytes = 8_388_608;
 const routePrefix = "/api/source-document/";
 
-type Body = Record<string, unknown>;
+export type Body = Record<string, unknown>;
 type DocumentPayload =
   | HistoryReveal
   | SourceDocument
@@ -60,7 +59,7 @@ async function readBody(request: IncomingMessage): Promise<Body> {
   return value as Body;
 }
 
-function text(body: Body, field: string): string {
+export function text(body: Body, field: string): string {
   const value = body[field];
   if (typeof value !== "string" || !value) {
     throw documentError(
@@ -71,7 +70,7 @@ function text(body: Body, field: string): string {
   return value;
 }
 
-function sourceRef(body: Body): SourceRef {
+export function sourceRef(body: Body): SourceRef {
   const scope = text(body, "scope");
   if (scope !== "global" && scope !== "project") {
     throw documentError("invalid_request", "Scope must be global or project.");
@@ -166,7 +165,7 @@ function dispatch(
 
 function send(
   response: ServerResponse,
-  reply: { status: number; payload: DocumentPayload | { error: DocumentError } }
+  reply: { status: number; payload: object }
 ): void {
   response.writeHead(reply.status, {
     "content-type": "application/json; charset=utf-8",
@@ -180,10 +179,41 @@ export function isDocumentRoute(pathname: string): boolean {
 }
 
 /**
- * POST routes for one selected document; `server.ts` checks the bearer token, host and origin
- * before dispatching here. Errors use the `{error: {code, message, retryable}}` envelope.
+ * Runs one POST route and replies with its payload or the `{error: {code, message, retryable}}` envelope.
+ * `server.ts` checks the bearer token, host and origin before dispatching here.
  */
-export async function handleDocumentRoute(
+export async function handleJsonRoute(
+  input: { request: IncomingMessage; response: ServerResponse; label: string },
+  run: (body: Body) => Promise<object>
+): Promise<void> {
+  const { request, response } = input;
+  try {
+    if (request.method !== "POST") {
+      throw documentError("invalid_request", "These routes accept POST only.");
+    }
+    const payload = await run(await readBody(request));
+    send(response, { status: 200, payload });
+  } catch (error) {
+    if (!(error instanceof DocumentApiError)) {
+      // An unexpected failure is a bug; keep its stack in the server log. File content never reaches it.
+      console.error(`agent-mapper: ${input.label} request failed`, error);
+    }
+    const failure =
+      error instanceof DocumentApiError
+        ? error
+        : documentError(
+            "io_error",
+            `The ${input.label} request failed: ${error instanceof Error ? error.message : String(error)}`
+          );
+    send(response, {
+      status: failure.status,
+      payload: { error: failure.toPayload() }
+    });
+  }
+}
+
+/** POST routes for one selected document. */
+export function handleDocumentRoute(
   service: SourceDocumentService,
   input: {
     request: IncomingMessage;
@@ -192,36 +222,11 @@ export async function handleDocumentRoute(
     launch: Launch;
   }
 ): Promise<void> {
-  const { request, response, url } = input;
-  try {
-    if (request.method !== "POST") {
-      throw documentError(
-        "invalid_request",
-        "Document routes accept POST only."
-      );
-    }
-    const body = await readBody(request);
-    const payload = await dispatch(service, {
-      action: url.pathname.slice(routePrefix.length),
+  return handleJsonRoute({ ...input, label: "document" }, (body) =>
+    dispatch(service, {
+      action: input.url.pathname.slice(routePrefix.length),
       body,
       launch: input.launch
-    });
-    send(response, { status: 200, payload });
-  } catch (error) {
-    if (!(error instanceof DocumentApiError)) {
-      // An unexpected failure is a bug; keep its stack in the server log. File content never reaches it.
-      console.error("agent-mapper: document request failed", error);
-    }
-    const failure =
-      error instanceof DocumentApiError
-        ? error
-        : documentError(
-            "io_error",
-            `The document request failed: ${error instanceof Error ? error.message : String(error)}`
-          );
-    send(response, {
-      status: failure.status,
-      payload: { error: failure.toPayload() }
-    });
-  }
+    })
+  );
 }

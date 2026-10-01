@@ -1,7 +1,8 @@
-import type { InstructionImport } from "@agent-mapper/core";
+import type { InstructionImport, ToolId } from "@agent-mapper/core";
 import { Layers } from "lucide-react";
 import { isLink, linkedFrom, linkTarget } from "../model/links";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
+import type { CopyTarget } from "../model/copy-targets";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
 import { stateText } from "../model/states";
 import {
@@ -23,6 +24,7 @@ import {
   sizeText
 } from "./inspector-sections";
 import { ReachSection, type ReachScope } from "./reach-section";
+import { SkillTransfer } from "./skill-transfer";
 
 interface InspectorScope {
   records: InventoryRecord[];
@@ -30,12 +32,13 @@ interface InspectorScope {
   context: PathContext;
   workingDirectory: string;
   scannedAt: string;
+  copyTargets: readonly CopyTarget[];
 }
 
 interface RecordInspectorProps {
   record: InventoryRecord;
   scope: InspectorScope;
-  onSelect(id: string): void;
+  onSelect(id: string, options?: { tool?: ToolId }): void;
   onKind(kind: RecordKind): void;
   onOpenDocument(sourceKey: string, mode: DocumentMode): void;
   /** Present in the Global view: which projects this record reaches. */
@@ -177,7 +180,7 @@ export function RecordInspector({
       ) : null}
       <Details context={scope.context} record={record} />
       {reach ? <ReachSection reach={reach} record={record} /> : null}
-      <div className="mt-5.5 flex gap-2">
+      <div className="mt-5.5 flex flex-wrap gap-2">
         {/* Files the app can edit already lead with Edit; keep one primary action per inspector. */}
         <Button
           onClick={() => void action.run(record.id, "open")}
@@ -188,6 +191,16 @@ export function RecordInspector({
         <Button onClick={() => void action.run(record.id, "reveal")}>
           Reveal in Finder
         </Button>
+        {record.kind === "skill" && record.sourceRef ? (
+          <SkillTransfer
+            context={scope.context}
+            onSelect={onSelect}
+            copyTargets={scope.copyTargets}
+            record={record}
+            scannedAt={scope.scannedAt}
+            sourceRef={record.sourceRef}
+          />
+        ) : null}
       </div>
       {error ? (
         <p className="mt-2 mb-0 text-label text-problem" role="alert">

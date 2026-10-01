@@ -72,7 +72,7 @@ async function scanRelated(options: {
   return { hooks, mcp, memory };
 }
 
-function configRoots(options: ScanOptions, home: string) {
+export function configRoots(options: ScanOptions, home: string) {
   const customClaude = options.claudeConfigDir ?? process.env.CLAUDE_CONFIG_DIR;
   const roots = {
     claude: resolve(
