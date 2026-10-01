@@ -4,7 +4,6 @@ import type { PathContext } from "../model/paths";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
 import { repeatedNames } from "../model/same-names";
 import { KindIcon, kindLabel } from "../ui/kind-icon";
-import { sourceTone } from "../ui/marks";
 import {
   GroupHead,
   InheritedToggle,
@@ -61,7 +60,7 @@ const localBorder = {
 
 export function InventoryView(props: InventoryViewProps) {
   const [inheritedChoice, setInheritedChoice] = useState<boolean>();
-  /** Source clusters the user folded away, keyed by group and repo. */
+  // Source clusters the user folded away, keyed by group and repo.
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const toggleSource = (key: string) =>
     setCollapsed((current) => {
@@ -75,29 +74,45 @@ export function InventoryView(props: InventoryViewProps) {
     (record) => props.kind === "all" || record.kind === props.kind
   );
   const groups = groupRecords(filtered);
-  const inherited = props.isProject
-    ? groups.filter((group) => !isLocalGroup(group))
-    : [];
-  const local = groups.filter((group) => !inherited.includes(group));
+  const isInherited = (group: InventoryGroup) =>
+    props.isProject && !isLocalGroup(group);
+  const inherited = groups.filter(isInherited);
+  const listed = groups.filter((group) => !isInherited(group));
+  const selectedGroup = groups.find((group) =>
+    group.records.some((record) => record.id === props.selectedId)
+  );
+  // A selection made elsewhere (search, the inspector) unfolds whatever hides its row.
+  const [revealedId, setRevealedId] = useState(props.selectedId);
+  if (props.selectedId !== revealedId) {
+    setRevealedId(props.selectedId);
+    const repo = selectedGroup?.records.find(
+      (record) => record.id === props.selectedId
+    )?.installedFrom?.repo;
+    const key = `${selectedGroup?.key}:${repo}`;
+    if (selectedGroup && isInherited(selectedGroup)) {
+      setInheritedChoice(true);
+    }
+    if (collapsed.has(key)) {
+      toggleSource(key);
+    }
+  }
   // Collapsed by default, unless that would hide the selection or leave the pane empty.
   const inheritedOpen =
     inheritedChoice ??
-    (local.length === 0 ||
-      inherited.some((group) =>
-        group.records.some((record) => record.id === props.selectedId)
-      ));
+    (listed.length === 0 ||
+      Boolean(selectedGroup && isInherited(selectedGroup)));
   const renderGroup = (group: InventoryGroup) => {
     const repeated = repeatedNames(group.records);
-    const isLocal = props.isProject && isLocalGroup(group);
+    const isOwn = props.isProject && isLocalGroup(group);
     return (
       <section className="mb-3.5" key={group.key}>
         <GroupHead
           group={group}
           hint={props.hintFor(group)}
-          localTool={isLocal ? props.tool : undefined}
+          localTool={isOwn ? props.tool : undefined}
         />
         <div
-          className={`overflow-hidden rounded-card border bg-surface ${isLocal ? localBorder[props.tool] : "border-hairline"}`}
+          className={`overflow-hidden rounded-card border bg-surface ${isOwn ? localBorder[props.tool] : "border-hairline"}`}
         >
           {clusterBySource(group.records).map(({ source, records }) => {
             const key = `${group.key}:${source?.repo}`;
@@ -125,7 +140,7 @@ export function InventoryView(props: InventoryViewProps) {
                         record={record}
                         selected={record.id === props.selectedId}
                         sharesName={repeated.has(record.name)}
-                        tone={source && sourceTone(source.tone)}
+                        tone={source?.tone}
                       />
                     ))
                   : null}
@@ -174,7 +189,7 @@ export function InventoryView(props: InventoryViewProps) {
         />
       ) : null}
       {inheritedOpen ? inherited.map(renderGroup) : null}
-      {local.map(renderGroup)}
+      {listed.map(renderGroup)}
     </div>
   );
 }

@@ -2,8 +2,8 @@ import type { ToolId } from "@agent-mapper/core";
 import { ChevronRight, Layers, Plug } from "lucide-react";
 import { layerLabel } from "../model/layers";
 import { HintText } from "../ui/hint-text";
-import { sourceTone, ToolGlyph } from "../ui/marks";
-import type { InventoryGroup, RowCluster } from "./inventory-groups";
+import { StateMarker, ToolGlyph } from "../ui/marks";
+import type { ClusterSource, InventoryGroup } from "./inventory-groups";
 
 const listFormat = new Intl.ListFormat("en", { type: "conjunction" });
 
@@ -12,6 +12,16 @@ function inheritedLabel(groups: readonly InventoryGroup[]): string {
   const labels = [...new Set(groups.map((group) => layerLabel[group.layer]))];
   return listFormat.format(
     labels.map((label, index) => (index ? label.toLowerCase() : label))
+  );
+}
+
+function FoldChevron({ open, size }: { open: boolean; size: string }) {
+  return (
+    <ChevronRight
+      aria-hidden="true"
+      className={`${size} text-ink-faint ${open ? "rotate-90" : ""}`}
+      strokeWidth={1.8}
+    />
   );
 }
 
@@ -69,11 +79,7 @@ export function InheritedToggle({
       className="mb-3.5 flex h-9 w-full items-center gap-2 rounded-card border border-hairline bg-wash px-2.5 text-left text-label font-semibold text-ink-muted hover:border-hairline-strong"
       onClick={onToggle}
     >
-      <ChevronRight
-        aria-hidden="true"
-        className={`size-3.5 text-ink-faint ${open ? "rotate-90" : ""}`}
-        strokeWidth={1.8}
-      />
+      <FoldChevron open={open} size="size-3.5" />
       {inheritedLabel(groups)}
       <span className="font-medium text-ink-faint tabular-nums">{count}</span>
       <span className="truncate font-normal text-ink-faint">
@@ -89,7 +95,7 @@ export function SourceToggle({
   open,
   onToggle
 }: {
-  source: NonNullable<RowCluster["source"]>;
+  source: ClusterSource;
   open: boolean;
   onToggle(): void;
 }) {
@@ -99,15 +105,8 @@ export function SourceToggle({
       className="flex h-8 w-full items-center gap-2.5 bg-wash px-3 text-left hover:bg-hover [&+&]:border-t [&+&]:border-wash"
       onClick={onToggle}
     >
-      <ChevronRight
-        aria-hidden="true"
-        className={`size-4 p-px text-ink-faint ${open ? "rotate-90" : ""}`}
-        strokeWidth={1.8}
-      />
-      <span
-        aria-hidden="true"
-        className={`mx-[1.5px] size-[7px] shrink-0 rounded-full ${sourceTone(source.tone)}`}
-      />
+      <FoldChevron open={open} size="size-4 p-px" />
+      <StateMarker tier="active" tone={source.tone} />
       <span className="truncate font-mono text-mono text-ink-muted">
         {source.repo}
       </span>

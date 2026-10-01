@@ -71,9 +71,14 @@ export function sharedSources(
     .sort((a, b) => b.count - a.count || a.repo.localeCompare(b.repo));
 }
 
+/** A repo shared by several skills in a group; `tone` is its rank among them, which picks its dot color. */
+export interface ClusterSource extends SharedSource {
+  tone: number;
+}
+
 export interface RowCluster {
-  /** Set when the rows are skills from one shared repo; `tone` is its place in the palette. */
-  source?: SharedSource & { tone: number };
+  /** Set when the rows are skills from one shared repo. */
+  source?: ClusterSource;
   records: InventoryRecord[];
 }
 
@@ -81,18 +86,18 @@ export interface RowCluster {
 export function clusterBySource(
   records: readonly InventoryRecord[]
 ): RowCluster[] {
-  const sources = sharedSources(records);
+  const shared = new Map<string, ClusterSource>(
+    sharedSources(records).map((source, tone) => [
+      source.repo,
+      { ...source, tone }
+    ])
+  );
   const clusters = new Map<string, RowCluster>();
   for (const record of records) {
-    const tone = sources.findIndex(
-      (source) => source.repo === record.installedFrom?.repo
-    );
-    const source = sources[tone];
+    const repo = record.installedFrom?.repo;
+    const source = repo ? shared.get(repo) : undefined;
     const key = source?.repo ?? record.id;
-    const cluster = clusters.get(key) ?? {
-      source: source && { ...source, tone },
-      records: []
-    };
+    const cluster = clusters.get(key) ?? { source, records: [] };
     cluster.records.push(record);
     clusters.set(key, cluster);
   }

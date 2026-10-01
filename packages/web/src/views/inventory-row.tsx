@@ -20,8 +20,8 @@ interface RowProps {
   otherVersions?: number;
   /** Another row in the group has the same name, so the path is what tells them apart. */
   sharesName?: boolean;
-  /** Dot color shared by skills installed from the same repo. */
-  tone?: string;
+  /** Rank of the shared repo this skill was installed from; picks the dot color. */
+  tone?: number;
   onSelect(id: string): void;
 }
 

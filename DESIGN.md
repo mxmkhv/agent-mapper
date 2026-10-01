@@ -21,6 +21,10 @@ colors:
   layer-global: "#8a8a84"
   layer-plugins: "#b7b7b0"
   layer-project: "#4d4d49"
+  source-1: "#a08ee6"
+  source-2: "#dcae4c"
+  source-3: "#5bbccf"
+  source-4: "#e08cc0"
   canvas-dark: "#121211"
   surface-dark: "#191918"
   sidebar-dark: "#151514"
@@ -37,6 +41,10 @@ colors:
   codex-dark: "#7d9df0"
   problem-dark: "#f07474"
   problem-wash-dark: "#3a1f1f"
+  source-1-dark: "#b3a4f0"
+  source-2-dark: "#e2bb66"
+  source-3-dark: "#74c9da"
+  source-4-dark: "#e8a0cc"
 typography:
   headline:
     fontFamily: "Inter, ui-sans-serif, -apple-system, system-ui, sans-serif"
@@ -207,7 +215,7 @@ The UI is organized around layers rather than file types. A project reads top to
 
 **Key Characteristics:**
 
-- Neutral warm-gray base. Tool hues (Claude terracotta, Codex blue) and problem red are the only saturated colors.
+- Neutral warm-gray base. Tool hues (Claude terracotta, Codex blue) and problem red are the only saturated colors, apart from the pastel source tones on Inventory skill dots.
 - One tool is visible at a time, chosen with a segmented toggle in the header.
 - State is expressed with markers and short text labels, not colored badges.
 - Monospace is used only for paths, versions, locators, and matchers.
@@ -216,7 +224,7 @@ The UI is organized around layers rather than file types. A project reads top to
 
 ## Colors
 
-Warm neutral grays carry the whole interface. Saturated color is reserved for tool identity and verified problems.
+Warm neutral grays carry the whole interface. Saturated color is reserved for tool identity and verified problems; four pastel source tones mark which repo a skill was installed from.
 
 ### Primary
 
@@ -243,7 +251,7 @@ Warm neutral grays carry the whole interface. Saturated color is reserved for to
 - **Wash** (`wash`): chip fill, provenance breadcrumb, matrix section rows, and toggle track.
 - **Hover / Selected** (`hover`, `selected`): row and nav states.
 - **Layer tones** (`layer-global`, `layer-plugins`, `layer-project`): startup budget bar segments by layer. These three grays are the only place layers get a color.
-- **Source tones** (`--am-source-1` to `--am-source-4` in `theme.css`: soft violet, gold, cyan, pink): the state dot of an active skill in the Inventory, by the repo it was installed from (read from the `skills` installer's lock files). Only repos with two or more skills in a group get a tone. Those skills sit together under a 32px wash row inside the card that names the repo, carries the same dot and a count, and folds them away (open by default); one-off and hand-written skills stay gray. Never red, green, terracotta or Codex blue, so a tone cannot read as a problem, a success or a tool. Inactive, unknown and problem dots keep their state styling.
+- **Source tones** (`source-1` to `source-4`: soft violet, gold, cyan, pink): the state dot of an active skill in the Inventory, by the repo it was installed from (read from the `skills` installer's lock files). Only repos with two or more skills in a group get a tone, largest repo first; a fifth repo in one group reuses the first tone. Those skills sit together under a 32px wash row inside the card that names the repo, carries the same dot and a count, and folds them away (open by default); one-off and hand-written skills stay gray. Never red, green, terracotta or Codex blue, so a tone cannot read as a problem, a success or a tool. Inactive, unknown and problem dots keep their state styling.
 
 Every neutral and signal token has a `-dark` twin in the frontmatter. Dark mode swaps the whole set; it is not an automatic inversion.
 
@@ -291,7 +299,7 @@ Every neutral and signal token has a `-dark` twin in the frontmatter. Dark mode 
   - A 36px view bar: view tabs (Map or Reach, Inventory, Findings) on the left; the Show inactive switch and the coverage notes link on the right.
   - Content and a 380px inspector in two columns, each scrolling independently.
 - **Map:** a 92px layer-label column followed by one layer card per layer, capped at 860px wide. Layer rows run Global → Plugins → Project → User, with Managed at the top only when present. A tool header with the startup budget sits above the layers.
-- **Inventory:** filter chips (facets) stick to the top of the pane. Groups follow the same layer order: Global, installed plugins, each plugin's contributions, Project, User. Rows are 36px in one bordered card per group. In a project, the groups it inherits (Managed, Global, plugins) sit behind one wash-filled disclosure row, collapsed by default; it opens by itself when the selection is inside it or the project has no groups of its own. The project's own groups (Project, User) carry the tool glyph, an ink label, and a card border in the tool hue at 50%. The Global view has no disclosure row.
+- **Inventory:** filter chips (facets) stick to the top of the pane. Groups follow the same layer order: Global, installed plugins, each plugin's contributions, Project, User. Rows are 36px in one bordered card per group. In a project, the groups it inherits (Managed, Global, plugins) sit behind one wash-filled disclosure row, collapsed by default; it starts open when the project has no groups of its own, and selecting an item inside it (from search or the inspector) opens it. The project's own groups (Project, User) carry the tool glyph, an ink label, and a card border in the tool hue at 50%. The Global view has no disclosure row.
 - **Reach (the Global view):** a fixed-layout table with a flexible source column and 104px project columns. The header and source column stay pinned while the table scrolls. When project columns are out of view, a surface-colored fade on the right edge says so, because macOS hides scrollbars until you scroll.
 - **Browser surfaces:** text selection uses Focus Blue at 24%; scrollbars are thin and use `hairline-strong` on a transparent track.
 - **Spacing rhythm:** 4 / 6 / 8 / 12 / 16 / 20px. Content gutters are 20px; card interiors are 4–12px.
@@ -374,7 +382,7 @@ Above the layers: "Startup ~7.4k · On demand ~102k", then a 6px segmented bar w
 
 ### Inventory Rows
 
-A 36px row: kind icon, state marker, name (body-strong), a symlink badge slot, a detail slot (path, matcher, or version, in faint mono), and a right-aligned state label. The hover fill is Hover and the selected fill is Selected. Group heads sit above each card: layer icon, label, count, and a mono location hint. Plugin groups show the plugin name and version.
+A 36px row: kind icon, state marker, name (body-strong), a symlink badge slot, a detail slot (path, matcher, or version, in faint mono), and a right-aligned state label. The hover fill is Hover and the selected fill is Selected. Group heads sit above each card: layer icon, label, count, and a mono location hint. Plugin groups show the plugin name and version. In a project, its own groups swap the layer icon for the tool glyph and use an ink label. Skills that share a source repo sit under a 32px wash row (chevron, source-tone dot, repo in mono, count) that folds them away.
 
 ### Facets
 

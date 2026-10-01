@@ -4,6 +4,7 @@ import type { InventoryRecord } from "../model/record-types";
 import {
   clusterBySource,
   groupRecords,
+  isLocalGroup,
   kindCounts,
   sharedSources
 } from "./inventory-groups";
@@ -125,6 +126,33 @@ it("gathers a shared repo's skills where the first of them sits", () => {
     [undefined, ["c"]]
   ]);
   expect(clusters[1]?.source).toMatchObject({ count: 2, tone: 0 });
+});
+
+it("ranks tied repos by name so their tones stay stable", () => {
+  const from = (id: string, repo: string) =>
+    record({ id, name: id, layer: "project", installedFrom: { repo } });
+  const clusters = clusterBySource([
+    from("a", "zed/skills"),
+    from("b", "acme/skills"),
+    from("c", "zed/skills"),
+    from("d", "acme/skills")
+  ]);
+  expect(clusters.map(({ source }) => [source?.repo, source?.tone])).toEqual([
+    ["zed/skills", 1],
+    ["acme/skills", 0]
+  ]);
+});
+
+it("treats only project and user groups as the project's own", () => {
+  expect(
+    groupRecords(records).map((group) => [group.label, isLocalGroup(group)])
+  ).toEqual([
+    ["Global", false],
+    ["Installed plugins", false],
+    ["review-kit", false],
+    ["Project", true],
+    ["User", true]
+  ]);
 });
 
 it("counts kinds in display order", () => {

@@ -53,11 +53,11 @@ const sourceTones = [
 ];
 
 /** The dot color for the nth shared source repo in a group; the palette repeats past its end. */
-export function sourceTone(index: number): string {
+function sourceTone(index: number): string {
   return sourceTones[index % sourceTones.length] ?? "";
 }
 
-/** Shape carries the state: solid is normal, hollow is inactive, dashed is unknown, red is a problem. A source tone only recolors the normal dot. */
+/** Shape carries the state: solid is normal, hollow is inactive, dashed is unknown, red is a problem. A source tone (the repo's rank in its group) only recolors the normal dot. */
 export function StateMarker({
   tier,
   large,
@@ -65,12 +65,13 @@ export function StateMarker({
 }: {
   tier: Tier;
   large?: boolean;
-  tone?: string;
+  tone?: number;
 }) {
+  const toned = tier === "active" && tone !== undefined;
   return (
     <span
       aria-hidden="true"
-      className={`inline-block shrink-0 rounded-full ${large ? "size-[9px]" : "size-[7px]"} ${tier === "active" && tone ? tone : markerStyle[tier]}`}
+      className={`inline-block shrink-0 rounded-full ${large ? "size-[9px]" : "size-[7px]"} ${toned ? sourceTone(tone) : markerStyle[tier]}`}
     />
   );
 }
