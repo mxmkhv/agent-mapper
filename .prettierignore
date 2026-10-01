@@ -1,0 +1,9 @@
+bun.lock
+node_modules/
+dist/
+coverage/
+.artifacts/
+.worktrees/
+tools/oxlint/anti-slop/
+prototypes/
+docs/mvp.md

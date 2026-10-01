@@ -1,0 +1,79 @@
+name: Release
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  publish:
+    name: Publish
+    if: github.event.pull_request.merged && startsWith(github.head_ref, 'release/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # npm trusted publishing exchanges this GitHub OIDC token for a publish token.
+      id-token: write
+    env:
+      MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.MERGE_SHA }}
+          fetch-depth: 0
+      - name: Require a merge commit
+        # A squash or rebase merge leaves dev outside main's history, so the merge back into dev conflicts.
+        run: |
+          if ! git rev-parse --verify --quiet "$MERGE_SHA^2" > /dev/null; then
+            echo "::error::Release PRs must be merged with 'Create a merge commit'. Nothing was published. Merge main into dev, then run the release script again."
+            exit 1
+          fi
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          registry-url: https://registry.npmjs.org
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - run: bun run validate
+      - id: version
+        run: echo "version=$(node -p 'require("./packages/cli/package.json").version')" >> "$GITHUB_OUTPUT"
+      - name: Publish to npm
+        working-directory: packages/cli
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        # Skipping an already published version lets a failed run be re-run safely.
+        run: |
+          if published=$(npm view "agent-mapper@$VERSION" version 2> view-error.log); then
+            if [ -n "$published" ]; then
+              echo "::notice::agent-mapper@$VERSION is already on npm; skipping publish."
+              exit 0
+            fi
+          elif ! grep -q E404 view-error.log; then
+            cat view-error.log
+            echo "::error::Could not check whether agent-mapper@$VERSION is published. Re-run the job."
+            exit 1
+          fi
+          npm publish --access public
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "::notice::Release v$VERSION already exists; skipping."
+          else
+            gh release create "v$VERSION" --target "$MERGE_SHA" --title "v$VERSION" --generate-notes
+          fi
+      - name: Merge main back into dev
+        # The next release branch starts from dev, so dev needs this version bump.
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --create dev origin/dev
+          git merge --no-edit "$MERGE_SHA"
+          git push origin dev

@@ -1,0 +1,206 @@
+import { createHash } from "node:crypto";
+import { lstat, readFile, readdir, readlink, realpath } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, sep } from "node:path";
+import type { SkillTransferFile } from "@agent-mapper/core";
+import { errnoCode, ioError } from "./source-document-errors";
+
+/** A skill is a few documents and scripts; anything larger is likely a checkout or build output. */
+export const maxFolderItems = 1000;
+const maxBytes = 52_428_800;
+type SizeLimit = "items" | "bytes";
+const permissionBits = 0o7777;
+const executableBits = 0o111;
+
+interface FolderItem extends SkillTransferFile {
+  absolutePath: string;
+  mode: number;
+  /** The link text of a symlink, recreated verbatim. */
+  link?: string;
+  /** A pipe, socket or device: listed, but never read, since reading one can block forever. */
+  special?: boolean;
+}
+
+export interface SkillFolder {
+  root: string;
+  rootMode: number;
+  items: FolderItem[];
+  totalBytes: number;
+  /** Covers every path, type, executable bit, file content and link text. */
+  fingerprint: string;
+  /** Why this folder cannot be transferred as it is. */
+  problem?: string;
+  /** Which cap the folder reaches; the listing stops at the item cap, so a folder that reaches it may be incomplete. */
+  tooLarge?: SizeLimit;
+}
+
+const posixPath = (path: string) => path.split(sep).join("/");
+
+/** A relative link that stays inside the skill folder still works after the folder moves. */
+function linkProblem(item: { path: string; link: string }): string | undefined {
+  if (isAbsolute(item.link)) {
+    return `${item.path} links to the absolute path ${item.link}. Make the link relative to the skill folder or replace it with the file.`;
+  }
+  const target = join(dirname(item.path), item.link);
+  if (target === ".." || target.startsWith(`..${sep}`)) {
+    return `${item.path} links outside the skill folder (${item.link}), so the copy would break it. Replace the link with the file.`;
+  }
+  return undefined;
+}
+
+/**
+ * Text alone can hide an escape (`a -> .` then `b -> ../a/../outside`), so the link is also
+ * followed on disk. A link to nothing is refused too: the copy could not be checked.
+ */
+async function resolvedLinkProblem(item: {
+  path: string;
+  link: string;
+  absolutePath: string;
+  realRoot: string;
+}): Promise<string | undefined> {
+  try {
+    const target = await realpath(item.absolutePath);
+    return target === item.realRoot ||
+      target.startsWith(`${item.realRoot}${sep}`)
+      ? undefined
+      : `${item.path} leads outside the skill folder (${item.link}), so the copy would break it. Replace the link with the file.`;
+  } catch (error) {
+    const code = errnoCode(error);
+    if (code === "ENOENT" || code === "ELOOP") {
+      return `${item.path} links to nothing (${item.link}). Remove the link or restore its target.`;
+    }
+    throw error;
+  }
+}
+
+async function readItem(
+  folder: { root: string; realRoot: string },
+  absolutePath: string
+): Promise<{ item: FolderItem; problem?: string }> {
+  const { root } = folder;
+  const info = await lstat(absolutePath);
+  const path = posixPath(relative(root, absolutePath));
+  const base = {
+    absolutePath,
+    path,
+    mode: info.mode & permissionBits,
+    executable: (info.mode & executableBits) !== 0
+  };
+  if (info.isSymbolicLink()) {
+    const link = await readlink(absolutePath);
+    return {
+      item: { ...base, type: "symlink", bytes: 0, link },
+      problem:
+        linkProblem({ path, link }) ??
+        (await resolvedLinkProblem({ ...folder, path, link, absolutePath }))
+    };
+  }
+  if (info.isDirectory()) {
+    return { item: { ...base, type: "directory", bytes: 0 } };
+  }
+  if (!info.isFile()) {
+    return {
+      item: { ...base, type: "file", bytes: 0, special: true },
+      problem: `${path} is not a regular file, folder or link, so it cannot be copied.`
+    };
+  }
+  return { item: { ...base, type: "file", bytes: info.size } };
+}
+
+/** Covers every path, type, executable bit, file content and link text, so any edit changes it. */
+export async function fingerprintOf(
+  items: readonly FolderItem[]
+): Promise<string> {
+  const hash = createHash("sha256");
+  for (const item of items) {
+    // A special item hashes under its own tag, so it never matches a regular file at the same path.
+    hash.update(
+      `${item.special ? "special" : item.type}\0${item.path}\0${item.executable}\0`
+    );
+    if (item.type === "file" && !item.special) {
+      hash.update(await readFile(item.absolutePath));
+    } else if (item.link !== undefined) {
+      hash.update(item.link);
+    }
+    hash.update("\n");
+  }
+  return hash.digest("hex");
+}
+
+function sizeLimit(size: {
+  count: number;
+  totalBytes: number;
+}): SizeLimit | undefined {
+  if (size.count >= maxFolderItems) {
+    return "items";
+  }
+  return size.totalBytes > maxBytes ? "bytes" : undefined;
+}
+
+function sizeProblem(root: string, limit: SizeLimit): string {
+  return limit === "items"
+    ? `${root} holds more than ${maxFolderItems} files and folders. Skills this large are not copied here; use Finder or the shell.`
+    : `${root} holds more than 50 MiB. Skills this large are not copied here; use Finder or the shell.`;
+}
+
+/** Lists a skill folder without following links, parents before children, siblings sorted by name. */
+export async function readSkillFolder(root: string): Promise<SkillFolder> {
+  const items: FolderItem[] = [];
+  const problems: string[] = [];
+  let totalBytes = 0;
+  const walk = async (directory: string): Promise<void> => {
+    const names = (await readdir(directory)).sort();
+    for (const name of names) {
+      if (items.length >= maxFolderItems) {
+        return;
+      }
+      const read = await readItem({ root, realRoot }, join(directory, name));
+      items.push(read.item);
+      totalBytes += read.item.bytes;
+      if (read.problem) {
+        problems.push(read.problem);
+      }
+      if (read.item.type === "directory") {
+        await walk(read.item.absolutePath);
+      }
+    }
+  };
+  let rootMode;
+  let realRoot = root;
+  let fingerprint = "";
+  let tooLarge: SizeLimit | undefined;
+  try {
+    rootMode = (await lstat(root)).mode & permissionBits;
+    realRoot = await realpath(root);
+    await walk(root);
+    tooLarge = sizeLimit({ count: items.length, totalBytes });
+    if (tooLarge) {
+      problems.unshift(sizeProblem(root, tooLarge));
+    }
+    if (!problems.length) {
+      fingerprint = await fingerprintOf(items);
+    }
+  } catch (error) {
+    throw ioError(error, `Reading the skill folder ${root}`);
+  }
+  return {
+    root,
+    rootMode,
+    items,
+    totalBytes,
+    fingerprint,
+    problem: problems[0],
+    tooLarge
+  };
+}
+
+export async function pathExists(path: string): Promise<boolean> {
+  try {
+    await lstat(path);
+    return true;
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
+}

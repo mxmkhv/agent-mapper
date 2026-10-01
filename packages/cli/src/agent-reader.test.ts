@@ -1,0 +1,192 @@
+import {
+  mkdtempSync,
+  mkdirSync,
+  realpathSync,
+  rmSync,
+  writeFileSync
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, expect, it } from "vitest";
+import { buildGlobalSnapshot, buildSnapshot } from "./service";
+
+const roots: string[] = [];
+function fixture() {
+  const home = realpathSync(
+    mkdtempSync(join(tmpdir(), "agent-mapper-agents-"))
+  );
+  roots.push(home);
+  const project = join(home, "app");
+  const nested = join(project, "src");
+  const codexHome = join(home, ".codex");
+  mkdirSync(join(project, ".git"), { recursive: true });
+  mkdirSync(nested);
+  mkdirSync(codexHome);
+  return { home, project, nested, codexHome };
+}
+afterEach(() => {
+  for (const root of roots.splice(0)) {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+it("reads Claude Markdown agents by scope and marks the lower priority name shadowed", async () => {
+  const options = fixture();
+  const global = join(options.home, ".claude", "agents", "review");
+  const project = join(options.project, ".claude", "agents");
+  mkdirSync(global, { recursive: true });
+  mkdirSync(project, { recursive: true });
+  writeFileSync(
+    join(global, "reviewer.md"),
+    "---\nname: reviewer\ndescription: Review changes\nmodel: sonnet\n---\nsecret-sentinel-global-prompt\n"
+  );
+  writeFileSync(
+    join(project, "reviewer.md"),
+    "---\nname: reviewer\ndescription: Review this repo\n---\nsecret-sentinel-project-prompt\n"
+  );
+  const snapshot = await buildSnapshot(options.nested, options);
+  expect(
+    snapshot.agents.map(({ name, scope, availability }) => [
+      name,
+      scope,
+      availability
+    ])
+  ).toEqual([
+    ["reviewer", "global", "shadowed"],
+    ["reviewer", "project", "configured"]
+  ]);
+  expect(snapshot.agents[0]?.shadowedBy).toBe(snapshot.agents[1]?.id);
+  expect(snapshot.agents[1]).toMatchObject({
+    tool: "claude",
+    format: "markdown",
+    descriptionPresent: true
+  });
+  expect(JSON.stringify(snapshot)).not.toContain("secret-sentinel");
+  const globalSnapshot = await buildGlobalSnapshot(options);
+  expect(globalSnapshot.agents.map((agent) => agent.name)).toEqual([
+    "reviewer"
+  ]);
+});
+
+it("reads Codex TOML agents and keeps malformed files visible", async () => {
+  const options = fixture();
+  mkdirSync(join(options.codexHome, "agents"));
+  mkdirSync(join(options.project, ".codex", "agents"), { recursive: true });
+  writeFileSync(
+    join(options.codexHome, "agents", "researcher.toml"),
+    'name = "researcher"\ndescription = "Find docs"\ndeveloper_instructions = """\nsecret-sentinel-instructions\n"""\n'
+  );
+  writeFileSync(
+    join(options.project, ".codex", "agents", "broken.toml"),
+    'name = "broken"\ndescription = "Incomplete"\n'
+  );
+  const snapshot = await buildSnapshot(options.project, options);
+  expect(
+    snapshot.agents.map(({ name, tool, availability }) => [
+      name,
+      tool,
+      availability
+    ])
+  ).toEqual([
+    ["researcher", "codex", "configured"],
+    ["broken", "codex", "unknown"]
+  ]);
+  expect(snapshot.agents[1]?.reason).toContain("developer_instructions");
+  expect(JSON.stringify(snapshot)).not.toContain("secret-sentinel");
+});
+
+it("keeps Claude files with unsupported frontmatter visible without calling them loadable", async () => {
+  const options = fixture();
+  const directory = join(options.project, ".claude", "agents");
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(join(directory, "notes.md"), "# Notes\nsecret-sentinel-body\n");
+  const snapshot = await buildSnapshot(options.project, options);
+  expect(snapshot.agents[0]).toMatchObject({
+    name: "notes",
+    availability: "unknown",
+    readState: "readable"
+  });
+  expect(JSON.stringify(snapshot)).not.toContain("secret-sentinel");
+});
+
+it("keeps duplicate Claude names in one scope unresolved", async () => {
+  const options = fixture();
+  const directory = join(options.home, ".claude", "agents");
+  mkdirSync(directory, { recursive: true });
+  for (const filename of ["first.md", "second.md"]) {
+    writeFileSync(
+      join(directory, filename),
+      "---\nname: same\ndescription: Review code\n---\nPrivate prompt."
+    );
+  }
+  const snapshot = await buildSnapshot(options.project, options);
+  expect(snapshot.agents.map((agent) => agent.availability)).toEqual([
+    "unknown",
+    "unknown"
+  ]);
+});
+
+it("does not scan global agents again as project agents in a home Git repo", async () => {
+  const options = fixture();
+  mkdirSync(join(options.home, ".git"));
+  const directory = join(options.home, ".claude", "agents");
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(
+    join(directory, "reviewer.md"),
+    "---\nname: reviewer\ndescription: Review code\n---\nPrompt"
+  );
+  const snapshot = await buildSnapshot(options.nested, options);
+  expect(snapshot.agents).toMatchObject([
+    { name: "reviewer", scope: "global", availability: "configured" }
+  ]);
+  expect(
+    snapshot.findings.some((finding) =>
+      finding.title.includes("Multiple agents")
+    )
+  ).toBe(false);
+});
+
+it("reads Codex developer_instructions that contain lines starting with a bracket", async () => {
+  const options = fixture();
+  mkdirSync(join(options.codexHome, "agents"), { recursive: true });
+  writeFileSync(
+    join(options.codexHome, "agents", "reviewer.toml"),
+    'name = "reviewer"\ndescription = "Review changes"\ndeveloper_instructions = """\n[ ] run tests\n[docs](https://example.com)\n"""\n'
+  );
+  writeFileSync(
+    join(options.codexHome, "agents", "broken.toml"),
+    'name = "broken"\ndescription = "Unclosed\n'
+  );
+  const snapshot = await buildSnapshot(options.project, options);
+  expect(
+    snapshot.agents.map(({ name, availability }) => [name, availability])
+  ).toEqual([
+    ["broken", "unknown"],
+    ["reviewer", "configured"]
+  ]);
+  expect(snapshot.agents[0]?.reason).toContain("could not be parsed");
+});
+
+it("names no winner over a global agent when the nearer agents are ambiguous", async () => {
+  const options = fixture();
+  const global = join(options.home, ".claude", "agents");
+  const project = join(options.project, ".claude", "agents");
+  mkdirSync(global, { recursive: true });
+  mkdirSync(project, { recursive: true });
+  const agent = "---\nname: same\ndescription: Review code\n---\nPrompt";
+  writeFileSync(join(global, "same.md"), agent);
+  writeFileSync(join(project, "first.md"), agent);
+  writeFileSync(join(project, "second.md"), agent);
+  const snapshot = await buildSnapshot(options.nested, options);
+  expect(
+    snapshot.agents.map(({ scope, availability, shadowedBy }) => [
+      scope,
+      availability,
+      shadowedBy
+    ])
+  ).toEqual([
+    ["global", "shadowed", undefined],
+    ["project", "unknown", undefined],
+    ["project", "unknown", undefined]
+  ]);
+});

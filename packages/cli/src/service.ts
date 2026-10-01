@@ -1,0 +1,168 @@
+import { realpath, stat } from "node:fs/promises";
+import { homedir } from "node:os";
+import { resolve } from "node:path";
+import {
+  coverageAreas,
+  resolveInventory,
+  summarizeContext,
+  type InventoryEntry,
+  type InventorySnapshot
+} from "@agent-mapper/core";
+import { scanInventory, type ScanOptions, type ScanResult } from "./inventory";
+import { scanWorktrees } from "./worktree-compare";
+import { buildFindings } from "./findings";
+import { scanInstructionImports } from "./instruction-imports";
+import { resolveScanContext } from "./scan-context";
+export { createAppServer } from "./server";
+
+function coverage(errors: string[]): string[] {
+  return [...errors, ...coverageAreas.map((area) => area.detail)];
+}
+
+function resolveItems(entries: InventoryEntry[], path: string) {
+  return [
+    ...resolveInventory(entries, { workingDirectory: path, tool: "claude" }),
+    ...resolveInventory(entries, { workingDirectory: path, tool: "codex" })
+  ];
+}
+
+async function analyzeSources(options: {
+  scan: ScanResult;
+  path: string;
+  home: string;
+}) {
+  const { scan, path, home } = options;
+  const items = resolveItems(scan.entries, path);
+  const imports = await scanInstructionImports({
+    items,
+    home,
+    workingDirectory: path,
+    contentFor: scan.contentFor
+  });
+  const findings = await buildFindings({
+    items,
+    plugins: scan.plugins,
+    imports: imports.imports,
+    contentFor: scan.contentFor
+  });
+  return { items, imports, findings };
+}
+
+async function validatedDirectory(workingDirectory: string): Promise<string> {
+  const requestedPath = resolve(workingDirectory);
+  let path: string;
+  try {
+    path = await realpath(requestedPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Error(
+        `${requestedPath} does not exist. Choose an existing folder.`
+      );
+    }
+    throw error;
+  }
+  if (!(await stat(path)).isDirectory()) {
+    throw new Error(`${path} is not a folder. Choose an existing folder.`);
+  }
+  return path;
+}
+
+async function buildSnapshotWithSources(
+  workingDirectory: string,
+  options: Omit<ScanOptions, "workingDirectory"> = {}
+): Promise<{
+  snapshot: InventorySnapshot;
+  contentFor: ScanResult["contentFor"];
+}> {
+  const path = await validatedDirectory(workingDirectory);
+  const context = await resolveScanContext(path);
+  const scan = await scanInventory(
+    { ...options, workingDirectory: path },
+    context
+  );
+  const worktree = await scanWorktrees(path, context.worktrees);
+  const { items, imports, findings } = await analyzeSources({
+    scan,
+    path,
+    home: resolve(options.home ?? homedir())
+  });
+  const snapshot: InventorySnapshot = {
+    workingDirectory: path,
+    scannedAt: new Date().toISOString(),
+    roots: scan.roots,
+    plugins: scan.plugins,
+    hooks: scan.hooks,
+    mcpServers: scan.mcpServers,
+    memories: scan.memories,
+    agents: scan.agents,
+    context: summarizeContext({
+      items,
+      agents: scan.agents,
+      memories: scan.memories
+    }),
+    worktrees: worktree.worktrees,
+    comparison: worktree.comparison,
+    items,
+    imports: imports.imports,
+    findings: findings.findings,
+    coverage: coverage([
+      ...scan.errors,
+      ...worktree.errors,
+      ...imports.errors,
+      ...findings.errors
+    ])
+  };
+  return { snapshot, contentFor: scan.contentFor };
+}
+
+export async function buildSnapshot(
+  workingDirectory: string,
+  options: Omit<ScanOptions, "workingDirectory"> = {}
+): Promise<InventorySnapshot> {
+  return (await buildSnapshotWithSources(workingDirectory, options)).snapshot;
+}
+
+export async function buildGlobalSnapshot(
+  options: Omit<ScanOptions, "workingDirectory"> = {}
+): Promise<InventorySnapshot> {
+  const { snapshot, contentFor } = await buildSnapshotWithSources(
+    options.home ?? homedir(),
+    options
+  );
+  const items = snapshot.items.filter(
+    ({ entry }) => entry.scope === "global" || entry.scope === "managed"
+  );
+  const agents = snapshot.agents.filter((agent) => agent.scope !== "project");
+  const memories = snapshot.memories.filter(
+    (memory) => memory.scope !== "project"
+  );
+  const plugins = snapshot.plugins.filter(
+    (plugin) => plugin.scope !== "project"
+  );
+  const imports = snapshot.imports.filter((item) =>
+    items.some(({ entry }) => entry.id === item.sourceEntryId)
+  );
+  const findings = await buildFindings({
+    items,
+    plugins,
+    imports,
+    contentFor
+  });
+  return {
+    ...snapshot,
+    items,
+    imports,
+    plugins,
+    hooks: snapshot.hooks.filter((hook) => hook.scope !== "project"),
+    mcpServers: snapshot.mcpServers.filter(
+      (server) => server.scope !== "project"
+    ),
+    memories,
+    agents,
+    context: summarizeContext({ items, agents, memories }),
+    findings: findings.findings,
+    coverage: [...new Set([...snapshot.coverage, ...findings.errors])],
+    worktrees: [],
+    comparison: undefined
+  };
+}
