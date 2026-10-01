@@ -61,6 +61,6 @@ The wrappers require Bash and Bun. Node must meet the documented minimum for the
 
 Script tests do not prove that an agent session loaded the hook registrations. Confirm project and hook trust in Codex's `/hooks`, reload the harness, and exercise one rejected command, one rejected protected edit, and one post-edit diagnostic in each harness. These interactive checks must be reported separately from script test results.
 
-CI files are checked in, but making their statuses required for merging is a repository-host setting. Require both `Validate (ubuntu-latest)` and `Validate (macos-latest)` on `dev` and `main` when enabling branch protection.
+CI files are checked in, but making their statuses required for merging is a repository-host setting. Require both `Validate (ubuntu-latest)` and `Validate (macos-latest)` on `dev` and `main` when enabling branch protection. The release workflow pushes a merge commit to `dev` with `GITHUB_TOKEN`, so `dev` protection needs a bypass for GitHub Actions.
 
 Official references: [Oxlint configuration](https://oxc.rs/docs/guide/usage/linter/config), [anti-slop](https://github.com/dmmulroy/anti-slop), [Knip workspaces](https://knip.dev/features/monorepos-and-workspaces), [lint-staged](https://github.com/lint-staged/lint-staged), [Claude hooks](https://code.claude.com/docs/en/hooks), [Codex hooks](https://learn.chatgpt.com/docs/hooks).

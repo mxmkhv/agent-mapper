@@ -67,7 +67,9 @@ After `bun run build`, run `node packages/cli/dist/index.js --help` to see CLI u
 
 ## Release
 
-Run `bun run release:patch`, `release:minor`, or `release:major` from a clean tree. The script branches `release/x.y.z` from `origin/dev`, bumps `packages/cli/package.json`, pushes (the pre-push hook runs the full validate), and opens a PR into `main`. Merging it runs [the release workflow](.github/workflows/release.yml): validate, publish to npm with provenance through trusted publishing, create the `vx.y.z` GitHub release, and merge `main` back into `dev`.
+Run `bun run release:patch`, `release:minor`, or `release:major` from a clean tree with an authenticated `gh`. The script branches `release/x.y.z` from `origin/dev`, bumps `packages/cli/package.json`, pushes (the pre-push hook runs the full validate), and opens a PR into `main`. Merge it with **Create a merge commit**; the workflow refuses squash and rebase merges because `dev` could no longer merge `main` cleanly. Merging runs [the release workflow](.github/workflows/release.yml): validate, publish to npm with provenance through trusted publishing, create the `vx.y.z` GitHub release, and push the merge back to `dev`. Branch protection on `dev` must let GitHub Actions push that merge.
+
+npm configures trusted publishing on an existing package, so the first version is published by hand: check out the release branch, run `bun run build`, then `npm publish --access public` in `packages/cli`. On npmjs.com, add a GitHub Actions trusted publisher for `mxmkhv/agent-mapper` with workflow `release.yml`, then merge the release PR. The workflow skips the already published version and still creates the release.
 
 ## Agent setup
 

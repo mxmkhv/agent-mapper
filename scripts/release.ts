@@ -54,7 +54,11 @@ function fetchReleasableDev(): void {
   run("git", ["fetch", "origin", "dev", "main", "--tags"]);
   try {
     run("git", ["merge-base", "--is-ancestor", "origin/main", "origin/dev"]);
-  } catch {
+  } catch (error: unknown) {
+    // Exit status 1 means "not an ancestor"; anything else is a real Git failure.
+    if ((error as { status?: number }).status !== 1) {
+      throw error;
+    }
     throw new Error(
       "origin/dev is missing commits from origin/main. Merge main into dev, then release again."
     );
@@ -70,6 +74,17 @@ function readDevVersion(): string {
 
 function releaseBranch(version: string): string {
   return `release/${version}`;
+}
+
+function assertBranchIsFree(version: string): void {
+  const branch = releaseBranch(version);
+  const local = run("git", ["branch", "--list", branch]);
+  const remote = run("git", ["ls-remote", "--heads", "origin", branch]);
+  if (local || remote) {
+    throw new Error(
+      `${branch} already exists from an earlier run. Finish it with \`gh pr create --base main --head ${branch}\`, or delete it (\`git branch -D ${branch}\` and \`git push origin --delete ${branch}\`) and release again.`
+    );
+  }
 }
 
 function commitVersion(version: string): void {
@@ -94,7 +109,7 @@ function openReleasePullRequest(version: string, type: ReleaseType): string {
   ]);
   const body = [
     `Releases agent-mapper ${version} (${type}).`,
-    `Merging publishes to npm, creates the \`v${version}\` GitHub release, and merges \`main\` back into \`dev\`.`,
+    `Merge with **Create a merge commit**, not squash or rebase. Merging publishes to npm, creates the \`v${version}\` GitHub release, and merges \`main\` back into \`dev\`.`,
     "## Changes since the last release",
     changes || "- Version bump only"
   ].join("\n\n");
@@ -120,9 +135,10 @@ function main(): void {
   const next = bumpVersion(current, type);
   if (run("git", ["tag", "--list", `v${next}`])) {
     throw new Error(
-      `Tag v${next} already exists. Check that the last release merged main back into dev.`
+      `Tag v${next} already exists, but dev is at ${current}. Set packages/cli/package.json on dev to the latest released version, then release again.`
     );
   }
+  assertBranchIsFree(next);
 
   console.log(`Releasing agent-mapper ${current} → ${next}`);
   commitVersion(next);
