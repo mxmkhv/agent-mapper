@@ -8,7 +8,8 @@ import { applySkillTransfer, planSkillTransfer } from "../skill-transfer-api";
 
 export type PlanState =
   | { status: "idle" }
-  | { status: "loading" }
+  /** The previous preview stays on screen, dimmed, so the form does not collapse between choices. */
+  | { status: "loading"; previous?: SkillTransferPlan }
   | { status: "ready"; plan: SkillTransferPlan }
   | { status: "error"; message: string };
 
@@ -48,7 +49,12 @@ export function useTransferPlan(
   }, [request, scannedAt, attempt]);
   let value: PlanState = { status: "idle" };
   if (request) {
-    value = state.request === request ? state.value : { status: "loading" };
+    const previous =
+      state.value.status === "ready" && state.value.plan.mode === request.mode
+        ? state.value.plan
+        : undefined;
+    value =
+      state.request === request ? state.value : { status: "loading", previous };
   }
   return { state: value, recheck: () => setAttempt((count) => count + 1) };
 }

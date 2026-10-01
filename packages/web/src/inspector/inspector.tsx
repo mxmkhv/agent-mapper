@@ -179,18 +179,8 @@ export function RecordInspector({
         </Section>
       ) : null}
       <Details context={scope.context} record={record} />
-      {record.kind === "skill" && record.sourceRef ? (
-        <SkillTransfer
-          context={scope.context}
-          onSelect={onSelect}
-          copyTargets={scope.copyTargets}
-          record={record}
-          scannedAt={scope.scannedAt}
-          sourceRef={record.sourceRef}
-        />
-      ) : null}
       {reach ? <ReachSection reach={reach} record={record} /> : null}
-      <div className="mt-5.5 flex gap-2">
+      <div className="mt-5.5 flex flex-wrap gap-2">
         <Button
           onClick={() => void action.run(record.id, "open")}
           variant="primary"
@@ -200,6 +190,16 @@ export function RecordInspector({
         <Button onClick={() => void action.run(record.id, "reveal")}>
           Reveal in Finder
         </Button>
+        {record.kind === "skill" && record.sourceRef ? (
+          <SkillTransfer
+            context={scope.context}
+            onSelect={onSelect}
+            copyTargets={scope.copyTargets}
+            record={record}
+            scannedAt={scope.scannedAt}
+            sourceRef={record.sourceRef}
+          />
+        ) : null}
       </div>
       {error ? (
         <p className="mt-2 mb-0 text-label text-problem" role="alert">

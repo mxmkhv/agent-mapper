@@ -1,4 +1,6 @@
+import type { ReactNode } from "react";
 import type { SkillTransferPlan, ToolId } from "@agent-mapper/core";
+import { TriangleAlert } from "lucide-react";
 import type { CopyTarget } from "../model/copy-targets";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
 import type { PlanState } from "../state/use-skill-transfer";
@@ -8,6 +10,7 @@ import { PathText } from "../ui/path-text";
 const kilobyte = 1024;
 const megabyte = kilobyte * kilobyte;
 const tools: ToolId[] = ["claude", "codex"];
+const fieldLabel = "text-caption font-semibold text-ink-muted";
 
 function bytesText(bytes: number): string {
   if (bytes < kilobyte) {
@@ -27,11 +30,19 @@ export function ProjectPicker({
   value: string;
   onChange(path: string): void;
 }) {
+  if (!targets.length) {
+    return (
+      <p className="m-0 text-label text-ink-muted">
+        No other project to copy into. Add one with “Add folder…” in the
+        sidebar.
+      </p>
+    );
+  }
   return (
-    <label className="grid gap-1 text-caption font-semibold text-ink-muted">
-      Project
+    <label className={`grid gap-1 ${fieldLabel}`}>
+      To project
       <select
-        className="h-7 min-w-0 rounded-control border border-hairline bg-surface px-1.5 text-label font-normal text-ink"
+        className="h-8 min-w-0 rounded-control border border-hairline bg-surface px-2 text-label font-normal text-ink"
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >
@@ -55,9 +66,7 @@ export function ToolPicker({
 }) {
   return (
     <fieldset className="m-0 grid gap-1 border-0 p-0">
-      <legend className="mb-1 p-0 text-caption font-semibold text-ink-muted">
-        For
-      </legend>
+      <legend className={`mb-1 p-0 ${fieldLabel}`}>For</legend>
       <div className="flex flex-wrap gap-x-4 gap-y-1">
         {tools.map((tool) => (
           <label className="flex items-center gap-1.5 text-label" key={tool}>
@@ -78,7 +87,21 @@ export function ToolPicker({
           </label>
         ))}
       </div>
+      {value.length ? null : (
+        <p className="m-0 text-label text-ink-muted">
+          Choose at least one tool.
+        </p>
+      )}
     </fieldset>
+  );
+}
+
+function Group({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-1.5">
+      <span className={fieldLabel}>{label}</span>
+      {children}
+    </div>
   );
 }
 
@@ -131,6 +154,59 @@ function Files({ plan }: { plan: SkillTransferPlan }) {
   );
 }
 
+function Warnings({
+  plan,
+  context
+}: {
+  plan: SkillTransferPlan;
+  context: PathContext;
+}) {
+  return (
+    <div className="flex gap-2 rounded-panel bg-wash px-3 py-2.5 text-label">
+      <TriangleAlert
+        aria-hidden="true"
+        className="mt-0.5 size-3.5 shrink-0 text-ink-muted"
+        strokeWidth={1.8}
+      />
+      <ul className="m-0 grid list-none gap-1 p-0">
+        {plan.warnings.map((warning) => (
+          <li key={warning}>{tildeText(warning, context)}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function Plan({
+  plan,
+  context
+}: {
+  plan: SkillTransferPlan;
+  context: PathContext;
+}) {
+  return (
+    <>
+      <Group label="Creates">
+        <Destinations context={context} plan={plan} />
+        <Files plan={plan} />
+      </Group>
+      {plan.mode === "promote" && !plan.blocked ? (
+        <Group label="Removes from the project">
+          <span className="font-mono text-mono break-words">
+            <PathText path={tildePath(plan.sourceFolder, context)} />
+          </span>
+        </Group>
+      ) : null}
+      {plan.blocked ? (
+        <p className="m-0 text-label text-problem">
+          {tildeText(plan.blocked, context)}
+        </p>
+      ) : null}
+      {plan.warnings.length ? <Warnings context={context} plan={plan} /> : null}
+    </>
+  );
+}
+
 /** Where the skill would go, what would stop it, and what another tool may read differently. */
 export function PlanPreview({
   state,
@@ -142,9 +218,6 @@ export function PlanPreview({
   if (state.status === "idle") {
     return null;
   }
-  if (state.status === "loading") {
-    return <output className="text-label text-ink-muted">Checking…</output>;
-  }
   if (state.status === "error") {
     return (
       <p className="m-0 text-label text-problem" role="alert">
@@ -152,23 +225,17 @@ export function PlanPreview({
       </p>
     );
   }
-  const { plan } = state;
+  const plan = state.status === "ready" ? state.plan : state.previous;
+  if (!plan) {
+    return <output className="text-label text-ink-muted">Checking…</output>;
+  }
+  const checking = state.status === "loading";
   return (
-    <div className="grid gap-2">
-      <Destinations context={context} plan={plan} />
-      <Files plan={plan} />
-      {plan.blocked ? (
-        <p className="m-0 text-label text-problem">
-          {tildeText(plan.blocked, context)}
-        </p>
-      ) : null}
-      {plan.warnings.length ? (
-        <ul className="m-0 grid list-none gap-1 p-0 text-label text-ink-muted">
-          {plan.warnings.map((warning) => (
-            <li key={warning}>{tildeText(warning, context)}</li>
-          ))}
-        </ul>
-      ) : null}
+    <div
+      aria-busy={checking}
+      className={`grid gap-3 ${checking ? "opacity-50" : ""}`}
+    >
+      <Plan context={context} plan={plan} />
     </div>
   );
 }

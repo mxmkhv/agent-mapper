@@ -6,8 +6,8 @@ import type {
   SourceRef,
   ToolId
 } from "@agent-mapper/core";
-import { ArrowUpToLine, Copy } from "lucide-react";
-import { ConfirmButton } from "../documents/confirm-button";
+import { Copy } from "lucide-react";
+import { SegmentedToggle } from "../documents/segmented-toggle";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
 import type { CopyTarget } from "../model/copy-targets";
 import type { InventoryRecord } from "../model/record-types";
@@ -18,7 +18,7 @@ import {
   type PlanState
 } from "../state/use-skill-transfer";
 import { Button } from "../ui/button";
-import { Section } from "./inspector-sections";
+import { Modal } from "../ui/modal";
 import {
   PlanPreview,
   ProjectPicker,
@@ -35,11 +35,20 @@ interface SkillTransferProps {
   onSelect(id: string, options: { tool: ToolId }): void;
 }
 
-interface FormProps extends SkillTransferProps {
-  mode: SkillTransferMode;
-  onCancel(): void;
+interface DialogProps extends SkillTransferProps {
+  onClose(): void;
+}
+
+interface FormProps extends DialogProps {
+  /** Only a project's own skill can leave its project. */
+  canMove: boolean;
   onDone(result: SkillTransferResult): void;
 }
+
+const modes: { value: SkillTransferMode; label: string }[] = [
+  { value: "copy", label: "Copy to project" },
+  { value: "promote", label: "Move to global" }
+];
 
 const ready = (state: PlanState) =>
   state.status === "ready" &&
@@ -48,15 +57,15 @@ const ready = (state: PlanState) =>
     ? state.plan
     : undefined;
 
-function useRequest(props: FormProps) {
-  const { mode, sourceRef, record } = props;
+function useRequest(sourceRef: SourceRef, tool: InventoryRecord["tool"]) {
+  const [mode, setMode] = useState<SkillTransferMode>("copy");
   const [projectPath, setProjectPath] = useState("");
   const [tools, setTools] = useState<ToolId[]>(
-    record.tool === "unknown" ? [] : [record.tool]
+    tool === "unknown" ? [] : [tool]
   );
   const request = useMemo<SkillTransferRequest | undefined>(
     () =>
-      mode === "copy" && !projectPath
+      !tools.length || (mode === "copy" && !projectPath)
         ? undefined
         : {
             source: sourceRef,
@@ -66,12 +75,20 @@ function useRequest(props: FormProps) {
           },
     [mode, projectPath, sourceRef, tools]
   );
-  return { request, projectPath, setProjectPath, tools, setTools };
+  return {
+    request,
+    mode,
+    setMode,
+    projectPath,
+    setProjectPath,
+    tools,
+    setTools
+  };
 }
 
 function TransferForm(props: FormProps) {
-  const { mode, context } = props;
-  const choice = useRequest(props);
+  const { record, context, canMove } = props;
+  const choice = useRequest(props.sourceRef, record.tool);
   const preview = useTransferPlan(choice.request, props.scannedAt);
   const run = useTransferApply({
     request: choice.request,
@@ -79,20 +96,57 @@ function TransferForm(props: FormProps) {
     onDone: props.onDone
   });
   const plan = ready(preview.state);
+  const copying = choice.mode === "copy";
+  // A project's own skill is already in its project; offering that folder only leads to a conflict.
+  const targets = canMove
+    ? props.copyTargets.filter(
+        (target) => target.path !== props.sourceRef.workingDirectory
+      )
+    : props.copyTargets;
+  const action = copying
+    ? { idle: "Copy", busy: "Copying…" }
+    : { idle: "Move to global", busy: "Moving…" };
   return (
-    <div className="grid gap-3 rounded-card border border-hairline p-3">
-      {mode === "copy" ? (
+    <Modal
+      busy={run.applying}
+      footer={
+        <>
+          <Button disabled={run.applying} onClick={props.onClose}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!plan || run.applying}
+            onClick={() => plan && void run.apply(plan)}
+            variant="primary"
+          >
+            {run.applying ? action.busy : action.idle}
+          </Button>
+        </>
+      }
+      onClose={props.onClose}
+      title={
+        copying
+          ? `Copy ${record.name} to a project`
+          : `Move ${record.name} to global`
+      }
+    >
+      {canMove ? (
+        <div>
+          <SegmentedToggle<SkillTransferMode>
+            label="Copy or move"
+            onChange={choice.setMode}
+            options={modes}
+            value={choice.mode}
+          />
+        </div>
+      ) : null}
+      {copying ? (
         <ProjectPicker
           onChange={choice.setProjectPath}
-          targets={props.copyTargets}
+          targets={targets}
           value={choice.projectPath}
         />
-      ) : (
-        <p className="m-0 text-label text-ink-muted">
-          Moves this folder into the global skills folder of each tool and
-          removes it from the project.
-        </p>
-      )}
+      ) : null}
       <ToolPicker onChange={choice.setTools} value={choice.tools} />
       <PlanPreview context={context} state={preview.state} />
       {run.error ? (
@@ -100,33 +154,11 @@ function TransferForm(props: FormProps) {
           {tildeText(run.error, context)}
         </p>
       ) : null}
-      <div className="flex flex-wrap items-center gap-2">
-        {mode === "copy" ? (
-          <Button
-            disabled={!plan || run.applying}
-            onClick={() => plan && void run.apply(plan)}
-            variant="primary"
-          >
-            {run.applying ? "Copying…" : "Copy"}
-          </Button>
-        ) : (
-          <ConfirmButton
-            confirmLabel="Move"
-            disabled={!plan || run.applying}
-            label={run.applying ? "Moving…" : "Move to global"}
-            onConfirm={() => plan && void run.apply(plan)}
-            question="Remove it from this project?"
-          />
-        )}
-        <Button disabled={run.applying} onClick={props.onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
-/** A copy, or a move that could not finish cleanly, stays on screen; a clean move shows the new skill. */
+/** A copy, or a move that could not finish cleanly, reports here; a clean move shows the new skill instead. */
 function Finished({
   result,
   context
@@ -135,19 +167,15 @@ function Finished({
   context: PathContext;
 }) {
   return (
-    <output className="mt-2 grid gap-1 text-label">
-      <span>
-        Copied to{" "}
-        {result.created.map((item, index) => (
-          <span key={item.path}>
-            {index ? " and " : ""}
-            <span className="font-mono text-mono break-words">
-              {tildePath(item.path, context)}
-            </span>
-          </span>
+    <output className="grid gap-2 text-label">
+      <span className="text-caption font-semibold text-ink-muted">Created</span>
+      <ul className="m-0 grid list-none gap-1 p-0">
+        {result.created.map((item) => (
+          <li className="font-mono text-mono break-words" key={item.path}>
+            {tildePath(item.path, context)}
+          </li>
         ))}
-        .
-      </span>
+      </ul>
       {result.warnings.map((warning) => (
         <span className="text-problem" key={warning}>
           {tildeText(warning, context)}
@@ -157,20 +185,17 @@ function Finished({
   );
 }
 
-/** Copy a skill folder into a project, or move a project's own skill to the global folders. */
-export function SkillTransfer(props: SkillTransferProps) {
-  const { record } = props;
+function TransferDialog(props: DialogProps) {
+  const { record, onClose } = props;
   const { onMutated } = useDocuments();
-  const [mode, setMode] = useState<SkillTransferMode>();
   const [finished, setFinished] = useState<SkillTransferResult>();
-  const canMove = record.layer === "project" && !record.plugin;
   function done(result: SkillTransferResult) {
-    setMode(undefined);
     onMutated();
     if (result.mode === "copy" || result.warnings.length) {
       setFinished(result);
       return;
     }
+    onClose();
     const moved =
       result.created.find((item) => item.tool === record.tool) ??
       result.created[0];
@@ -178,38 +203,42 @@ export function SkillTransfer(props: SkillTransferProps) {
       props.onSelect(moved.entryId, { tool: moved.tool });
     }
   }
-  function open(next: SkillTransferMode) {
-    setFinished(undefined);
-    setMode(next);
+  if (finished) {
+    return (
+      <Modal
+        footer={
+          <Button onClick={onClose} variant="primary">
+            Done
+          </Button>
+        }
+        onClose={onClose}
+        title={`Copied ${record.name}`}
+      >
+        <Finished context={props.context} result={finished} />
+      </Modal>
+    );
   }
   return (
-    <Section title="Copy or move">
-      {mode ? (
-        <TransferForm
-          {...props}
-          mode={mode}
-          onCancel={() => setMode(undefined)}
-          onDone={done}
-        />
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => open("copy")}>
-            <Copy aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
-            Copy to project…
-          </Button>
-          {canMove ? (
-            <Button onClick={() => open("promote")}>
-              <ArrowUpToLine
-                aria-hidden="true"
-                className="size-3.5"
-                strokeWidth={1.8}
-              />
-              Move to global…
-            </Button>
-          ) : null}
-        </div>
-      )}
-      {finished ? <Finished context={props.context} result={finished} /> : null}
-    </Section>
+    <TransferForm
+      {...props}
+      canMove={record.layer === "project" && !record.plugin}
+      onDone={done}
+    />
+  );
+}
+
+/** Copy a skill folder into a project, or move a project's own skill to the global folders. */
+export function SkillTransfer(props: SkillTransferProps) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>
+        <Copy aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+        Copy…
+      </Button>
+      {open ? (
+        <TransferDialog {...props} onClose={() => setOpen(false)} />
+      ) : null}
+    </>
   );
 }
