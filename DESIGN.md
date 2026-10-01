@@ -226,6 +226,7 @@ Warm neutral grays carry the whole interface. Saturated color is reserved for to
 
 - **Claude Terracotta** (`claude`): Claude Code identity only. Used for the tool glyph, the skill-index segment of the startup budget bar, and nothing else.
 - **Codex Blue** (`codex`): Codex identity only, in the same places. It is never green, so it cannot be confused with a success state.
+- **Favicon**: a disc filled with the selected tool's hue (the light-theme value in both color schemes) and a white bot icon at 60% in its center. It swaps when the tool toggle changes.
 
 ### Tertiary
 
@@ -252,7 +253,7 @@ Every neutral and signal token has a `-dark` twin in the frontmatter. Dark mode 
 
 **The No-Green Rule.** Green has no role. "Active" is the absence of a badge, not a green pill.
 
-**The Glyph-Plus-Color Rule.** A tool is always marked with its letter glyph (`C` for Claude Code, `X` for Codex) as well as its color, so color is never the only signal.
+**The Glyph-Plus-Color Rule.** A tool is always marked with its letter glyph (`C` for Claude Code, `X` for Codex) as well as its color, so color is never the only signal. The favicon is the one exception: a 16px tab icon has no room for the letter.
 
 ## Typography
 
