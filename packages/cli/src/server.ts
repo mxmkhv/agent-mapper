@@ -7,8 +7,9 @@ import {
 } from "node:http";
 import type { AddressInfo } from "node:net";
 import { homedir } from "node:os";
-import type { InventorySnapshot } from "@agent-mapper/core";
-import { discoverProjects, type DiscoveryResult } from "./inventory";
+import type { InventorySnapshot, PullRequestLookup } from "@agent-mapper/core";
+import { ConfigStore, defaultConfigPath } from "./app-config";
+import { projectRoute, type ProjectsPayload } from "./project-routes";
 import { buildGlobalSnapshot, buildSnapshot } from "./service";
 import { serveAsset } from "./server-assets";
 import {
@@ -20,6 +21,7 @@ import {
   handleSkillTransferRoute,
   isSkillTransferRoute
 } from "./skill-transfer-routes";
+import { worktreeRoute } from "./worktree-routes";
 import { handleDocumentRoute, isDocumentRoute } from "./source-document-routes";
 import {
   launchOpen,
@@ -34,6 +36,8 @@ export interface AppServerOptions {
   managedClaudeDir?: string;
   /** Private revision snapshots; defaults to the platform data folder. */
   historyRoot?: string;
+  /** agent-mapper preferences such as removed projects; defaults to ~/.config/agent-mapper/config.json (XDG_CONFIG_HOME aware). */
+  configPath?: string;
   launchSource?: (args: string[]) => Promise<void>;
 }
 export interface AppServer {
@@ -48,10 +52,15 @@ interface RequestContext extends ServerServices {
   server: Server;
   token: string;
   options: AppServerOptions;
+  config: ConfigStore;
 }
 
 type ApiPayload =
-  DiscoveryResult | InventorySnapshot | { error: string } | { ok: true };
+  | ProjectsPayload
+  | InventorySnapshot
+  | PullRequestLookup
+  | { error: string }
+  | { ok: true };
 interface JsonReply {
   response: ServerResponse;
   status: number;
@@ -107,16 +116,36 @@ const sessionError = {
   error: "Session expired or missing. Reopen the URL printed by agent-mapper."
 };
 
+/** Projects, removal, and worktrees. A fresh project list also updates where skills may be copied. */
+async function handleProjectRoute(
+  context: RequestContext,
+  url: URL
+): Promise<boolean> {
+  const { request, response } = context;
+  const routed =
+    (await projectRoute({
+      request,
+      url,
+      config: context.config,
+      home: context.options.home ?? homedir()
+    })) ?? (await worktreeRoute(request, url));
+  if (!routed) {
+    return false;
+  }
+  if ("projects" in routed) {
+    rememberProjects(context.discovered, routed);
+  }
+  sendJson({ response, status: status.ok, payload: routed });
+  return true;
+}
+
 async function handleApi(context: RequestContext, url: URL): Promise<void> {
   const { request, response } = context;
   if (request.headers.authorization !== `Bearer ${context.token}`) {
     sendJson({ response, status: status.unauthorized, payload: sessionError });
     return;
   }
-  if (request.method === "GET" && url.pathname === "/api/projects") {
-    const payload = await discoverProjects(context.options.home ?? homedir());
-    rememberProjects(context.discovered, payload);
-    sendJson({ response, status: status.ok, payload });
+  if (await handleProjectRoute(context, url)) {
     return;
   }
   if (request.method === "GET" && url.pathname === "/api/inventory") {
@@ -193,6 +222,9 @@ async function handleRequest(context: RequestContext): Promise<void> {
 export function createAppServer(options: AppServerOptions): AppServer {
   const token = randomBytes(tokenBytes).toString("hex");
   const services = createServices(options);
+  const config = new ConfigStore(
+    options.configPath ?? defaultConfigPath(options.home ?? homedir())
+  );
   const server = createServer((request, response) => {
     void handleRequest({
       request,
@@ -200,7 +232,8 @@ export function createAppServer(options: AppServerOptions): AppServer {
       server,
       token,
       options,
-      ...services
+      ...services,
+      config
     }).catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       sendJson({

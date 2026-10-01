@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
-import { configRoots, type DiscoveryResult } from "./inventory";
+import type { DiscoveryResult } from "./discovery";
+import { configRoots } from "./inventory";
 import { managedClaudeDirectory } from "./managed-claude-reader";
 import { SkillTransferService } from "./skill-transfer";
 import type { SourcePathStore } from "./source-actions";

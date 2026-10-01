@@ -57,12 +57,16 @@ it("shows linked checkouts from the main view, including stale registrations", (
       context: {},
       tool: "claude",
       refreshKey: 0,
-      onSelectPath: () => undefined
+      onSelectPath: () => undefined,
+      onRemoved: () => undefined
     })
   );
   expect(html).toContain("feature");
   expect(html).toContain("prunable");
   expect(html).toContain("linked");
+  // Only available checkouts offer removal; stale registrations point at git worktree prune instead.
+  expect(html.match(/>Remove</g)).toHaveLength(1);
+  expect(html).toContain("run git worktree prune");
 });
 
 it("explains when the selected folder is outside Git", () => {
@@ -73,7 +77,8 @@ it("explains when the selected folder is outside Git", () => {
       context: {},
       tool: "claude",
       refreshKey: 0,
-      onSelectPath: () => undefined
+      onSelectPath: () => undefined,
+      onRemoved: () => undefined
     })
   );
   expect(html).toContain("No Git repository");
@@ -88,7 +93,8 @@ it("lists content differences before files only in the main checkout", () => {
       context: {},
       tool: "claude",
       refreshKey: 0,
-      onSelectPath: () => undefined
+      onSelectPath: () => undefined,
+      onRemoved: () => undefined
     })
   );
   expect(html.indexOf("Different content")).toBeGreaterThan(-1);
@@ -127,7 +133,8 @@ it("keeps shared differences but hides Claude files under the Codex filter", () 
       context: {},
       tool: "codex",
       refreshKey: 0,
-      onSelectPath: () => undefined
+      onSelectPath: () => undefined,
+      onRemoved: () => undefined
     })
   );
   expect(html).toContain("AGENTS.md");
@@ -150,7 +157,8 @@ it("shows checkout paths under home with ~", () => {
       context: { home: "/Users/me" },
       tool: "claude",
       refreshKey: 0,
-      onSelectPath: () => undefined
+      onSelectPath: () => undefined,
+      onRemoved: () => undefined
     })
   );
   expect(html).toContain('title="~/trees/feature"');

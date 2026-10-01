@@ -7,6 +7,7 @@ import { Sidebar } from "./shell/sidebar";
 import type { Landing } from "./shell/view-bar";
 import { DraftStore } from "./state/draft-store";
 import { DocumentsContext, useUnloadGuard } from "./state/use-document-drafts";
+import { useHiddenProjects } from "./state/use-hidden-projects";
 import { useTheme } from "./state/use-theme";
 import { useTool } from "./state/use-tool";
 import { Button } from "./ui/button";
@@ -22,7 +23,11 @@ export function App() {
   const [landing, setLanding] = useState<Landing>();
   const [theme, setTheme] = useTheme();
   const [tool, setTool] = useTool();
-  const projects = useProjects();
+  const [projectsRefresh, setProjectsRefresh] = useState(0);
+  const projects = useProjects(projectsRefresh);
+  const visibility = useHiddenProjects(projects.value, () =>
+    setProjectsRefresh((value) => value + 1)
+  );
   const inventory = useInventory(selectedPath, refresh);
   // Drafts sit above the per-folder Workspace so project switches and rescans keep them.
   const [drafts] = useState(() => new DraftStore());
@@ -31,7 +36,9 @@ export function App() {
   const rescan = () => {
     setRefreshAfterSave(false);
     setRefresh((value) => value + 1);
+    setProjectsRefresh((value) => value + 1);
   };
+
   const documents = {
     store: drafts,
     onMutated() {
@@ -53,10 +60,12 @@ export function App() {
       <div className="grid h-full grid-cols-[200px_minmax(0,1fr)] overflow-hidden lg:grid-cols-[232px_minmax(0,1fr)]">
         <Sidebar
           error={projects.error}
-          loading={projects.loading}
+          hiddenProjects={visibility.hidden}
+          loading={projects.loading && !projects.value}
           onSelect={selectPath}
+          onSetHidden={visibility.setHidden}
           onTheme={setTheme}
-          projects={projects.value?.projects ?? []}
+          projects={visibility.projects}
           selectedPath={selectedPath}
           theme={theme}
         />
@@ -75,11 +84,11 @@ export function App() {
                 onRescan={rescan}
                 onSelectPath={selectPath}
                 onTool={setTool}
-                projectPaths={
-                  projects.value?.projects.map((project) => project.path) ?? []
-                }
+                projectPaths={visibility.projects.map(
+                  (project) => project.path
+                )}
                 copyTargets={copyTargets(
-                  projects.value?.projects ?? [],
+                  visibility.projects,
                   selectedPath ? inventory.value.workingDirectory : undefined
                 )}
                 refreshKey={refresh}

@@ -2,7 +2,12 @@ import type { ReactNode } from "react";
 import type { InstructionImport } from "@agent-mapper/core";
 import { ArrowRight, Link2 } from "lucide-react";
 import { layerLabel } from "../model/layers";
-import { shortPath, tildePath, type PathContext } from "../model/paths";
+import {
+  shortPath,
+  tildePath,
+  tildeText,
+  type PathContext
+} from "../model/paths";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
 import { kindLabel } from "../ui/kind-icon";
 import { ToolGlyph } from "../ui/marks";
@@ -187,7 +192,17 @@ export function Details({
         {record.details.map((row) => (
           <div className="contents" key={`${row.label}\0${row.value}`}>
             <dt className="text-ink-muted">{row.label}</dt>
-            <dd className="m-0 break-words">{tildePath(row.value, context)}</dd>
+            <dd
+              className={
+                row.code
+                  ? "m-0 font-mono text-mono break-words whitespace-pre-wrap"
+                  : "m-0 break-words"
+              }
+            >
+              {row.code
+                ? tildeText(row.value, context)
+                : tildePath(row.value, context)}
+            </dd>
           </div>
         ))}
       </dl>

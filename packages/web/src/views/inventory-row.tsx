@@ -1,6 +1,11 @@
 import { isConventionalPath } from "../model/conventional-path";
 import { isLink } from "../model/links";
-import { shortPath, tildePath, type PathContext } from "../model/paths";
+import {
+  shortPath,
+  tildePath,
+  tildeText,
+  type PathContext
+} from "../model/paths";
 import type { InventoryRecord } from "../model/record-types";
 import { stateLabel, stateText } from "../model/states";
 import { KindIcon } from "../ui/kind-icon";
@@ -18,12 +23,36 @@ interface RowProps {
   onSelect(id: string): void;
 }
 
+/** Row-only: project hook scripts read as project-relative paths, so the script name survives truncation. */
+function shortCommand(command: string, context: PathContext): string {
+  return tildeText(
+    command.replace(/"?\$\{?CLAUDE_PROJECT_DIR\}?"?\//g, ""),
+    context
+  );
+}
+
 function Detail({
   record,
   context,
   sharesName
 }: Pick<RowProps, "record" | "context" | "sharesName">) {
-  if (record.kind === "hook" || record.kind === "mcp") {
+  if (record.kind === "hook") {
+    // What the hook runs comes first: it says more than the matcher or handler type, and long matchers would truncate it away.
+    const runs =
+      record.details.find((detail) => detail.code)?.value ??
+      record.details.find((detail) => detail.label === "Handler")?.value;
+    const matcher = record.details.find(
+      (detail) => detail.label === "Matcher"
+    )?.value;
+    return (
+      <span className="truncate font-mono text-mono text-ink-faint">
+        {[runs && shortCommand(runs, context), matcher]
+          .filter(Boolean)
+          .join(" · ")}
+      </span>
+    );
+  }
+  if (record.kind === "mcp") {
     const text = record.details
       .filter((detail) =>
         ["Handler", "Matcher", "Transport", "Destination"].includes(

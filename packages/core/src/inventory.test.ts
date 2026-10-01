@@ -129,25 +129,93 @@ it("uses Claude's project AGENTS fallback only without a project CLAUDE file", (
   ).toBe("shadowed");
 });
 
-it("does not shadow nested Claude AGENTS guidance with an ancestor CLAUDE file", () => {
+// The scanner gives .claude/CLAUDE.md its project folder, as instruction-sources.ts does.
+const claudeAt = (path: string, name = "CLAUDE.md") =>
+  entry({
+    id: path,
+    tool: "claude",
+    name,
+    path,
+    characters: 40,
+    projectPath: path.includes("/.claude/")
+      ? path.slice(0, path.indexOf("/.claude/"))
+      : undefined
+  });
+const agentsAt = (path: string) =>
+  entry({ id: path, tool: "claude", path, characters: 80 });
+const availability = (entries: InventoryEntry[]) =>
+  resolveInventory(entries, {
+    workingDirectory: "/work/app",
+    tool: "claude"
+  }).map(({ entry: item, resolution }) => [item.id, resolution.availability]);
+
+it("drops every Claude AGENTS file when any project CLAUDE file is in the folder chain", () => {
+  expect(
+    availability([claudeAt("/work/CLAUDE.md"), agentsAt("/work/app/AGENTS.md")])
+  ).toEqual([
+    ["/work/CLAUDE.md", "expected"],
+    ["/work/app/AGENTS.md", "shadowed"]
+  ]);
+  expect(
+    availability([agentsAt("/work/AGENTS.md"), claudeAt("/work/app/CLAUDE.md")])
+  ).toEqual([
+    ["/work/AGENTS.md", "shadowed"],
+    ["/work/app/CLAUDE.md", "expected"]
+  ]);
+  expect(
+    availability([
+      agentsAt("/work/AGENTS.md"),
+      claudeAt("/work/app/CLAUDE.local.md", "CLAUDE.local.md")
+    ])
+  ).toEqual([
+    ["/work/AGENTS.md", "shadowed"],
+    ["/work/app/CLAUDE.local.md", "expected"]
+  ]);
+  expect(
+    availability([
+      agentsAt("/work/AGENTS.md"),
+      claudeAt("/work/app/.claude/CLAUDE.md")
+    ])
+  ).toEqual([
+    ["/work/AGENTS.md", "shadowed"],
+    ["/work/app/.claude/CLAUDE.md", "expected"]
+  ]);
+  expect(
+    availability([agentsAt("/work/AGENTS.md"), agentsAt("/work/app/AGENTS.md")])
+  ).toEqual([
+    ["/work/AGENTS.md", "expected"],
+    ["/work/app/AGENTS.md", "expected"]
+  ]);
+});
+
+it("keeps Claude AGENTS files when the only CLAUDE file is global or outside the chain", () => {
+  // The working folder sits under home, so only the scope keeps ~/.claude/CLAUDE.md from counting.
   const results = resolveInventory(
     [
       entry({
-        id: "ancestor",
+        id: "global",
         tool: "claude",
+        scope: "global",
         name: "CLAUDE.md",
-        path: "/work/CLAUDE.md",
+        path: "/home/.claude/CLAUDE.md",
         characters: 40
       }),
       entry({
-        id: "nested",
+        id: "sibling",
         tool: "claude",
-        path: "/work/app/AGENTS.md",
+        name: "CLAUDE.md",
+        path: "/home/other/CLAUDE.md",
+        characters: 40
+      }),
+      entry({
+        id: "agents",
+        tool: "claude",
+        path: "/home/app/AGENTS.md",
         characters: 80
       })
     ],
-    { workingDirectory: "/work/app", tool: "claude" }
+    { workingDirectory: "/home/app", tool: "claude" }
   );
-  expect(results[1]?.resolution.availability).toBe("expected");
-  expect(results[1]?.resolution.estimatedTokens?.startup).toBe(20);
+  expect(results[2]?.resolution.availability).toBe("expected");
+  expect(results[2]?.resolution.estimatedTokens?.startup).toBe(20);
 });

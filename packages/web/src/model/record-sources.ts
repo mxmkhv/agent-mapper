@@ -81,6 +81,27 @@ export function agentDraft(agent: AgentRecord, order: number): RecordDraft {
   };
 }
 
+const previewLabels = new Map([
+  ["command", "Command"],
+  ["http", "URL"],
+  ["mcp_tool", "MCP tool"],
+  ["prompt", "Prompt"],
+  ["agent", "Prompt"]
+]);
+
+function hookPreview(hook: HookRecord): RecordDetail[] {
+  const label = previewLabels.get(hook.handlerType);
+  return hook.preview && label
+    ? [
+        {
+          label,
+          value: hook.preview,
+          code: hook.handlerType !== "prompt" && hook.handlerType !== "agent"
+        }
+      ]
+    : [];
+}
+
 export function hookDraft(hook: HookRecord, order: number): RecordDraft {
   return {
     id: hook.id,
@@ -101,6 +122,7 @@ export function hookDraft(hook: HookRecord, order: number): RecordDraft {
     details: [
       { label: "Lane", value: hook.lane },
       { label: "Handler", value: hook.handlerType },
+      ...hookPreview(hook),
       { label: "Matcher", value: hook.matcher ?? "all matches" },
       ...detail("Condition", hook.condition),
       ...detail("Flags", hook.flags.join(" · "))

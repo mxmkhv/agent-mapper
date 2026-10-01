@@ -22,7 +22,7 @@ import {
 import { resolveScanContext, type ScanContext } from "./scan-context";
 import { scanGlobal, scanProjectSources } from "./instruction-sources";
 import { CodexTomlReader } from "./codex-toml";
-export { discoverProjects, type DiscoveryResult } from "./discovery";
+export { discoverProjects } from "./discovery";
 
 export interface ScanOptions {
   workingDirectory: string;
