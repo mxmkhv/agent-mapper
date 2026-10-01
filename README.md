@@ -88,7 +88,7 @@ Configuration comes from `~/.claude`, `~/.claude.json`, `~/.codex`, `~/.agents`,
 
 Scans are read-only. Writes happen only through reviewed save, restore, copy, or delete actions, plus agent-mapper's own history and lock files. The server listens on `127.0.0.1` and requires a per-session token.
 
-agent-mapper never executes hook commands or starts or contacts MCP servers. Hook commands, MCP credentials, arguments, and full URLs stay out of inventory responses. When you open an instruction, skill, agent, or saved version, its full text goes to the local browser for preview and editing.
+agent-mapper never executes hook commands or starts or contacts MCP servers. Hook previews show command or handler text with common secret patterns masked. MCP credentials, arguments, and full URLs stay out of inventory responses. When you open an instruction, skill, agent, or saved version, its full text goes to the local browser for preview and editing.
 
 The Worktrees view can run `gh pr list` to look up pull requests when the GitHub CLI is installed. This is the app's only optional network lookup.
 
