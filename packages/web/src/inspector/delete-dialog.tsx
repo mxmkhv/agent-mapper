@@ -4,6 +4,7 @@ import { Trash2 } from "lucide-react";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
 import type { InventoryRecord } from "../model/record-types";
 import { applyDelete, planDelete } from "../source-delete-api";
+import { DocumentRequestError } from "../source-document-api";
 import { useDocuments } from "../state/use-document-drafts";
 import { Button } from "../ui/button";
 import { Modal } from "../ui/modal";
@@ -18,8 +19,10 @@ type PlanState =
 const messageOf = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
 
-function usePlan(source: SourceRef): PlanState {
+/** The plan for this item; `refresh` asks again, for example after the item changed under the dialog. */
+function usePlan(source: SourceRef) {
   const [state, setState] = useState<PlanState>({ status: "loading" });
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
     planDelete(source, controller.signal).then(
@@ -31,8 +34,14 @@ function usePlan(source: SourceRef): PlanState {
       }
     );
     return () => controller.abort();
-  }, [source]);
-  return state;
+  }, [source, attempt]);
+  return {
+    state,
+    refresh() {
+      setState({ status: "loading" });
+      setAttempt((value) => value + 1);
+    }
+  };
 }
 
 function Path({ path, context }: { path: string; context: PathContext }) {
@@ -51,6 +60,15 @@ function Summary({
   plan: SourceDeletePlan;
   context: PathContext;
 }) {
+  if (plan.target === "link" && plan.broken) {
+    return (
+      <p className="m-0">
+        Removes the broken symlink <Path context={context} path={plan.path} />.
+        It points to <Path context={context} path={plan.linkTarget ?? ""} />,
+        which no longer exists.
+      </p>
+    );
+  }
   if (plan.target === "link") {
     return (
       <p className="m-0">
@@ -69,9 +87,11 @@ function Summary({
   }
   return (
     <p className="m-0">
-      Moves the folder <Path context={context} path={plan.path} /> and its{" "}
-      {plan.files} {plan.files === 1 ? "file" : "files"} (
-      {bytesText(plan.totalBytes)}) to the Trash.
+      Moves the folder <Path context={context} path={plan.path} /> and{" "}
+      {plan.moreFiles
+        ? `more than ${plan.files} files (over ${bytesText(plan.totalBytes)})`
+        : `its ${plan.files} ${plan.files === 1 ? "file" : "files"} (${bytesText(plan.totalBytes)})`}{" "}
+      to the Trash.
     </p>
   );
 }
@@ -120,7 +140,7 @@ export function DeleteDialog({
   context: PathContext;
   onClose(): void;
 }) {
-  const state = usePlan(sourceRef);
+  const { state, refresh } = usePlan(sourceRef);
   const { onMutated } = useDocuments();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string>();
@@ -136,6 +156,10 @@ export function DeleteDialog({
     } catch (cause) {
       setDeleting(false);
       setError(messageOf(cause));
+      // The item changed since the dialog opened: show what is there now, so Delete acts on what was reviewed.
+      if (cause instanceof DocumentRequestError && cause.code === "conflict") {
+        refresh();
+      }
     }
   }
   return (

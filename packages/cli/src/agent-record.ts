@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { lstat, readFile, realpath } from "node:fs/promises";
-import { basename, extname } from "node:path";
+import { lstat, readFile, readlink, realpath } from "node:fs/promises";
+import { basename, dirname, extname, resolve } from "node:path";
 import type { AgentRecord, PluginRecord } from "@agent-mapper/core";
 import { parse } from "smol-toml";
 
@@ -163,12 +163,18 @@ function baseRecord(source: AgentSource) {
   } as const;
 }
 
-/** A broken link has no real path; reading the file reports that. */
-async function linkTarget(path: string): Promise<string | undefined> {
+/** Where a linked agent file leads. A broken link names its missing target, so it still reads as a link. */
+async function linkTarget(path: string): Promise<string> {
   try {
     return await realpath(path);
-  } catch {
-    return undefined;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw new Error(
+        `${path}: Could not resolve this agent link. Check its target and permissions.`,
+        { cause: error }
+      );
+    }
+    return resolve(dirname(path), await readlink(path));
   }
 }
 

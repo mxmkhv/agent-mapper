@@ -34,6 +34,7 @@ interface InventoryViewProps extends RowActionScope {
   hintFor(group: InventoryGroup): string | undefined;
   /** A group to scroll to, such as a plugin's after its contributions were picked in the inspector. */
   groupFocus?: GroupFocus;
+  onGroupFocused(): void;
   onKind(kind: RecordKind | "all"): void;
 }
 
@@ -101,11 +102,14 @@ export function InventoryView(props: InventoryViewProps) {
       toggleSource(key);
     }
   }
-  useGroupFocus(props.groupFocus, (key) => {
-    const group = groups.find((item) => item.key === key);
-    if (group && isInherited(group)) {
-      setInheritedChoice(true);
-    }
+  useGroupFocus(props.groupFocus, {
+    onReveal(key) {
+      const group = groups.find((item) => item.key === key);
+      if (group && isInherited(group)) {
+        setInheritedChoice(true);
+      }
+    },
+    onDone: props.onGroupFocused
   });
   // Collapsed by default, unless that would hide the selection or leave the pane empty.
   const inheritedOpen =

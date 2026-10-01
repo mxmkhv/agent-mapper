@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstat, readFile, readlink, realpath } from "node:fs/promises";
-import { basename, dirname, sep } from "node:path";
+import { lstat, readFile, readlink } from "node:fs/promises";
+import { basename, dirname, resolve } from "node:path";
 import type {
   InventoryEntry,
   SourceDeleteApply,
@@ -9,17 +9,29 @@ import type {
   SourceDeleteResult,
   SourceRef
 } from "@agent-mapper/core";
-import { readSkillFolder } from "./skill-folder";
+import {
+  fingerprintOf,
+  maxFolderItems,
+  pathExists,
+  readSkillFolder
+} from "./skill-folder";
+import { inside, realOrSelf } from "./skill-transfer-paths";
 import { documentError, errnoCode, ioError } from "./source-document-errors";
 import type { SourceDocumentRegistry } from "./source-document-registry";
 
 /** Moves paths to the user's Trash, where Finder's Put Back can restore them. */
 export type MoveToTrash = (path: string) => Promise<void>;
 
-/** macOS 15 and later ship `/usr/bin/trash`. */
+/** macOS 15 and later ship `/usr/bin/trash`. Its own explanation of a refusal is passed on. */
 function systemTrash(path: string): Promise<void> {
   return new Promise((finish, reject) => {
-    const child = spawn("/usr/bin/trash", [path], { stdio: "ignore" });
+    const child = spawn("/usr/bin/trash", [path], {
+      stdio: ["ignore", "ignore", "pipe"]
+    });
+    let stderr = "";
+    child.stderr.on("data", (chunk) => {
+      stderr += String(chunk);
+    });
     child.once("error", (error) =>
       reject(
         errnoCode(error) === "ENOENT"
@@ -30,36 +42,38 @@ function systemTrash(path: string): Promise<void> {
           : error
       )
     );
-    child.once("exit", (code) =>
+    child.once("close", (code, signal) =>
       code === 0
         ? finish()
         : reject(
             documentError(
               "io_error",
-              `The Trash refused ${path} (trash exited with status ${code}). Delete it in Finder instead.`
+              `The Trash refused ${path} (${stderr.trim() || (signal ? `trash stopped by ${signal}` : `trash exited with status ${code}`)}). Delete it in Finder instead.`
             )
           )
     );
   });
 }
 
-const inside = (path: string, root: string) =>
-  path === root || path.startsWith(`${root}${sep}`);
-
 const sha = (text: string) => createHash("sha256").update(text).digest("hex");
 
-async function realOrSelf(path: string): Promise<string> {
-  return realpath(path).catch(() => path);
-}
-
+/** A link goes alone. A broken one still names where it pointed, so the dialog can say the target is missing. */
 async function linkTarget(path: string) {
+  const text = await readlink(path).catch((error: unknown) => {
+    throw ioError(error, `Reading the link ${path}`);
+  });
+  const pointsTo = resolve(dirname(path), text);
+  const exists = await pathExists(pointsTo).catch((error: unknown) => {
+    throw ioError(error, `Checking ${pointsTo}`);
+  });
   return {
     path,
     target: "link" as const,
-    linkTarget: await realOrSelf(path),
+    linkTarget: exists ? await realOrSelf(path) : pointsTo,
+    broken: !exists,
     files: 1,
     totalBytes: 0,
-    fingerprint: sha(`link:${await readlink(path)}`)
+    fingerprint: sha(`link:${text}`)
   };
 }
 
@@ -88,12 +102,13 @@ async function targetOf(entry: InventoryEntry) {
       path,
       target: "folder" as const,
       files: files.length,
+      // The listing stops at the cap, but the whole folder goes to the Trash.
+      moreFiles: folder.items.length >= maxFolderItems,
       totalBytes: folder.totalBytes,
-      fingerprint: sha(
-        JSON.stringify(
-          folder.items.map(({ path, type, bytes }) => [path, type, bytes])
-        )
-      )
+      // Content, not just names and sizes: a same-size edit after the dialog opened must stop the delete.
+      fingerprint: await fingerprintOf(folder.items).catch((error: unknown) => {
+        throw ioError(error, `Reading the skill folder ${path}`);
+      })
     };
   }
   const content = await readFile(path).catch((error: unknown) => {

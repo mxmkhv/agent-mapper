@@ -2,6 +2,7 @@ import {
   existsSync,
   mkdirSync,
   renameSync,
+  rmSync,
   symlinkSync,
   writeFileSync
 } from "node:fs";
@@ -167,8 +168,8 @@ it("moves an agent file to the Trash", async () => {
   );
 });
 
-it("refuses plugin skills and anything that changed since the plan", async () => {
-  const { fixture, trashed, ref, post } = await setup();
+it("refuses plugin skills and files that are not skills or agents", async () => {
+  const { trashed, ref, post } = await setup();
   const plugin = await ref("review/SKILL.md", "global");
   const blocked = await post<SourceDeletePlan>("plan", { source: plugin });
   expect(blocked.body.blocked).toBe(
@@ -179,10 +180,52 @@ it("refuses plugin skills and anything that changed since the plan", async () =>
     fingerprint: blocked.body.fingerprint
   });
   expect(refused.status).toBe(403);
+  const instruction = await post("plan", {
+    source: await ref("work/app/CLAUDE.md", "project")
+  });
+  expect(instruction.status).toBe(400);
+  expect(trashed).toEqual([]);
+});
 
+it("refuses a skill that a linked folder leads into a plugin's files", async () => {
+  const { fixture, trashed, ref, remove } = await setup();
+  // The project's Codex skills folder is a link into the plugin cache, so the skill there carries no plugin ID.
+  mkdirSync(join(fixture.project, ".agents"));
+  symlinkSync(
+    join(fixture.home, ".claude/plugins/cache/market/reviewer/1.0.0/skills"),
+    join(fixture.project, ".agents/skills")
+  );
+  const { plan, apply } = await remove(
+    await ref(".agents/skills/review/SKILL.md", "project")
+  );
+  expect(plan.blocked).toBe(
+    "This lives in a plugin or managed folder, which stays read-only."
+  );
+  expect(apply.status).toBe(403);
+  expect(trashed).toEqual([]);
+});
+
+it("stops when the folder changed since the plan, even at the same size", async () => {
+  const { fixture, trashed, ref, post } = await setup();
   const source = await ref("deploy/SKILL.md", "project");
   const plan = await post<SourceDeletePlan>("plan", { source });
-  write(join(fixture.project, ".claude/skills/deploy/notes.md"), "New\n");
+  write(join(fixture.project, ".claude/skills/deploy/run.sh"), "echo SHIP\n");
+  const stale = await post("apply", {
+    source,
+    fingerprint: plan.body.fingerprint
+  });
+  expect(stale.status).toBe(409);
+  expect(trashed).toEqual([]);
+});
+
+it("stops when a link points somewhere else since the plan", async () => {
+  const { fixture, trashed, ref, post } = await setup();
+  const source = await ref("linked/SKILL.md", "project");
+  const plan = await post<SourceDeletePlan>("plan", { source });
+  const link = join(fixture.project, ".claude/skills/linked");
+  write(join(fixture.home, "elsewhere/SKILL.md"), "---\nname: linked\n---\n");
+  rmSync(link);
+  symlinkSync(join(fixture.home, "elsewhere"), link);
   const stale = await post("apply", {
     source,
     fingerprint: plan.body.fingerprint
@@ -201,4 +244,20 @@ it("warns about other paths that lead to the deleted folder", async () => {
   expect(plan.body.warnings).toEqual([
     `${join(fixture.home, ".agents/skills/writer/SKILL.md")} also leads here and will stop working.`
   ]);
+});
+
+it("removes a broken agent link and names the missing file", async () => {
+  const { fixture, ref, remove } = await setup();
+  const link = join(fixture.project, ".claude/agents/ghost.md");
+  symlinkSync(join(fixture.home, "gone/ghost.md"), link);
+  const { plan, apply } = await remove(
+    await ref(".claude/agents/ghost.md", "project")
+  );
+  expect(plan).toMatchObject({
+    target: "link",
+    broken: true,
+    linkTarget: join(fixture.home, "gone/ghost.md")
+  });
+  expect(apply.status).toBe(200);
+  expect(existsSync(link)).toBe(false);
 });

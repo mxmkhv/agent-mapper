@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { SourceDocument } from "@agent-mapper/core";
+import type { SkillTransferPlan, SourceDocument } from "@agent-mapper/core";
 import { parse } from "smol-toml";
 import { afterEach, expect, it } from "vitest";
 import {
@@ -75,6 +75,47 @@ it("never overwrites an agent and never moves one", async () => {
     "Agents can be copied to a project, not moved to global."
   );
   expect(existsSync(join(other, ".claude/agents/reviewer.md"))).toBe(false);
+});
+
+it("stops an agent copy when the agent changed since the preview", async () => {
+  const { fixture, other, source, post } = await agentSetup();
+  const body = { source, mode: "copy", projectPath: other, tools: ["codex"] };
+  const plan = await post<SkillTransferPlan>("plan", body);
+  write(
+    join(fixture.project, ".claude/agents/reviewer.md"),
+    reviewer.replace("Read the diff.", "Read the PR.")
+  );
+  const apply = await post("apply", {
+    ...body,
+    fingerprint: plan.body.fingerprint
+  });
+  expect(apply.status).toBe(409);
+  expect(existsSync(join(other, ".codex/agents/reviewer.toml"))).toBe(false);
+});
+
+it("writes nothing when the agent cannot be converted", async () => {
+  const { fixture, other, client, transfer } = await agentSetup();
+  write(join(fixture.project, ".claude/agents/broken.md"), "No frontmatter\n");
+  const snapshot = await client.scan(fixture.project);
+  const broken = snapshot.agents.find((agent) =>
+    agent.sourcePath.endsWith("broken.md")
+  );
+  if (!broken) {
+    throw new Error("Fixture agent was not scanned.");
+  }
+  const { plan, apply } = await transfer({
+    source: {
+      scope: "project",
+      workingDirectory: snapshot.workingDirectory,
+      entryId: broken.id
+    },
+    mode: "copy",
+    projectPath: other,
+    tools: ["codex"]
+  });
+  expect(plan.blocked).toContain("cannot be converted for Codex");
+  expect(apply.status).toBe(400);
+  expect(existsSync(join(other, ".codex/agents/broken.toml"))).toBe(false);
 });
 
 it("opens an agent as a document and blocks saving broken TOML", async () => {

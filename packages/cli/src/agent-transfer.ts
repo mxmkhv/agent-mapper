@@ -19,7 +19,7 @@ import {
   resolvedPath
 } from "./skill-transfer-paths";
 import type { TransferSetup } from "./skill-transfer-plan";
-import { documentError, ioError } from "./source-document-errors";
+import { documentError, errnoCode, ioError } from "./source-document-errors";
 
 const toolNames: Record<ToolId, string> = {
   claude: "Claude Code",
@@ -174,6 +174,30 @@ export async function planAgentCopy(
   };
 }
 
+/** Removes the files a failed copy wrote; the failure is reported first, then anything left behind. */
+async function undoCopies(
+  created: readonly { path: string }[],
+  error: unknown
+): Promise<Error> {
+  const removals = await Promise.allSettled(
+    created.map(({ path }) => rm(path, { force: true }))
+  );
+  const left = created
+    .filter((_, index) => removals[index]?.status === "rejected")
+    .map(({ path }) => path);
+  const failure =
+    errnoCode(error) === "EEXIST"
+      ? documentError(
+          "conflict",
+          "A file appeared at the destination since the preview. Nothing was overwritten; review the copy again."
+        )
+      : ioError(error, "Copying the agent");
+  if (left.length) {
+    failure.message += ` The partial copy at ${left.join(", ")} could not be removed; delete it by hand.`;
+  }
+  return failure;
+}
+
 /** Writes each planned file with an exclusive create, and removes what it wrote if a later file fails. */
 export async function writeAgentCopies({
   plan,
@@ -184,12 +208,15 @@ export async function writeAgentCopies({
     for (const { tool, path } of plan.destinations) {
       await mkdir(dirname(path), { recursive: true });
       // `wx` fails if the file appeared since the plan, so nothing is overwritten.
-      await writeFile(path, contents.get(path) ?? "", { flag: "wx" });
+      const content = contents.get(path);
+      if (content === undefined) {
+        throw new Error(`No converted text was planned for ${path}.`);
+      }
+      await writeFile(path, content, { flag: "wx" });
       created.push({ tool, path, entryId: agentId({ tool, path }) });
     }
   } catch (error) {
-    await Promise.all(created.map(({ path }) => rm(path, { force: true })));
-    throw ioError(error, "Copying the agent");
+    throw await undoCopies(created, error);
   }
   return { mode: "copy", created, warnings: [] };
 }

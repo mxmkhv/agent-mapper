@@ -155,12 +155,13 @@ function useViewFilter(isProject: boolean, landing?: Landing) {
     filterKind(next: RecordKind | "all", group?: string) {
       setKind(next);
       setView("inventory");
-      if (group) {
-        setGroupFocus((current) => ({
-          key: group,
-          request: (current?.request ?? 0) + 1
-        }));
-      }
+      setGroupFocus((current) =>
+        group ? { key: group, request: (current?.request ?? 0) + 1 } : undefined
+      );
+    },
+    /** A focus is done once scrolled to, so reopening the Inventory later does not scroll there again. */
+    groupFocused() {
+      setGroupFocus(undefined);
     }
   };
 }
@@ -207,6 +208,7 @@ export function useWorkspace(input: WorkspaceInput) {
     kind: filter.kind,
     groupFocus: filter.groupFocus,
     filterKind: filter.filterKind,
+    groupFocused: filter.groupFocused,
     records,
     lookup,
     ...forTool(records, { tool, showInactive: selection.showInactive }),

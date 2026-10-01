@@ -117,9 +117,11 @@ export function SourceDocumentPanel({
     return (
       <div role="alert">
         <p className="m-0 text-label text-problem">{state.message}</p>
-        <Button className="mt-2" onClick={retry}>
-          Try again
-        </Button>
+        {/* Copy and Delete still apply to an item whose file cannot be shown. */}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Button onClick={retry}>Try again</Button>
+          {actions}
+        </div>
       </div>
     );
   }
