@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import type {
+  AgentRecord,
   ImpactAssociation,
   InventoryEntry,
   InventorySnapshot,
@@ -48,6 +49,30 @@ function readOnlyRoots(
   ];
 }
 
+/** An agent file as a document entry, so it opens, validates and saves through the same path as a skill. */
+function agentEntry(agent: AgentRecord): ResolvedEntry {
+  return {
+    entry: {
+      id: agent.id,
+      tool: agent.tool,
+      kind: "agent",
+      name: agent.name,
+      path: agent.sourcePath,
+      realPath: agent.realPath,
+      scope: agent.scope,
+      readState: agent.readState,
+      isSymlink: Boolean(agent.realPath),
+      pluginId: agent.pluginId
+    },
+    resolution: {
+      availability:
+        agent.availability === "configured" ? "expected" : agent.availability,
+      loading: "agent-selected",
+      reason: agent.reason
+    }
+  };
+}
+
 /**
  * Remembers the latest scan of each global/project context this server produced.
  * Documents open only through entries of those scans, never by a client-supplied path.
@@ -63,7 +88,7 @@ export class SourceDocumentRegistry {
       scope,
       workingDirectory: snapshot.workingDirectory,
       scannedAt: snapshot.scannedAt,
-      items: snapshot.items,
+      items: [...snapshot.items, ...snapshot.agents.map(agentEntry)],
       readOnlyRoots: readOnlyRoots(snapshot, this.managedRoot)
     });
   }

@@ -6,6 +6,11 @@ interface ConfirmButtonProps {
   question: string;
   confirmLabel: string;
   disabled?: boolean;
+  /**
+   * In a table row: the question floats over the cells to its left as a raised strip, anchored where the
+   * button was, so nothing in the row moves. The parent must be `relative` and keep the button's width.
+   */
+  floating?: boolean;
   onConfirm(): void;
 }
 
@@ -32,7 +37,13 @@ export function ConfirmButton(props: ConfirmButtonProps) {
     }
   };
   return (
-    <fieldset className="m-0 inline-flex min-w-0 items-center gap-2 border-0 p-0">
+    <fieldset
+      className={
+        props.floating
+          ? "absolute top-1/2 right-2 z-10 m-0 flex -translate-y-1/2 items-center gap-2 rounded-card border border-hairline bg-surface py-0.5 pr-0.5 pl-3 whitespace-nowrap shadow-raised"
+          : "m-0 inline-flex min-w-0 items-center gap-2 border-0 p-0"
+      }
+    >
       {/* The legend names the group for screen readers; the visible question repeats it inline. */}
       <legend className="sr-only">{props.question}</legend>
       <span aria-hidden="true" className="text-label text-ink-muted">

@@ -1,12 +1,11 @@
 import { Fragment, useState, type ReactNode } from "react";
 import type { ToolId } from "@agent-mapper/core";
-import type { PathContext } from "../model/paths";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
 import { repeatedNames } from "../model/same-names";
 import { KindIcon, kindLabel } from "../ui/kind-icon";
 import {
   GroupHead,
-  InheritedToggle,
+  InheritedSection,
   SourceToggle
 } from "./inventory-group-head";
 import {
@@ -17,8 +16,9 @@ import {
   type InventoryGroup
 } from "./inventory-groups";
 import { InventoryRow } from "./inventory-row";
+import { useRowActions, type RowActionScope } from "./use-row-actions";
 
-interface InventoryViewProps {
+interface InventoryViewProps extends RowActionScope {
   records: InventoryRecord[];
   kind: RecordKind | "all";
   tool: ToolId;
@@ -27,12 +27,10 @@ interface InventoryViewProps {
   selectedId?: string;
   /** Changes on every selection that should be shown, including picking the selected item again. */
   revealRequest: number;
-  context: PathContext;
   /** Background versions per plugin name, while they are folded into the active version's row. */
   otherVersions?: ReadonlyMap<string, number>;
   hintFor(group: InventoryGroup): string | undefined;
   onKind(kind: RecordKind | "all"): void;
-  onSelect(id: string): void;
 }
 
 function Facet({
@@ -72,6 +70,7 @@ export function InventoryView(props: InventoryViewProps) {
       }
       return next;
     });
+  const rowActions = useRowActions(props);
   const filtered = props.records.filter(
     (record) => props.kind === "all" || record.kind === props.kind
   );
@@ -131,6 +130,7 @@ export function InventoryView(props: InventoryViewProps) {
                 {open
                   ? records.map((record) => (
                       <InventoryRow
+                        actions={rowActions.handlers}
                         context={props.context}
                         key={record.id}
                         onSelect={props.onSelect}
@@ -143,6 +143,7 @@ export function InventoryView(props: InventoryViewProps) {
                         selected={record.id === props.selectedId}
                         sharesName={repeated.has(record.name)}
                         tone={source?.tone}
+                        workingDirectory={props.transfer.workingDirectory}
                       />
                     ))
                   : null}
@@ -183,15 +184,18 @@ export function InventoryView(props: InventoryViewProps) {
           kind.
         </p>
       ) : null}
+      {rowActions.error}
       {inherited.length ? (
-        <InheritedToggle
+        <InheritedSection
           groups={inherited}
           onToggle={() => setInheritedChoice(!inheritedOpen)}
           open={inheritedOpen}
-        />
+        >
+          {inherited.map(renderGroup)}
+        </InheritedSection>
       ) : null}
-      {inheritedOpen ? inherited.map(renderGroup) : null}
       {listed.map(renderGroup)}
+      {rowActions.dialog}
     </div>
   );
 }

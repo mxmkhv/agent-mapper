@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type { PullRequestSummary, WorktreeRecord } from "@agent-mapper/core";
 import { GitBranch } from "lucide-react";
-import { removeWorktree } from "../../api";
+import { pruneWorktree, removeWorktree } from "../../api";
 import { ConfirmButton } from "../../documents/confirm-button";
 import { tildePath, type PathContext } from "../../model/paths";
 import { StateLabel, StateMarker } from "../../ui/marks";
@@ -15,56 +15,68 @@ interface CheckoutRowProps {
   /** The difference count for available checkouts. */
   status: ReactNode;
   pullRequest?: PullRequestSummary;
+  /** A checkout of the repository that still exists, which Git runs in to prune a stale entry. */
+  repository?: string;
   onOpen(): void;
   onRemoved(): void;
 }
 
 type Removal = { state: "idle"; error?: string } | { state: "removing" };
 
-function RemoveAction({
+/** Remove deletes an available checkout; Prune only clears Git's record of one whose folder is already gone. */
+const actions = {
+  remove: {
+    label: "Remove",
+    busy: "Removing…",
+    title:
+      "Runs git worktree remove. Git refuses while the checkout has uncommitted changes or untracked files; ignored files such as .env and node_modules are deleted with the folder. The branch stays.",
+    question: (name: string) =>
+      `Remove ${name}? Ignored files like .env go too.`
+  },
+  prune: {
+    label: "Prune",
+    busy: "Pruning…",
+    title:
+      "The folder is already gone. This clears Git's leftover record of the worktree; the branch and its commits stay.",
+    question: (name: string) => `Clear Git's record of ${name}?`
+  }
+};
+
+function RowAction({
+  kind,
   name,
   removal,
-  onRemove
+  onConfirm
 }: {
+  kind: keyof typeof actions;
   name: string;
   removal: Removal;
-  onRemove(): void;
+  onConfirm(): void;
 }) {
+  const action = actions[kind];
   if (removal.state === "removing") {
-    return <output className="text-label text-ink-muted">Removing…</output>;
+    return <output className="text-label text-ink-muted">{action.busy}</output>;
   }
   return (
-    <span title="Runs git worktree remove. Git refuses while the checkout has uncommitted changes or untracked files; ignored files such as .env and node_modules are deleted with the folder. The branch stays.">
+    <span title={action.title}>
       <ConfirmButton
-        confirmLabel="Remove"
-        label="Remove"
-        onConfirm={onRemove}
-        question={`Remove ${name}? Ignored files like .env go too.`}
+        confirmLabel={action.label}
+        floating
+        label={action.label}
+        onConfirm={onConfirm}
+        question={action.question(name)}
       />
     </span>
   );
 }
 
-/**
- * One linked worktree: the row opens its comparison, and a separate Remove action (shown on hover or focus)
- * removes an available checkout after an inline confirmation.
- */
-export function CheckoutRow({
-  tree,
-  context,
-  status,
-  pullRequest,
-  onOpen,
-  onRemoved
-}: CheckoutRowProps) {
+/** Runs the row's Remove or Prune, keeping Git's refusal next to the row it belongs to. */
+function useRemoval(action: () => Promise<void>, onRemoved: () => void) {
   const [removal, setRemoval] = useState<Removal>({ state: "idle" });
-  const available = tree.state === "available";
-  const folder = folderName(tree.path);
-  const name = tree.branch ?? folder;
-  async function remove() {
+  async function run() {
     setRemoval({ state: "removing" });
     try {
-      await removeWorktree(tree.path);
+      await action();
       onRemoved();
     } catch (error) {
       setRemoval({
@@ -73,7 +85,64 @@ export function CheckoutRow({
       });
     }
   }
-  const error = removal.state === "idle" ? removal.error : undefined;
+  return {
+    removal,
+    error: removal.state === "idle" ? removal.error : undefined,
+    run
+  };
+}
+
+/** The checkout's folder, or what became of it when Git still lists a checkout whose folder is gone. */
+function Whereabouts({
+  tree,
+  folder,
+  prunable
+}: {
+  tree: WorktreeRecord;
+  folder: string;
+  prunable: boolean;
+}) {
+  if (tree.state === "available") {
+    return (
+      <span className="truncate font-mono text-mono text-ink-faint">
+        {tree.branch ? folder : "detached"}
+      </span>
+    );
+  }
+  return (
+    <span className="truncate text-caption text-ink-muted">
+      {prunable
+        ? "Folder is gone · only Git's record is left"
+        : "Folder unavailable · run git worktree prune"}
+    </span>
+  );
+}
+
+/**
+ * One linked worktree: the row opens its comparison, and a separate Remove action (shown on hover or focus)
+ * removes an available checkout after an inline confirmation. A stale entry offers Prune instead, always
+ * visible, since clearing it is the only thing left to do with the row.
+ */
+export function CheckoutRow({
+  tree,
+  context,
+  status,
+  pullRequest,
+  repository,
+  onOpen,
+  onRemoved
+}: CheckoutRowProps) {
+  const available = tree.state === "available";
+  const folder = folderName(tree.path);
+  const name = tree.branch ?? folder;
+  const prunable = tree.state === "prunable" && repository !== undefined;
+  const { removal, error, run } = useRemoval(
+    () =>
+      prunable
+        ? pruneWorktree(repository, tree.path)
+        : removeWorktree(tree.path),
+    onRemoved
+  );
   return (
     <div className="group [&+&]:border-t [&+&]:border-wash">
       <div className={`flex items-center ${available ? "hover:bg-hover" : ""}`}>
@@ -94,16 +163,7 @@ export function CheckoutRow({
           >
             {name}
           </span>
-          {available ? (
-            <span className="truncate font-mono text-mono text-ink-faint">
-              {tree.branch ? folder : "detached"}
-            </span>
-          ) : (
-            // Git still lists the checkout but its folder is gone; say where to look.
-            <span className="truncate text-caption text-ink-muted">
-              Folder unavailable · run git worktree prune
-            </span>
-          )}
+          <Whereabouts folder={folder} prunable={prunable} tree={tree} />
           <span className="truncate text-right">
             {available ? (
               status
@@ -118,12 +178,13 @@ export function CheckoutRow({
         </div>
         {/* Beside the row button, not inside it; stays visible while its confirmation holds focus. */}
         <div
-          className={`flex h-9 min-w-[84px] shrink-0 items-center justify-end pr-3 pl-2 ${removal.state === "removing" || error ? "" : "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"}`}
+          className={`relative flex h-9 w-[96px] shrink-0 items-center justify-end pr-3 pl-2 ${removal.state === "removing" || error || prunable ? "" : "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"}`}
         >
-          {available ? (
-            <RemoveAction
+          {available || prunable ? (
+            <RowAction
+              kind={prunable ? "prune" : "remove"}
               name={name}
-              onRemove={() => void remove()}
+              onConfirm={() => void run()}
               removal={removal}
             />
           ) : null}

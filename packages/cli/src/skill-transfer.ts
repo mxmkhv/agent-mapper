@@ -6,6 +6,7 @@ import type {
   SkillTransferRequest,
   SkillTransferResult
 } from "@agent-mapper/core";
+import { planAgentCopy, writeAgentCopies } from "./agent-transfer";
 import { readSkillFolder, type SkillFolder } from "./skill-folder";
 import { placeSkillFolder, removeMadeFolders } from "./skill-folder-place";
 import {
@@ -119,7 +120,10 @@ async function transfer(input: {
   };
 }
 
-/** Copies skills into projects and moves project skills to the global folders of each tool. */
+/**
+ * Copies skills and agents into projects, and moves project skills to the global folders of each tool.
+ * A skill is a folder copied as it is; an agent is one file, rewritten when it changes tools.
+ */
 export class SkillTransferService {
   /** Skill folders being written or removed right now. */
   private readonly busy = new Set<string>();
@@ -127,11 +131,29 @@ export class SkillTransferService {
   constructor(private readonly setup: TransferSetup) {}
 
   async plan(request: SkillTransferRequest): Promise<SkillTransferPlan> {
-    return (await planTransfer(this.setup, request)).plan;
+    return (await this.planned(request)).plan;
+  }
+
+  /** The plan with the step that carries it out, chosen by what the source is. */
+  private async planned(request: SkillTransferRequest): Promise<{
+    plan: SkillTransferPlan;
+    run(): Promise<SkillTransferResult>;
+  }> {
+    const found = this.setup.registry.lookup(request.source);
+    if (found?.item.entry.kind === "agent") {
+      const copy = await planAgentCopy(this.setup, {
+        request,
+        entry: found.item.entry,
+        readOnlyRoots: found.readOnlyRoots
+      });
+      return { plan: copy.plan, run: () => writeAgentCopies(copy) };
+    }
+    const skill = await planTransfer(this.setup, request);
+    return { plan: skill.plan, run: () => transfer(skill) };
   }
 
   async apply(request: SkillTransferApply): Promise<SkillTransferResult> {
-    const planned = await planTransfer(this.setup, request);
+    const planned = await this.planned(request);
     const { plan } = planned;
     if (plan.blocked) {
       throw documentError("invalid_request", plan.blocked);
@@ -139,7 +161,7 @@ export class SkillTransferService {
     if (plan.fingerprint !== request.fingerprint) {
       throw documentError(
         "conflict",
-        "The skill changed since the preview. Nothing was written; review the new preview and try again."
+        "The source changed since the preview. Nothing was written; review the new preview and try again."
       );
     }
     const conflict = plan.destinations.find((item) => item.conflict)?.conflict;
@@ -153,14 +175,14 @@ export class SkillTransferService {
     if (keys.some((key) => this.busy.has(key))) {
       throw documentError(
         "busy",
-        "Another copy or move of this skill is in progress. Wait for it to finish, then try again."
+        "Another copy or move of this source is in progress. Wait for it to finish, then try again."
       );
     }
     for (const key of keys) {
       this.busy.add(key);
     }
     try {
-      return await transfer(planned);
+      return await planned.run();
     } finally {
       for (const key of keys) {
         this.busy.delete(key);

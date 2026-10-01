@@ -1,4 +1,5 @@
 import type { ToolId } from "@agent-mapper/core";
+import type { ReactNode } from "react";
 import { ChevronRight, Layers, Plug } from "lucide-react";
 import { layerLabel } from "../model/layers";
 import { HintText } from "../ui/hint-text";
@@ -63,29 +64,36 @@ export function GroupHead({
   );
 }
 
-export function InheritedToggle({
+/** Everything a project inherits, in one wash panel: its head folds the groups inside it away. */
+export function InheritedSection({
   groups,
   open,
-  onToggle
+  onToggle,
+  children
 }: {
   groups: readonly InventoryGroup[];
   open: boolean;
   onToggle(): void;
+  children: ReactNode;
 }) {
   const count = groups.reduce((sum, group) => sum + group.records.length, 0);
   return (
-    <button
-      aria-expanded={open}
-      className="mb-3.5 flex h-9 w-full items-center gap-2 rounded-card border border-hairline bg-wash px-2.5 text-left text-label font-semibold text-ink-muted hover:border-hairline-strong"
-      onClick={onToggle}
-    >
-      <FoldChevron open={open} size="size-3.5" />
-      {inheritedLabel(groups)}
-      <span className="font-medium text-ink-faint tabular-nums">{count}</span>
-      <span className="truncate font-normal text-ink-faint">
-        Comes from outside this project
-      </span>
-    </button>
+    <section className="mb-3.5 rounded-card border border-hairline bg-wash">
+      <button
+        aria-expanded={open}
+        className="flex h-9 w-full items-center gap-2 rounded-card px-2.5 text-left text-label font-semibold text-ink-muted hover:text-ink"
+        onClick={onToggle}
+        type="button"
+      >
+        <FoldChevron open={open} size="size-3.5" />
+        {inheritedLabel(groups)}
+        <span className="font-medium text-ink-faint tabular-nums">{count}</span>
+        <span className="truncate font-normal text-ink-faint">
+          Comes from outside this project
+        </span>
+      </button>
+      {open ? <div className="px-2.5">{children}</div> : null}
+    </section>
   );
 }
 

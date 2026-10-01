@@ -25,6 +25,7 @@ colors:
   source-2: "#dcae4c"
   source-3: "#5bbccf"
   source-4: "#e08cc0"
+  link: "#5fb487"
   canvas-dark: "#121211"
   surface-dark: "#191918"
   sidebar-dark: "#151514"
@@ -45,6 +46,7 @@ colors:
   source-2-dark: "#e2bb66"
   source-3-dark: "#74c9da"
   source-4-dark: "#e8a0cc"
+  link-dark: "#7cc7a0"
 typography:
   headline:
     fontFamily: "Inter, ui-sans-serif, -apple-system, system-ui, sans-serif"
@@ -252,15 +254,16 @@ Warm neutral grays carry the whole interface. Saturated color is reserved for to
 - **Wash** (`wash`): chip fill, provenance breadcrumb, matrix section rows, and toggle track.
 - **Hover / Selected** (`hover`, `selected`): row and nav states.
 - **Layer tones** (`layer-global`, `layer-plugins`, `layer-project`): startup budget bar segments by layer. These three grays are the only place layers get a color.
-- **Source tones** (`source-1` to `source-4`: soft violet, gold, cyan, pink): the state dot of an active skill in the Inventory, by the repo it was installed from (read from the `skills` installer's lock files). Only repos with two or more skills in a group get a tone, largest repo first; a fifth repo in one group reuses the first tone. Those skills sit together under a 32px wash row inside the card that names the repo, carries the same dot and a count, and folds them away (open by default); one-off and hand-written skills stay gray. Never red, green, terracotta or Codex blue, so a tone cannot read as a problem, a success or a tool. Inactive, unknown and problem dots keep their state styling.
+- **Source tones** (`source-1` to `source-4`: soft violet, gold, cyan, pink): the state dot of an active skill in the Inventory, by the repo it was installed from (read from the `skills` installer's lock files). Only repos with two or more skills in a group get a tone, largest repo first; a fifth repo in one group reuses the first tone. Those skills sit together under a 32px wash row inside the card that names the repo, carries the same dot and a count, and folds them away (open by default); one-off and hand-written skills stay gray. Never red, green, terracotta or Codex blue, so a tone cannot read as a problem, a link or a tool. Inactive, unknown and problem dots keep their state styling.
+- **Link green** (`link`: soft sage): symlinks. It tints the symlink chip (45% border, 10% fill, the link icon; the text stays Muted Ink for contrast) and colors the state dot of an active symlinked item that has no source tone. A source tone wins on the dot, so a cluster's dots still match its head.
 
 Every neutral and signal token has a `-dark` twin in the frontmatter. Dark mode swaps the whole set; it is not an automatic inversion.
 
 ### Named Rules
 
-**The Meaning-Only Color Rule.** Saturated color appears for exactly three reasons: which tool, a real problem, or keyboard focus. The pastel source tones are the one soft exception: which repo a skill was installed from. Anything else is graphite or gray.
+**The Meaning-Only Color Rule.** Saturated color appears for exactly three reasons: which tool, a real problem, or keyboard focus. The pastels are the soft exceptions: the source tones say which repo a skill was installed from, and link green says an item is a symlink. Anything else is graphite or gray.
 
-**The No-Green Rule.** Green has no role. "Active" is the absence of a badge, not a green pill.
+**The No-Success-Green Rule.** Green never means active, healthy or done. "Active" is the absence of a badge, not a green pill. The only green is the soft link green, which marks symlinks.
 
 **The Glyph-Plus-Color Rule.** A tool is always marked with its letter glyph (`C` for Claude Code, `X` for Codex) as well as its color, so color is never the only signal. The favicon is the one exception: a 16px tab icon has no room for the letter.
 
@@ -383,7 +386,7 @@ Above the layers: "Startup ~7.4k · On demand ~102k", then a 6px segmented bar w
 
 ### Inventory Rows
 
-A 36px row: kind icon, state marker, name (body-strong), a symlink badge slot, a detail slot (path, matcher, or version, in faint mono), and a right-aligned state label. The hover fill is Hover and the selected fill is Selected. Group heads sit above each card: layer icon, label, count, and a mono location hint. Plugin groups show the plugin name and version. In a project, its own groups swap the layer icon for the tool glyph and use an ink label. Skills that share a source repo sit under a 32px wash row (chevron, source-tone dot, repo in mono, count) that folds them away.
+A 36px row: kind icon, state marker, name (body-strong), a symlink badge slot, a detail slot (path, matcher, or version, in faint mono), and a right-aligned state label. The hover fill is Hover and the selected fill is Selected. Group heads sit above each card: layer icon, label, count, and a mono location hint. Plugin groups show the plugin name and version. In a project, its own groups swap the layer icon for the tool glyph and use an ink label. Skills that share a source repo sit under a 32px wash row (chevron, source-tone dot, repo in mono, count) that folds them away. The name is the row's button, stretched over the row; two things sit above it as buttons of their own. The symlink chip opens a popover (native `popover`, anchored under the chip) with the folder the link resolves into and **Open in Finder**. Rows for files the app can edit swap the state label for two 28px buttons while hovered, focused or selected: primary **Edit** and, on skills and agents, secondary **Copy**. In a project, everything inherited (Global and plugins) sits inside one wash panel whose head row folds it away, so the groups read as its contents; it is closed by default.
 
 ### Facets
 
@@ -405,11 +408,12 @@ Rows are sources outside projects, grouped by kind in section rows (Wash fill, 1
 
 A white sheet on the right, 18–20px padding:
 
-- a kind line (icon, kind name, tool glyph, symlink badge);
+- a kind line (icon, kind name, tool glyph, symlink chip with its popover);
 - the Headline name;
 - a state line (marker plus bold state text) and the reason in muted body text;
 - a provenance breadcrumb on Wash (`Global › ~/.claude/CLAUDE.md`, or `Plugins › plugin version › skills/x/SKILL.md › locator`);
 - symlink sections, contributions grid (plugins), a Details key-value list, and "Reaches N of M projects";
+- for files the app can edit, a document block: an action row (primary **Edit**, **Copy** on skills and agents, and a History icon button at the far end), then the Preview/Source toggle on its own row above the text (a Codex agent is TOML, which has no preview, so it shows source only);
 - the actions (Open in editor, Reveal in Finder).
 
 When nothing is selected, it shows a centered hint and the active/inactive counts. Coverage notes open here too.

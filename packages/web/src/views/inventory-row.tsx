@@ -1,4 +1,5 @@
 import { isConventionalPath } from "../model/conventional-path";
+import { canCopy } from "../model/copyable";
 import { isLink } from "../model/links";
 import {
   shortPath,
@@ -8,9 +9,16 @@ import {
 } from "../model/paths";
 import type { InventoryRecord } from "../model/record-types";
 import { stateLabel, stateText } from "../model/states";
+import { Button } from "../ui/button";
 import { KindIcon } from "../ui/kind-icon";
-import { StateLabel, StateMarker, SymlinkBadge } from "../ui/marks";
+import { StateLabel, StateMarker } from "../ui/marks";
 import { PathLine } from "../ui/path-line";
+import { SymlinkPopover } from "../ui/symlink-popover";
+
+export interface RowActionHandlers {
+  onEdit(record: InventoryRecord): void;
+  onCopy(record: InventoryRecord): void;
+}
 
 interface RowProps {
   record: InventoryRecord;
@@ -22,6 +30,9 @@ interface RowProps {
   sharesName?: boolean;
   /** Rank of the shared repo this skill was installed from; picks the dot color. */
   tone?: number;
+  /** The scanned folder, for records that carry no source ref of their own. */
+  workingDirectory: string;
+  actions: RowActionHandlers;
   onSelect(id: string): void;
 }
 
@@ -99,40 +110,84 @@ function RowLabel({
   );
 }
 
+/** Edit and Copy buttons for a file the app can open, shown in place of the state label while the row is hovered, focused or selected. */
+function RowActions({ record, actions }: Pick<RowProps, "record" | "actions">) {
+  return (
+    <span className="hidden justify-end gap-1.5 group-focus-within:flex group-hover:flex group-aria-current:flex">
+      <Button
+        className="relative"
+        onClick={() => actions.onEdit(record)}
+        variant="primary"
+      >
+        Edit
+      </Button>
+      {canCopy(record) ? (
+        <Button className="relative" onClick={() => actions.onCopy(record)}>
+          Copy
+        </Button>
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * The name is the row's button, stretched over the whole row; the symlink chip and the row actions sit above
+ * it as buttons of their own, which a button wrapping the row could not contain.
+ */
 export function InventoryRow({
   record,
   selected,
   context,
+  workingDirectory,
   otherVersions,
   sharesName,
   tone,
+  actions,
   onSelect
 }: RowProps) {
   const inactive = record.tier === "inactive";
+  const linked = isLink(record);
+  const hasActions = Boolean(record.sourceRef);
   return (
-    <button
+    <div
       aria-current={selected ? "true" : undefined}
-      className={`grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_minmax(0,1fr)_112px] items-center gap-2.5 px-3 text-left [&+&]:border-t [&+&]:border-wash ${selected ? "bg-selected" : "hover:bg-hover"}`}
-      onClick={() => onSelect(record.id)}
+      className={`group relative grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_minmax(0,1fr)_112px] items-center gap-2.5 px-3 text-left [&+&]:border-t [&+&]:border-wash ${selected ? "bg-selected" : "hover:bg-hover"}`}
       title={stateText(record)}
     >
       <KindIcon kind={record.kind} />
-      <StateMarker tier={record.tier} tone={tone} />
+      <StateMarker linked={linked} tier={record.tier} tone={tone} />
       <span className="flex min-w-0 items-center gap-2">
-        <span
-          className={`truncate font-semibold ${inactive ? "text-ink-muted" : ""}`}
+        <button
+          className={`truncate text-left font-semibold outline-none after:absolute after:inset-0 after:-outline-offset-2 after:outline-focus focus-visible:after:outline-2 ${inactive ? "text-ink-muted" : ""}`}
+          onClick={() => onSelect(record.id)}
+          type="button"
         >
           {record.name}
-        </span>
-        {isLink(record) ? (
-          <SymlinkBadge target={tildePath(record.realPath, context)} />
+        </button>
+        {linked ? (
+          <SymlinkPopover
+            id={record.id}
+            target={tildePath(record.realPath, context)}
+            workingDirectory={
+              record.sourceRef?.workingDirectory ?? workingDirectory
+            }
+          />
         ) : null}
       </span>
       <Detail context={context} record={record} sharesName={sharesName} />
       {/* A fixed last column keeps every row's detail column aligned, labelled or not. */}
       <span className="truncate text-right">
-        <RowLabel otherVersions={otherVersions} record={record} />
+        <span
+          className={
+            hasActions
+              ? "group-focus-within:hidden group-hover:hidden group-aria-current:hidden"
+              : ""
+          }
+        >
+          <RowLabel otherVersions={otherVersions} record={record} />
+        </span>
+        {hasActions ? <RowActions actions={actions} record={record} /> : null}
       </span>
-    </button>
+    </div>
   );
 }

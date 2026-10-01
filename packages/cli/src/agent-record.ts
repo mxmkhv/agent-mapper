@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lstat, readFile } from "node:fs/promises";
+import { lstat, readFile, realpath } from "node:fs/promises";
 import { basename, extname } from "node:path";
 import type { AgentRecord, PluginRecord } from "@agent-mapper/core";
 import { parse } from "smol-toml";
@@ -138,13 +138,22 @@ function availability(
   };
 }
 
+/** The inventory ID of the agent declared at `path`; a copied agent gets this ID on the next scan. */
+export function agentId(source: {
+  tool: AgentRecord["tool"];
+  path: string;
+  pluginId?: string;
+}): string {
+  return createHash("sha256")
+    .update(`${source.tool}:${source.path}:${source.pluginId ?? ""}`)
+    .digest("hex")
+    .slice(0, idLength);
+}
+
 function baseRecord(source: AgentSource) {
   const format = source.tool === "claude" ? "markdown" : "toml";
   return {
-    id: createHash("sha256")
-      .update(`${source.tool}:${source.path}:${source.plugin?.id ?? ""}`)
-      .digest("hex")
-      .slice(0, idLength),
+    id: agentId({ ...source, pluginId: source.plugin?.id }),
     tool: source.tool,
     scope: source.scope,
     format,
@@ -152,6 +161,15 @@ function baseRecord(source: AgentSource) {
     locator: format === "markdown" ? "frontmatter" : "top-level keys",
     pluginId: source.plugin?.id
   } as const;
+}
+
+/** A broken link has no real path; reading the file reports that. */
+async function linkTarget(path: string): Promise<string | undefined> {
+  try {
+    return await realpath(path);
+  } catch {
+    return undefined;
+  }
 }
 
 export async function inspectAgent(
@@ -174,7 +192,10 @@ export async function inspectAgent(
   }
   const fallback =
     source.pluginName ?? basename(source.path, extname(source.path));
-  const base = baseRecord(source);
+  const base = {
+    ...baseRecord(source),
+    realPath: info.isSymbolicLink() ? await linkTarget(source.path) : undefined
+  };
   try {
     const content = await readFile(source.path, "utf8");
     const metadata =

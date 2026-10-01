@@ -36,6 +36,11 @@ it("only opens regular text files and reveals executable or linked sources", asy
   expect(await openArguments("open", linked)).toEqual(["-R", linked]);
   expect(await openArguments("open", app)).toEqual(["-R", app]);
   expect(await openArguments("reveal", text)).toEqual(["-R", text]);
+  expect(await openArguments("reveal-target", linked)).toEqual(["-R", command]);
+  rmSync(command);
+  await expect(openArguments("reveal-target", linked)).rejects.toThrow(
+    "points to a file that no longer exists"
+  );
 });
 
 it("uses the last inventory's source index without rescanning on a source action", async () => {

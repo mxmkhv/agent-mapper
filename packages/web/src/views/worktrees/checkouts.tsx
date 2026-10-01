@@ -118,10 +118,8 @@ export function Checkouts({
     },
     readDifferences
   );
-  const pullRequests = usePullRequests(
-    worktrees.find((tree) => tree.isMain)?.path,
-    refreshKey
-  );
+  const main = worktrees.find((tree) => tree.isMain)?.path;
+  const pullRequests = usePullRequests(main, refreshKey);
   const byBranch =
     pullRequests.status === "done" && pullRequests.lookup.status === "ready"
       ? pullRequests.lookup.byBranch
@@ -146,6 +144,7 @@ export function Checkouts({
             key={tree.path}
             onOpen={() => onSelectPath(tree.path, { view: "worktrees" })}
             onRemoved={onRemoved}
+            repository={main}
             pullRequest={
               tree.branch ? pullRequestFor(byBranch, tree.branch) : undefined
             }

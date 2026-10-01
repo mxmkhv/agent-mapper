@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { basename, dirname, isAbsolute, join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import type {
   InventoryEntry,
   SkillTransferDestination,
@@ -14,6 +14,7 @@ import type { SourceDocumentRegistry } from "./source-document-registry";
 import {
   distinctFolders,
   inside,
+  knownProject,
   realOrSelf,
   resolvedPath
 } from "./skill-transfer-paths";
@@ -89,13 +90,7 @@ function destinationFolders(
     };
     return tools.map((tool) => ({ tool, path: join(global[tool], name) }));
   }
-  const project = request.projectPath ?? "";
-  if (!isAbsolute(project) || ![...setup.knownProjects()].includes(project)) {
-    throw documentError(
-      "invalid_request",
-      "Choose a project from the sidebar to copy into."
-    );
-  }
+  const project = knownProject(setup.knownProjects(), request.projectPath);
   const local: Record<ToolId, string> = {
     claude: join(project, ".claude", "skills"),
     codex: join(project, ".agents", "skills")

@@ -1,7 +1,7 @@
 import { realpath } from "node:fs/promises";
-import { basename, dirname, join, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, sep } from "node:path";
 import type { ToolId } from "@agent-mapper/core";
-import { errnoCode, ioError } from "./source-document-errors";
+import { documentError, errnoCode, ioError } from "./source-document-errors";
 
 export const inside = (path: string, root: string) =>
   path === root || path.startsWith(`${root}${sep}`);
@@ -30,6 +30,20 @@ export async function resolvedPath(path: string): Promise<string> {
       ? path
       : join(await resolvedPath(parent), basename(path));
   }
+}
+
+/** The project a copy goes into: only folders the sidebar lists, never a client-supplied path. */
+export function knownProject(
+  known: Iterable<string>,
+  projectPath = ""
+): string {
+  if (!isAbsolute(projectPath) || ![...known].includes(projectPath)) {
+    throw documentError(
+      "invalid_request",
+      "Choose a project from the sidebar to copy into."
+    );
+  }
+  return projectPath;
 }
 
 const toolNames: Record<ToolId, string> = {

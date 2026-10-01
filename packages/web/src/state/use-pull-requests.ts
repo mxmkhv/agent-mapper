@@ -45,16 +45,20 @@ function settledLookup(path: string, refresh: number) {
   return cached?.refresh === refresh ? cached.settled : undefined;
 }
 
-/** Pull requests for a repository, shared across mounts and fetched again on each rescan. */
+/**
+ * Pull requests for a repository, shared across mounts and fetched again on each rescan. While a rescan's
+ * answer is on its way the previous one for the same repository stays, so badges update in place.
+ */
 export function usePullRequests(
   path: string | undefined,
   refresh: number
 ): PullRequestState {
   const key = `${refresh}\n${path ?? ""}`;
-  const [state, setState] = useState<{ key: string; value: PullRequestState }>({
-    key: "",
-    value: { status: "loading" }
-  });
+  const [state, setState] = useState<{
+    key: string;
+    path?: string;
+    value: PullRequestState;
+  }>({ key: "", value: { status: "loading" } });
   useEffect(() => {
     if (!path) {
       return undefined;
@@ -62,11 +66,12 @@ export function usePullRequests(
     let active = true;
     pullRequestLookup(path, refresh).request.then(
       (lookup) =>
-        active && setState({ key, value: { status: "done", lookup } }),
+        active && setState({ key, path, value: { status: "done", lookup } }),
       (error: unknown) =>
         active &&
         setState({
           key,
+          path,
           value: {
             status: "error",
             message: error instanceof Error ? error.message : String(error)
@@ -77,7 +82,7 @@ export function usePullRequests(
       active = false;
     };
   }, [key, path, refresh]);
-  if (state.key === key) {
+  if (state.key === key || (path && state.path === path)) {
     return state.value;
   }
   // A cached answer renders at once on remount instead of flashing a loading state.

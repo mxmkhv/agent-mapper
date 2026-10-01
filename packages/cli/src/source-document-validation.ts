@@ -1,4 +1,5 @@
 import type { InventoryEntry, SourceDiagnostic } from "@agent-mapper/core";
+import { validateAgentToml } from "./agent-toml-validation";
 import {
   isAlias,
   isMap,
@@ -13,7 +14,35 @@ const closingLine = /^---[ \t]*$/m;
 /** Frontmatter starts after the opening `---` on line 1. */
 const headerLineOffset = 1;
 
-type DocumentKind = InventoryEntry["kind"];
+/** A Codex agent is TOML; every other document is Markdown with optional YAML frontmatter. */
+type DocumentKind = InventoryEntry["kind"] | "agent-toml";
+
+function documentKind(
+  entry: Pick<InventoryEntry, "kind" | "path">
+): DocumentKind {
+  return entry.kind === "agent" && entry.path.endsWith(".toml")
+    ? "agent-toml"
+    : entry.kind;
+}
+
+/** Skills and Claude Code agents declare themselves in frontmatter; its syntax and field types block a save. */
+const declared = {
+  skill: {
+    label: "skill",
+    use: "Claude Code and Codex use it to describe the skill."
+  },
+  agent: {
+    label: "agent",
+    use: "Claude Code uses it to offer the agent."
+  }
+} as const;
+
+type Declared = (typeof declared)[keyof typeof declared];
+
+const declaredBy = (kind: DocumentKind): Declared | undefined =>
+  kind === "skill" || kind === "agent" ? declared[kind] : undefined;
+
+const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** YAML messages quote source snippets, so diagnostics use fixed wording keyed by YAML error code. */
 const yamlMessages = new Map([
@@ -54,27 +83,30 @@ function frontmatterBlock(
  * Reads `name` and `description` from the parsed nodes instead of converting to JS, so an alias
  * (`*anchor`) is reported instead of throwing, and nothing is expanded.
  */
-function skillFieldDiagnostics(document: Document): SourceDiagnostic[] {
+function fieldDiagnostics(
+  document: Document,
+  { label, use }: Declared
+): SourceDiagnostic[] {
   const diagnostics: SourceDiagnostic[] = [];
   for (const field of ["name", "description"]) {
     const node: unknown = document.get(field, true);
     if (!document.has(field)) {
       diagnostics.push({
         severity: "warning",
-        code: `skill-${field}-missing`,
-        message: `Skill frontmatter has no \`${field}\`. Claude Code and Codex use it to describe the skill.`
+        code: `${label}-${field}-missing`,
+        message: `${sentence(label)} frontmatter has no \`${field}\`. ${use}`
       });
     } else if (isAlias(node)) {
       diagnostics.push({
         severity: "warning",
-        code: `skill-${field}-alias`,
-        message: `Skill \`${field}\` uses a YAML alias, so agent-mapper cannot check that it is text.`
+        code: `${label}-${field}-alias`,
+        message: `${sentence(label)} \`${field}\` uses a YAML alias, so agent-mapper cannot check that it is text.`
       });
     } else if (!isScalar(node) || typeof node.value !== "string") {
       diagnostics.push({
         severity: "error",
-        code: `skill-${field}-type`,
-        message: `Skill \`${field}\` must be text.`
+        code: `${label}-${field}-type`,
+        message: `${sentence(label)} \`${field}\` must be text.`
       });
     }
   }
@@ -82,16 +114,20 @@ function skillFieldDiagnostics(document: Document): SourceDiagnostic[] {
 }
 
 /**
- * Checks only a leading YAML frontmatter block. For skills, YAML syntax, shape and non-text
- * `name`/`description` block a save; missing fields only warn. Instruction files are plain
- * Markdown to both tools, so every finding there is a warning. Line endings are normalized first,
- * matching what a save writes.
+ * Checks only a leading YAML frontmatter block. For skills and Claude Code agents, YAML syntax,
+ * shape and non-text `name`/`description` block a save; missing fields only warn. Instruction files
+ * are plain Markdown to both tools, so every finding there is a warning. A Codex agent is TOML and
+ * is checked as a whole. Line endings are normalized first, matching what a save writes.
  */
 export function validateDocument(
   content: string,
   kind: DocumentKind
 ): SourceDiagnostic[] {
-  const severity = kind === "skill" ? "error" : "warning";
+  if (kind === "agent-toml") {
+    return validateAgentToml(content);
+  }
+  const fields = declaredBy(kind);
+  const severity = fields ? "error" : "warning";
   const block = frontmatterBlock(content.replace(/\r\n?/g, "\n"));
   if (block === "unterminated") {
     return [
@@ -104,25 +140,24 @@ export function validateDocument(
     ];
   }
   if (!block) {
-    return kind === "skill"
+    return fields
       ? [
           {
             severity: "warning",
-            code: "skill-frontmatter-missing",
-            message:
-              "This skill has no frontmatter. Add `name` and `description` between `---` lines."
+            code: `${fields.label}-frontmatter-missing`,
+            message: `This ${fields.label} has no frontmatter. Add \`name\` and \`description\` between \`---\` lines.`
           }
         ]
       : [];
   }
-  return frontmatterDiagnostics(block.header, kind);
+  return frontmatterDiagnostics(block.header, fields);
 }
 
 function frontmatterDiagnostics(
   header: string,
-  kind: DocumentKind
+  fields: Declared | undefined
 ): SourceDiagnostic[] {
-  const severity = kind === "skill" ? "error" : "warning";
+  const severity = fields ? "error" : "warning";
   const document = parseDocument(header, { uniqueKeys: true });
   const problems = [
     ...document.errors.map((error) => yamlDiagnostic(error, severity)),
@@ -142,10 +177,17 @@ function frontmatterDiagnostics(
       }
     ];
   }
-  if (kind !== "skill") {
-    return problems;
-  }
-  return [...problems, ...skillFieldDiagnostics(document)];
+  return fields
+    ? [...problems, ...fieldDiagnostics(document, fields)]
+    : problems;
+}
+
+/** Validates content as the kind of document its entry is. */
+export function validateEntry(
+  content: string,
+  entry: Pick<InventoryEntry, "kind" | "path">
+): SourceDiagnostic[] {
+  return validateDocument(content, documentKind(entry));
 }
 
 export function blockingDiagnostics(

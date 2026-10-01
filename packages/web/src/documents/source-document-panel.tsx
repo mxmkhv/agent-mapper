@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import type { SourceRef } from "@agent-mapper/core";
 import { History, PencilLine } from "lucide-react";
 import { openSourceDocument } from "../source-document-api";
@@ -7,6 +7,7 @@ import { useDocuments, useDraft } from "../state/use-document-drafts";
 import { Button } from "../ui/button";
 import { Diagnostics } from "./diagnostics";
 import { DocumentErrorBoundary } from "./document-error-boundary";
+import { isToml } from "./document-format";
 import { MarkdownPreview } from "./lazy";
 import { SegmentedToggle } from "./segmented-toggle";
 
@@ -17,6 +18,8 @@ interface SourceDocumentPanelProps {
   /** Changes after each rescan, so a saved file is re-read. */
   scannedAt: string;
   onOpen(sourceKey: string, mode: DocumentMode): void;
+  /** Further actions on the file, placed right after Edit. */
+  actions?: ReactNode;
 }
 
 type LoadState =
@@ -102,7 +105,8 @@ export function DocumentText({
 export function SourceDocumentPanel({
   sourceRef,
   scannedAt,
-  onOpen
+  onOpen,
+  actions
 }: SourceDocumentPanelProps) {
   const { state, retry } = useSourceDocument(sourceRef, scannedAt);
   const draft = useDraft(
@@ -126,6 +130,7 @@ export function SourceDocumentPanel({
   }
   const { document } = draft;
   const dirty = isDirty(draft);
+  const toml = isToml(document);
   return (
     <div>
       {/* Edit leads: it is the main thing to do with an app-editable file, and wrapping keeps it from clipping. */}
@@ -143,21 +148,32 @@ export function SourceDocumentPanel({
           />
           {dirty ? "Continue editing" : "Edit"}
         </Button>
-        <Button onClick={() => onOpen(draft.sourceKey, "history")}>
-          <History aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
-          History
-        </Button>
+        {actions}
         <span className="flex-1" />
-        <SegmentedToggle<"preview" | "source">
-          label="Source view"
-          onChange={setView}
-          options={[
-            { value: "preview", label: "Preview" },
-            { value: "source", label: "Source" }
-          ]}
-          value={view}
-        />
+        {/* History is a look back, not a next step: a quiet icon at the end of the row. */}
+        <Button
+          aria-label="History"
+          onClick={() => onOpen(draft.sourceKey, "history")}
+          title="History"
+          variant="icon"
+        >
+          <History aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+        </Button>
       </div>
+      {/* The view toggle belongs to the text below it, so it gets its own row and never wraps into the actions. TOML has no rendered form. */}
+      {toml ? null : (
+        <div className="mt-2.5 flex">
+          <SegmentedToggle<"preview" | "source">
+            label="Source view"
+            onChange={setView}
+            options={[
+              { value: "preview", label: "Preview" },
+              { value: "source", label: "Source" }
+            ]}
+            value={view}
+          />
+        </div>
+      )}
       <output
         aria-live="polite"
         className="mt-2 block text-label text-ink-muted"
@@ -173,7 +189,10 @@ export function SourceDocumentPanel({
       ) : null}
       <Diagnostics diagnostics={document.diagnostics} />
       <div className="mt-2 max-h-[60vh] overflow-auto rounded-card border border-hairline bg-canvas p-3">
-        <DocumentText content={document.content} view={view} />
+        <DocumentText
+          content={document.content}
+          view={toml ? "source" : view}
+        />
       </div>
     </div>
   );

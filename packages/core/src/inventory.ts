@@ -1,5 +1,6 @@
 export type ToolId = "claude" | "codex";
-type EntryKind = "instruction" | "skill" | "command";
+/** Agents are scanned as `AgentRecord`s; the kind exists here so their files open as documents like the others. */
+type EntryKind = "instruction" | "skill" | "command" | "agent";
 type Scope = "global" | "project" | "unknown";
 type EntryScope = Scope | "managed";
 type HookScope = Scope | "managed";

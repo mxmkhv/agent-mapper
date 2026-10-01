@@ -62,18 +62,21 @@ function finish(
   return record;
 }
 
-/** Instruction and skill entries backed by a file of their own, which can be opened as documents. */
+/** Instructions, skills and agents backed by a file of their own, which can be opened as documents. */
 function documentIds(snapshot: InventorySnapshot): Set<string> {
-  return new Set(
-    snapshot.items
+  return new Set([
+    ...snapshot.items
       .filter(
         ({ entry }) =>
           (entry.kind === "instruction" || entry.kind === "skill") &&
           !entry.inlineContent &&
           !entry.declarationOnly
       )
-      .map(({ entry }) => entry.id)
-  );
+      .map(({ entry }) => entry.id),
+    ...snapshot.agents
+      .filter((agent) => agent.readState === "readable")
+      .map((agent) => agent.id)
+  ]);
 }
 
 /**

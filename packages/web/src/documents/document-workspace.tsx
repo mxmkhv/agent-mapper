@@ -7,6 +7,7 @@ import { useDocuments, useDraft } from "../state/use-document-drafts";
 import { Button } from "../ui/button";
 import { CopyTextButton } from "./copy-text";
 import { DocumentErrorBoundary } from "./document-error-boundary";
+import { editorLanguage, isToml } from "./document-format";
 import { DocumentToolbar } from "./document-toolbar";
 import type { ImpactCoverage } from "./impact-summary";
 import { SourceEditor } from "./lazy";
@@ -32,18 +33,22 @@ function EditorPane({ draft }: { draft: Draft }) {
   const { store } = useDocuments();
   const [view, setView] = useState<"source" | "preview">("source");
   const context = { store, sourceKey: draft.sourceKey };
+  // TOML has no rendered form, so its editor offers no preview.
+  const toml = isToml(draft.document);
   return (
     <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)]">
       <div className="flex items-center gap-2 border-b border-hairline px-5 py-2">
-        <SegmentedToggle<"source" | "preview">
-          label="Editor view"
-          onChange={setView}
-          options={[
-            { value: "source", label: "Source" },
-            { value: "preview", label: "Preview" }
-          ]}
-          value={view}
-        />
+        {toml ? null : (
+          <SegmentedToggle<"source" | "preview">
+            label="Editor view"
+            onChange={setView}
+            options={[
+              { value: "source", label: "Source" },
+              { value: "preview", label: "Preview" }
+            ]}
+            value={view}
+          />
+        )}
         <span className="hidden text-caption text-ink-faint md:inline">
           ⌘S to review
         </span>
@@ -55,6 +60,7 @@ function EditorPane({ draft }: { draft: Draft }) {
         <Suspense fallback={loadingEditor}>
           <SourceEditor
             dirty={isDirty(draft)}
+            language={editorLanguage(draft.document)}
             label={`Edit ${draft.document.source.name}`}
             onChange={(text) => store.setText(draft.sourceKey, text)}
             onReview={() => void reviewDraft(context)}

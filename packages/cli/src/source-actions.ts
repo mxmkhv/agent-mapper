@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { lstat } from "node:fs/promises";
+import { lstat, realpath } from "node:fs/promises";
 import type { IncomingMessage } from "node:http";
 import { extname } from "node:path";
 import type { InventorySnapshot } from "@agent-mapper/core";
@@ -97,10 +97,35 @@ export function sourcePathIndex(
   return result;
 }
 
+type SourceAction = "open" | "reveal" | "reveal-target";
+const sourceActions: readonly string[] = ["open", "reveal", "reveal-target"];
+
+function isSourceAction(value: string): value is SourceAction {
+  return sourceActions.includes(value);
+}
+
+/** The file a symlinked source resolves to, which is what Finder should select for "reveal-target". */
+async function linkTarget(source: string): Promise<string> {
+  try {
+    return await realpath(source);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Error(
+        `${source} points to a file that no longer exists. Fix the symlink, then rescan.`,
+        { cause: error }
+      );
+    }
+    throw error;
+  }
+}
+
 export async function openArguments(
-  action: "open" | "reveal",
+  action: SourceAction,
   source: string
 ): Promise<string[]> {
+  if (action === "reveal-target") {
+    return ["-R", await linkTarget(source)];
+  }
   if (action === "reveal" || !safeTextExtensions.has(extname(source))) {
     return ["-R", source];
   }
@@ -121,7 +146,7 @@ export async function performSourceAction(
   if (!body.path || !body.id || !body.action) {
     throw new Error("Choose a source and action.");
   }
-  if (body.action !== "open" && body.action !== "reveal") {
+  if (!isSourceAction(body.action)) {
     throw new Error("Choose Open or Reveal.");
   }
   const indexes = context.paths.get(body.path);

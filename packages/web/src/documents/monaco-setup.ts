@@ -1,8 +1,9 @@
 /**
  * Loaded only when an editor or diff (edit, review, conflict, history) is first shown. Imports the editor core, the contributions an
- * editor and diff view need, and the Markdown tokenizer; no language services or CDN loader.
+ * editor and diff view need, and the Markdown and INI (for TOML) tokenizers; no language services or CDN loader.
  */
 import * as monaco from "monaco-editor/editor/editor.api";
+import type { EditorLanguage } from "./document-format";
 import "monaco-editor/features/codicon/register";
 import "monaco-editor/editor/browser/coreCommands";
 import "monaco-editor/editor/browser/widget/codeEditor/codeEditorWidget";
@@ -23,6 +24,7 @@ import "monaco-editor/editor/contrib/wordHighlighter/browser/wordHighlighter";
 import "monaco-editor/editor/contrib/wordOperations/browser/wordOperations";
 import "monaco-editor/editor/common/standaloneStrings";
 import "monaco-editor/features/find/register";
+import "monaco-editor/languages/definitions/ini/register";
 import "monaco-editor/languages/definitions/markdown/register";
 
 self.MonacoEnvironment = {
@@ -102,11 +104,11 @@ export function restoreViewState(
 /** One model per draft, so typing undo survives leaving and reopening the editor. */
 export function draftModel(
   sourceKey: string,
-  text: string
+  draft: { text: string; language: EditorLanguage }
 ): monaco.editor.ITextModel {
   let model = models.get(sourceKey);
   if (!model || model.isDisposed()) {
-    model = monaco.editor.createModel(text, "markdown");
+    model = monaco.editor.createModel(draft.text, draft.language);
     models.set(sourceKey, model);
   }
   return model;

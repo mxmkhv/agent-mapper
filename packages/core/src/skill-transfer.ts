@@ -1,7 +1,8 @@
 import type { ToolId } from "./inventory";
 import type { SourceRef } from "./source-document";
 
-// Browser-safe contract for copying a skill folder into a project or moving it to the global folders.
+// Browser-safe contract for copying a skill folder or an agent file into a project, or moving a skill to the global folders.
+// Agents share it: their plan lists one file, and `sourceFolder` is that file.
 
 /** Copy leaves the skill where it is; promote moves it out of its project into the global skills folders. */
 export type SkillTransferMode = "copy" | "promote";

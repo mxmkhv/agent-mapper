@@ -185,7 +185,8 @@ function Finished({
   );
 }
 
-function TransferDialog(props: DialogProps) {
+/** The copy-or-move dialog on its own, for callers that bring their own trigger. */
+export function SkillTransferDialog(props: DialogProps) {
   const { record, onClose } = props;
   const { onMutated } = useDocuments();
   const [finished, setFinished] = useState<SkillTransferResult>();
@@ -221,23 +222,25 @@ function TransferDialog(props: DialogProps) {
   return (
     <TransferForm
       {...props}
-      canMove={record.layer === "project" && !record.plugin}
+      canMove={
+        record.kind === "skill" && record.layer === "project" && !record.plugin
+      }
       onDone={done}
     />
   );
 }
 
-/** Copy a skill folder into a project, or move a project's own skill to the global folders. */
+/** Copy a skill folder or an agent file into a project, or move a project's own skill to the global folders. */
 export function SkillTransfer(props: SkillTransferProps) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <Button onClick={() => setOpen(true)}>
         <Copy aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
-        Copy…
+        Copy
       </Button>
       {open ? (
-        <TransferDialog {...props} onClose={() => setOpen(false)} />
+        <SkillTransferDialog {...props} onClose={() => setOpen(false)} />
       ) : null}
     </>
   );

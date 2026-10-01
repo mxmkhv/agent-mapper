@@ -33,7 +33,7 @@ import {
 import type { SourceDocumentRegistry } from "./source-document-registry";
 import {
   blockingDiagnostics,
-  validateDocument
+  validateEntry
 } from "./source-document-validation";
 import { commitMutation, type MutationPlan } from "./source-document-writer";
 
@@ -59,7 +59,7 @@ async function currentHash(
   }
 }
 
-/** Reads, validates, saves and restores instruction and skill files from registered scans. */
+/** Reads, validates, saves and restores instruction, skill and agent files from registered scans. */
 export class SourceDocumentService {
   private readonly registry: SourceDocumentRegistry;
   private readonly busy = new Set<string>();
@@ -82,10 +82,10 @@ export class SourceDocumentService {
       );
     }
     const { entry } = found.item;
-    if (entry.kind !== "instruction" && entry.kind !== "skill") {
+    if (entry.kind === "command") {
       throw documentError(
         "invalid_request",
-        "Only instructions and skills can be opened here."
+        "Only instructions, skills and agents can be opened here."
       );
     }
     if (entry.inlineContent || entry.declarationOnly) {
@@ -126,7 +126,7 @@ export class SourceDocumentService {
       );
     }
     return {
-      diagnostics: validateDocument(request.content, bound.handle.entry.kind),
+      diagnostics: validateEntry(request.content, bound.handle.entry),
       impact: this.registry.impact(target.canonicalPath),
       currentVersion: target.version,
       unchanged
@@ -139,13 +139,10 @@ export class SourceDocumentService {
       kind: "before-save",
       proposed: (current) => encodeDocument(request.content, current.decoded),
       check: () => {
-        const diagnostics = validateDocument(
-          request.content,
-          handle.entry.kind
-        );
+        const diagnostics = validateEntry(request.content, handle.entry);
         if (blockingDiagnostics(diagnostics)) {
           throw new DocumentApiError("validation_failed", {
-            message: "Fix the frontmatter errors before saving.",
+            message: "Fix the errors in this file before saving.",
             diagnostics
           });
         }
@@ -218,7 +215,7 @@ export class SourceDocumentService {
         current: revision.summary.hash === current.hash
       },
       content: decoded.content,
-      diagnostics: validateDocument(decoded.content, handle.entry.kind)
+      diagnostics: validateEntry(decoded.content, handle.entry)
     };
   }
 
