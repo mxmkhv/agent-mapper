@@ -6,7 +6,7 @@ Agent configuration gets scattered across home folders, repositories, plugins, a
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mxmkhv/agent-mapper/dev/docs/screenshots/project-map-dark.png">
-  <img src="https://raw.githubusercontent.com/mxmkhv/agent-mapper/dev/docs/screenshots/project-map-light.png" alt="Project map showing global and project instructions, skills, agents, hooks, and MCP configuration, with a selected instruction's source and preview">
+  <img src="https://raw.githubusercontent.com/mxmkhv/agent-mapper/dev/docs/screenshots/project-map-light.png" alt="Project inventory with a startup summary in load order above global and project instructions, skills, agents, hooks, and MCP configuration, with a selected instruction's source and preview">
 </picture>
 
 Screenshots use a sample setup.
