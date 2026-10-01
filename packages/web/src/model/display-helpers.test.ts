@@ -68,6 +68,17 @@ it("counts text added after a last line without a line break as added only", () 
   });
 });
 
+it("counts only the lines added around an unchanged line inside one chunk", () => {
+  const original = Text.of(["word"]);
+  const modified = Text.of(["", "word", ""]);
+  const chunks = Chunk.build(original, modified);
+  expect(diffStats({ chunks, original, modified })).toEqual({
+    changed: 2,
+    added: 2,
+    removed: 0
+  });
+});
+
 it("reports no change for identical text and no count for an imprecise diff", () => {
   const same = Text.of(["a", "b"]);
   expect(

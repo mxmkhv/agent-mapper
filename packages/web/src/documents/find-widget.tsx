@@ -81,7 +81,7 @@ function FindWidget({ view, state }: FindWidgetProps) {
 
   return (
     <div
-      className={`absolute top-1 right-7 w-[419px] bg-surface pr-1 pl-[9px] font-sans text-(--monaco-widget-foreground) ${showReplace ? "h-[62px]" : "h-[33px]"}`}
+      className={`absolute top-1 right-7 w-[419px] max-w-[calc(100%-36px)] bg-surface pr-1 pl-[9px] font-sans text-(--monaco-widget-foreground) ${showReplace ? "h-[62px]" : "h-[33px]"}`}
     >
       <div className="absolute inset-y-0 left-0 w-0.5 bg-hairline-strong" />
       {editable ? (

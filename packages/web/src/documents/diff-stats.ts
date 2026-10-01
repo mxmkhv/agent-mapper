@@ -1,4 +1,4 @@
-import type { Chunk } from "@codemirror/merge";
+import { diff, type Chunk } from "@codemirror/merge";
 import type { Text } from "@codemirror/state";
 
 /**
@@ -33,31 +33,47 @@ function chunkLines(doc: Text, range: { from: number; to: number }): string[] {
   );
 }
 
+// One UTF-16 unit per distinct line, skipping the surrogate range so every line stays a single unit.
+const surrogateStart = 0xd800;
+const surrogateCount = 0x800;
+const utf16Units = 0x10000;
+const lineCodeLimit = utf16Units - surrogateCount;
+
 /**
- * Chunks are found by character, so text added after a last line without a line break also covers that unchanged line.
- * Matching lines at either end are dropped to count lines the way a line diff does.
+ * Chunks are found by character, so they can span unchanged lines: a line kept between two edits, or a last line
+ * without a line break that text was added after. Diffing the chunk's lines, each encoded as one character, counts
+ * only the lines a line diff would. Undefined past 63,488 distinct lines in one chunk.
  */
-function changedLines(before: string[], after: string[]) {
-  let start = 0;
-  while (
-    start < before.length &&
-    start < after.length &&
-    before[start] === after[start]
-  ) {
-    start += 1;
+function lineStats(before: string[], after: string[]): DiffStats | undefined {
+  const codes = new Map<string, string>();
+  const encode = (lines: string[]) =>
+    lines
+      .map((line) => {
+        let code = codes.get(line);
+        if (code === undefined) {
+          const index = codes.size;
+          code = String.fromCharCode(
+            index < surrogateStart ? index : index + surrogateCount
+          );
+          codes.set(line, code);
+        }
+        return code;
+      })
+      .join("");
+  const a = encode(before);
+  const b = encode(after);
+  if (codes.size > lineCodeLimit) {
+    return undefined;
   }
-  let end = 0;
-  while (
-    end < before.length - start &&
-    end < after.length - start &&
-    before[before.length - 1 - end] === after[after.length - 1 - end]
-  ) {
-    end += 1;
+  const stats = { changed: 0, added: 0, removed: 0 };
+  for (const change of diff(a, b)) {
+    const added = change.toB - change.fromB;
+    const removed = change.toA - change.fromA;
+    stats.added += added;
+    stats.removed += removed;
+    stats.changed += Math.max(added, removed);
   }
-  return {
-    removed: before.length - start - end,
-    added: after.length - start - end
-  };
+  return stats;
 }
 
 /** Undefined when any chunk came from the coarser fallback diff, whose line counts would overstate the change. */
@@ -68,16 +84,18 @@ export function diffStats({
 }: ChunkedDiff): DiffStats | undefined {
   const stats = { changed: 0, added: 0, removed: 0 };
   for (const chunk of chunks) {
-    if (!chunk.precise) {
+    const lines =
+      chunk.precise &&
+      lineStats(
+        chunkLines(original, { from: chunk.fromA, to: chunk.toA }),
+        chunkLines(modified, { from: chunk.fromB, to: chunk.toB })
+      );
+    if (!lines) {
       return undefined;
     }
-    const { added, removed } = changedLines(
-      chunkLines(original, { from: chunk.fromA, to: chunk.toA }),
-      chunkLines(modified, { from: chunk.fromB, to: chunk.toB })
-    );
-    stats.added += added;
-    stats.removed += removed;
-    stats.changed += Math.max(added, removed);
+    stats.added += lines.added;
+    stats.removed += lines.removed;
+    stats.changed += lines.changed;
   }
   return stats;
 }

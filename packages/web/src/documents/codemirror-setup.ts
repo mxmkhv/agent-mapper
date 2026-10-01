@@ -109,7 +109,9 @@ export function editingExtensions(): Extension[] {
 
 export const readOnlyExtensions = [
   EditorState.readOnly.of(true),
-  EditorView.editable.of(false)
+  EditorView.editable.of(false),
+  // A non-editable view is not focusable by default; without focus, find and keyboard scrolling cannot reach it.
+  EditorView.contentAttributes.of({ tabindex: "0", "aria-readonly": "true" })
 ];
 
 interface DraftSession {

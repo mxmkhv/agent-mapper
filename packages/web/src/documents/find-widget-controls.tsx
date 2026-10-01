@@ -7,7 +7,7 @@ export const iconProps = {
   "aria-hidden": true
 } as const;
 export const field =
-  "relative flex h-[25px] w-[230px] items-center rounded-[4px] border border-transparent bg-(--monaco-input-background) focus-within:outline focus-within:outline-1 focus-within:outline-focus";
+  "relative flex h-[25px] w-[230px] min-w-0 items-center rounded-[4px] border border-transparent bg-(--monaco-input-background) focus-within:outline focus-within:outline-1 focus-within:outline-focus";
 export const input =
   "h-full min-w-0 flex-1 bg-transparent px-1 font-sans text-[13px] text-(--monaco-widget-foreground) outline-none placeholder:text-ink-faint";
 
@@ -22,7 +22,7 @@ export function ToolButton(props: {
   return (
     <button
       aria-label={props.label}
-      className={`ml-[3px] flex size-[22px] items-center justify-center rounded-[5px] hover:bg-(--monaco-toolbar-hover) disabled:pointer-events-none disabled:opacity-30 ${props.className ?? ""}`}
+      className={`ml-[3px] flex size-[22px] shrink-0 items-center justify-center rounded-[5px] hover:bg-(--monaco-toolbar-hover) disabled:pointer-events-none disabled:opacity-30 ${props.className ?? ""}`}
       disabled={props.disabled}
       onClick={props.onClick}
       title={props.label}
@@ -56,7 +56,8 @@ export function OptionToggle(props: {
 
 export function Row({ children }: { children: ReactNode }) {
   return (
-    <div className="mt-[3px] ml-[17px] flex h-[25px] items-center">
+    // In a narrow pane the fields shrink first; the right padding keeps them clear of the close button.
+    <div className="mt-[3px] ml-[17px] flex h-[25px] min-w-0 items-center pr-[25px]">
       {children}
     </div>
   );
