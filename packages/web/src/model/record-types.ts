@@ -42,6 +42,8 @@ export interface InventoryRecord {
   /** Native state word from the resolver, e.g. "shadowed", "cached", "approval required". */
   label: string;
   reason: string;
+  /** Id of the record that takes precedence over this one, when the resolver names a single winner. */
+  shadowedBy?: string;
   loading?: string;
   /** Position in the source snapshot, used for startup load order. */
   order: number;

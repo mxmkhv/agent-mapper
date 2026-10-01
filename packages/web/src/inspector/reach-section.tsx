@@ -2,10 +2,10 @@ import type { InventoryRecord } from "../model/record-types";
 import type { Landing } from "../shell/view-bar";
 import { stateText } from "../model/states";
 import { StateMarker } from "../ui/marks";
-import { recordKey, type ReachProject } from "../views/reach/reach-model";
+import { recordKey, type ScannedProject } from "../model/scanned-project";
 
 export interface ReachScope {
-  projects: ReachProject[];
+  projects: ScannedProject[];
   onOpen(path: string, landing?: Landing): void;
 }
 
@@ -56,11 +56,11 @@ export function ReachSection({
   );
 }
 
-function reachLabel(project: ReachProject, match?: InventoryRecord): string {
+function reachLabel(project: ScannedProject, match?: InventoryRecord): string {
   if (project.refreshing) {
     return "Rescanning…";
   }
-  if (project.error) {
+  if (project.error !== undefined) {
     return "Scan failed";
   }
   if (!project.records) {

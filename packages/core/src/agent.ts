@@ -15,5 +15,7 @@ export interface AgentRecord {
   readState: "readable" | "unreadable";
   availability: "configured" | "shadowed" | "unknown";
   reason: string;
+  /** Id of the nearer agent that takes precedence, when a single one does. It may itself be shadowed. */
+  shadowedBy?: string;
   pluginId?: string;
 }

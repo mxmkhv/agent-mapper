@@ -120,6 +120,8 @@ interface EntryResolution {
   availability: "expected" | "shadowed" | "not-applicable" | "unknown";
   loading: "startup" | "agent-selected" | "not-applicable" | "unknown";
   reason: string;
+  /** Id of the source that takes precedence over this one, when a single source wins. */
+  shadowedBy?: string;
   estimatedTokens?: { startup: number; onDemand: number };
 }
 

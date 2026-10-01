@@ -103,6 +103,7 @@ it("shows Codex's same-folder override as the winner", () => {
     ["override", "expected"]
   ]);
   expect(results[0]?.resolution.reason).toContain("AGENTS.override.md");
+  expect(results[0]?.resolution.shadowedBy).toBe("override");
 });
 
 it("skips empty Codex instruction files without letting an empty override win", () => {
@@ -234,4 +235,12 @@ it("keeps Claude AGENTS files when the only CLAUDE file is global or outside the
   );
   expect(results[2]?.resolution.availability).toBe("expected");
   expect(results[2]?.resolution.estimatedTokens?.startup).toBe(20);
+});
+
+it("names the CLAUDE file that makes Claude Code skip AGENTS.md", () => {
+  const [agents] = resolveInventory(
+    [agentsAt("/work/AGENTS.md"), claudeAt("/work/app/CLAUDE.md")],
+    { workingDirectory: "/work/app", tool: "claude" }
+  );
+  expect(agents?.resolution.shadowedBy).toBe("/work/app/CLAUDE.md");
 });

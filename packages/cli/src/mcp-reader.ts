@@ -133,13 +133,21 @@ function markClaudeShadowing(records: McpRecord[], projectPath: string): void {
     return record.scope === "project" ? privateRank : 1;
   };
   for (const record of direct) {
-    const winner = direct.find(
-      (candidate) =>
-        candidate.name === record.name && rank(candidate) > rank(record)
-    );
+    // The top-ranked declaration wins; an intermediate one is shadowed too.
+    const winner = direct
+      .filter(
+        (candidate) =>
+          candidate.name === record.name && rank(candidate) > rank(record)
+      )
+      .reduce<McpRecord | undefined>(
+        (best, candidate) =>
+          best && rank(best) >= rank(candidate) ? best : candidate,
+        undefined
+      );
     if (winner) {
       record.availability = "shadowed";
       record.reason = `Higher-priority Claude declaration: ${winner.sourcePath}`;
+      record.shadowedBy = winner.id;
     }
   }
 }

@@ -2,6 +2,7 @@ import type { InventorySnapshot, ToolId } from "@agent-mapper/core";
 import { layerHint } from "../model/layers";
 import { tildePath } from "../model/paths";
 import type { InventoryRecord } from "../model/record-types";
+import type { ScannedProject } from "../model/scanned-project";
 import { CoverageInspector } from "../inspector/coverage-inspector";
 import { InspectorEmpty, RecordInspector } from "../inspector/inspector";
 import type { HeaderTitle } from "../shell/header";
@@ -9,9 +10,8 @@ import type { Landing, ViewTab } from "../shell/view-bar";
 import { toolName } from "../ui/marks";
 import { FindingsView } from "../views/findings-view";
 import { InventoryView } from "../views/inventory-view";
-import { MapView } from "../views/map/map-view";
-import type { ReachProject } from "../views/reach/reach-model";
-import { ReachView } from "../views/reach/reach-view";
+import { ProjectsView } from "../views/projects/projects-view";
+import { StartupSummary } from "../views/startup-summary";
 import { relevantDifferences } from "../views/worktrees/difference-groups";
 import { WorktreeView } from "../views/worktrees/worktree-view";
 import type { CopyTarget } from "../model/copy-targets";
@@ -37,7 +37,7 @@ export interface PartsProps {
   props: WorkspaceProps;
   state: WorkspaceState;
   /** Other projects' inventories, scanned only for the Global view. */
-  reach: ReachProject[];
+  scanned: ScannedProject[];
 }
 
 export function tabsFor({ props, state }: PartsProps): ViewTab[] {
@@ -53,7 +53,11 @@ export function tabsFor({ props, state }: PartsProps): ViewTab[] {
     count: state.visible.length
   };
   if (!props.isProject) {
-    return [{ id: "reach", label: "Reach" }, inventory, findings];
+    return [
+      { id: "projects", label: "Projects", count: props.projectPaths.length },
+      inventory,
+      findings
+    ];
   }
   const linked = props.snapshot.worktrees.filter((tree) => !tree.isMain).length;
   const worktrees: ViewTab[] =
@@ -73,14 +77,14 @@ export function tabsFor({ props, state }: PartsProps): ViewTab[] {
           }
         ]
       : [];
-  return [{ id: "map", label: "Map" }, inventory, findings, ...worktrees];
+  return [inventory, findings, ...worktrees];
 }
 
 export function titleFor({ props, state }: PartsProps): HeaderTitle {
   if (!props.isProject) {
     return {
       name: "Global",
-      subtitle: "How your global configuration reaches each project"
+      subtitle: "Your global configuration and how each project builds on it"
     };
   }
   const path = props.snapshot.workingDirectory;
@@ -91,7 +95,7 @@ export function titleFor({ props, state }: PartsProps): HeaderTitle {
   };
 }
 
-export function Content({ props, state, reach }: PartsProps) {
+export function Content({ props, state, scanned }: PartsProps) {
   const common = { context: state.context, selectedId: state.selected?.id };
   if (state.view === "findings") {
     return (
@@ -103,30 +107,33 @@ export function Content({ props, state, reach }: PartsProps) {
       />
     );
   }
-  if (state.view === "map") {
+  const summary = (title: string, withFindings: boolean) => (
+    <StartupSummary
+      {...common}
+      estimate={props.snapshot.context[props.tool]}
+      findings={
+        withFindings
+          ? { list: state.findings, onOpen: () => state.setView("findings") }
+          : undefined
+      }
+      onSelect={(id) => state.select(id, { reveal: props.isProject })}
+      records={state.toolRecords}
+      title={title}
+      tool={props.tool}
+    />
+  );
+  if (state.view === "projects") {
     return (
-      <MapView
-        {...common}
-        estimate={props.snapshot.context}
-        onKind={state.filterKind}
-        onSelect={state.select}
-        records={state.toolRecords}
-        showInactive={state.showInactive}
-        tool={props.tool}
-      />
-    );
-  }
-  if (state.view === "reach") {
-    return (
-      <ReachView
-        {...common}
+      <ProjectsView
+        context={state.context}
         globalRecords={state.toolRecords}
         onOpenProject={props.onSelectPath}
         onSelect={(record: InventoryRecord) =>
           state.select(record.id, { reveal: false })
         }
-        projects={reach}
+        projects={scanned}
         showInactive={state.showInactive}
+        summary={summary("Your global setup loads", false)}
         tool={props.tool}
       />
     );
@@ -166,7 +173,11 @@ export function Content({ props, state, reach }: PartsProps) {
       onSelect={state.select}
       otherVersions={state.showInactive ? undefined : state.otherVersions}
       records={state.visible}
+      relations={state.relations}
       revealRequest={state.revealRequest}
+      summary={
+        props.isProject ? summary("A new session starts with", true) : undefined
+      }
       tool={props.tool}
       transfer={{
         workingDirectory: props.snapshot.workingDirectory,
@@ -177,7 +188,7 @@ export function Content({ props, state, reach }: PartsProps) {
   );
 }
 
-export function Inspector({ props, state, reach }: PartsProps) {
+export function Inspector({ props, state, scanned }: PartsProps) {
   if (state.showCoverage) {
     return (
       <CoverageInspector
@@ -197,6 +208,7 @@ export function Inspector({ props, state, reach }: PartsProps) {
   }
   const scope = {
     records: state.lookup,
+    findings: state.findings,
     imports: props.snapshot.imports,
     context: state.context,
     workingDirectory: props.snapshot.workingDirectory,
@@ -212,7 +224,7 @@ export function Inspector({ props, state, reach }: PartsProps) {
       reach={
         props.isProject
           ? undefined
-          : { projects: reach, onOpen: props.onSelectPath }
+          : { projects: scanned, onOpen: props.onSelectPath }
       }
       record={state.selected}
       scope={scope}

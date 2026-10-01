@@ -15,4 +15,6 @@ export interface McpRecord {
   availability:
     "configured" | "disabled" | "shadowed" | "approval required" | "unknown";
   reason: string;
+  /** Id of the declaration that takes precedence over this one, when a single declaration wins. */
+  shadowedBy?: string;
 }

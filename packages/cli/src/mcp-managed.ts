@@ -52,6 +52,9 @@ function addProvided(
       });
       const current = records.at(-1);
       if (current) {
+        if (previous) {
+          previous.shadowedBy = current.id;
+        }
         selected.set(name, current);
       }
     }
@@ -69,6 +72,8 @@ function markOrdinary(
     if (options.exclusivePath) {
       record.availability = "shadowed";
       record.reason = `Local managed MCP policy excludes ordinary sources if selected: ${options.exclusivePath}`;
+      // The policy, not another declaration, excludes it; an earlier link to a winner no longer applies.
+      record.shadowedBy = undefined;
     } else if (
       options.managedNames.has(record.name) &&
       record.availability !== "disabled" &&
@@ -100,10 +105,14 @@ export async function addManagedMcp(
   const provided = records.slice(ordinaryCount);
   if (exclusive) {
     addDeclarations(records, { path, kind: "exclusive", values: exclusive });
+    const declared = records.slice(ordinaryCount + provided.length);
     for (const record of provided) {
       if (Object.hasOwn(exclusive, record.name)) {
         record.availability = "shadowed";
         record.reason = `Local managed-mcp.json replaces this provided server: ${path}`;
+        record.shadowedBy = declared.find(
+          (winner) => winner.name === record.name
+        )?.id;
       }
     }
   }

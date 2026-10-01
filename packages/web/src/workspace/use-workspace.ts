@@ -3,6 +3,7 @@ import type { InventorySnapshot, ToolId } from "@agent-mapper/core";
 import { buildRecords } from "../model/build-records";
 import { pathContext } from "../model/paths";
 import { foldInactive } from "../model/plugin-versions";
+import { relationLabels } from "../model/precedence";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
 import type { Landing, View } from "../shell/view-bar";
 import { useSearchShortcut } from "../use-search-shortcut";
@@ -12,7 +13,7 @@ interface WorkspaceInput {
   snapshot: InventorySnapshot;
   isProject: boolean;
   tool: ToolId;
-  /** Records from other folders (Global reach), so links and rows from them can be inspected. */
+  /** Records from other folders (the Global view), so links and rows from them can be inspected. */
   extraRecords: InventoryRecord[];
   landing?: Landing;
   onTool(tool: ToolId): void;
@@ -41,7 +42,7 @@ function forTool(
 
 /**
  * Whether the list for the record's tool hides it until Show inactive. Uses the same records and fold as
- * `forTool`; a record from another folder (Global reach) is hidden only when inactive.
+ * `forTool`; a record from another folder (the Global view) is hidden only when inactive.
  */
 function foldedIn(records: readonly InventoryRecord[], tool: ToolId) {
   return (record: InventoryRecord) => {
@@ -55,7 +56,7 @@ function foldedIn(records: readonly InventoryRecord[], tool: ToolId) {
 }
 
 interface SelectOptions {
-  /** Views that already show the row (Reach) pass false so the list does not reflow. */
+  /** Views that do not list the record (Projects) pass false so nothing unfolds behind them. */
   reveal?: boolean;
   /** An item the next scan adds (a moved skill) is not listed yet, so it names its tool. */
   tool?: ToolId;
@@ -141,7 +142,7 @@ export interface GroupFocus {
 function useViewFilter(isProject: boolean, landing?: Landing) {
   const target = landing && "view" in landing ? landing : undefined;
   const [view, setView] = useState<View>(
-    target?.view ?? (isProject ? "map" : "reach")
+    target?.view ?? (isProject ? "inventory" : "projects")
   );
   const [kind, setKind] = useState<RecordKind | "all">(target?.kind ?? "all");
   const [groupFocus, setGroupFocus] = useState<GroupFocus>();
@@ -166,22 +167,39 @@ function useViewFilter(isProject: boolean, landing?: Landing) {
   };
 }
 
-/** All per-folder UI state: view, filters, selection, and the records the views render. */
-export function useWorkspace(input: WorkspaceInput) {
-  const { snapshot, isProject, tool } = input;
-  const filter = useViewFilter(isProject, input.landing);
+/** The scan's records, derived once per snapshot, plus records from other folders for lookups. */
+function useRecords({
+  snapshot,
+  isProject,
+  extraRecords
+}: Pick<WorkspaceInput, "snapshot" | "isProject" | "extraRecords">) {
   const records = useMemo(
     () => buildRecords(snapshot, isProject ? "project" : "global"),
     [snapshot, isProject]
   );
-  const context = useMemo(
-    () => pathContext(snapshot, isProject),
-    [snapshot, isProject]
-  );
-  const lookup = useMemo(
-    () => [...records, ...input.extraRecords],
-    [records, input.extraRecords]
-  );
+  return {
+    records,
+    context: useMemo(
+      () => pathContext(snapshot, isProject),
+      [snapshot, isProject]
+    ),
+    lookup: useMemo(
+      () => [...records, ...extraRecords],
+      [records, extraRecords]
+    ),
+    // Labels are keyed by record id, so both tools' records can share one map.
+    relations: useMemo(
+      () => relationLabels({ records, findings: snapshot.findings }),
+      [records, snapshot.findings]
+    )
+  };
+}
+
+/** All per-folder UI state: view, filters, selection, and the records the views render. */
+export function useWorkspace(input: WorkspaceInput) {
+  const { snapshot, isProject, tool } = input;
+  const filter = useViewFilter(isProject, input.landing);
+  const { records, context, lookup, relations } = useRecords(input);
   const selection = useRevealingSelection(lookup, {
     ...input,
     isFolded: foldedIn(records, tool)
@@ -211,6 +229,7 @@ export function useWorkspace(input: WorkspaceInput) {
     groupFocused: filter.groupFocused,
     records,
     lookup,
+    relations,
     ...forTool(records, { tool, showInactive: selection.showInactive }),
     findings: snapshot.findings.filter((finding) => finding.tool === tool),
     context
