@@ -1,4 +1,4 @@
-import type { SourceRef, ToolId } from "@agent-mapper/core";
+import type { SkillSource, SourceRef, ToolId } from "@agent-mapper/core";
 
 export type RecordKind =
   | "instruction"
@@ -61,6 +61,8 @@ export interface InventoryRecord {
   details: RecordDetail[];
   problems: string[];
   contributions?: Partial<Record<RecordKind, number>>;
+  /** The repo an installed skill came from, when a skills lock file records it. */
+  installedFrom?: SkillSource;
   /** The scan that owns this file-backed instruction or skill; documents open through it. */
   sourceRef?: SourceRef;
 }

@@ -22,6 +22,7 @@ import {
 import { resolveScanContext, type ScanContext } from "./scan-context";
 import { scanGlobal, scanProjectSources } from "./instruction-sources";
 import { CodexTomlReader } from "./codex-toml";
+import { attachSkillSources } from "./skill-lock";
 export { discoverProjects } from "./discovery";
 
 export interface ScanOptions {
@@ -108,6 +109,9 @@ async function scanBase(options: {
     root: options.root,
     home: options.home
   });
+  collector.errors.push(
+    ...(await attachSkillSources(collector.entries, options.home))
+  );
   const plugins = await scanPlugins({
     workingDirectory: options.workingDirectory,
     root: options.root,

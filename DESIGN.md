@@ -224,7 +224,7 @@ Warm neutral grays carry the whole interface. Saturated color is reserved for to
 
 ### Secondary
 
-- **Claude Terracotta** (`claude`): Claude Code identity only. Used for the tool glyph, the skill-index segment of the startup budget bar, and nothing else.
+- **Claude Terracotta** (`claude`): Claude Code identity only. Used for the tool glyph, the skill-index segment of the startup budget bar, the border of the open project's own Inventory groups, and nothing else.
 - **Codex Blue** (`codex`): Codex identity only, in the same places. It is never green, so it cannot be confused with a success state.
 
 ### Tertiary
@@ -243,12 +243,13 @@ Warm neutral grays carry the whole interface. Saturated color is reserved for to
 - **Wash** (`wash`): chip fill, provenance breadcrumb, matrix section rows, and toggle track.
 - **Hover / Selected** (`hover`, `selected`): row and nav states.
 - **Layer tones** (`layer-global`, `layer-plugins`, `layer-project`): startup budget bar segments by layer. These three grays are the only place layers get a color.
+- **Source tones** (`--am-source-1` to `--am-source-4` in `theme.css`: soft violet, gold, cyan, pink): the state dot of an active skill in the Inventory, by the repo it was installed from (read from the `skills` installer's lock files). Only repos with two or more skills in a group get a tone. Those skills sit together under a 32px wash row inside the card that names the repo, carries the same dot and a count, and folds them away (open by default); one-off and hand-written skills stay gray. Never red, green, terracotta or Codex blue, so a tone cannot read as a problem, a success or a tool. Inactive, unknown and problem dots keep their state styling.
 
 Every neutral and signal token has a `-dark` twin in the frontmatter. Dark mode swaps the whole set; it is not an automatic inversion.
 
 ### Named Rules
 
-**The Meaning-Only Color Rule.** Saturated color appears for exactly three reasons: which tool, a real problem, or keyboard focus. Anything else is graphite or gray.
+**The Meaning-Only Color Rule.** Saturated color appears for exactly three reasons: which tool, a real problem, or keyboard focus. The pastel source tones are the one soft exception: which repo a skill was installed from. Anything else is graphite or gray.
 
 **The No-Green Rule.** Green has no role. "Active" is the absence of a badge, not a green pill.
 
@@ -290,7 +291,7 @@ Every neutral and signal token has a `-dark` twin in the frontmatter. Dark mode 
   - A 36px view bar: view tabs (Map or Reach, Inventory, Findings) on the left; the Show inactive switch and the coverage notes link on the right.
   - Content and a 380px inspector in two columns, each scrolling independently.
 - **Map:** a 92px layer-label column followed by one layer card per layer, capped at 860px wide. Layer rows run Global → Plugins → Project → User, with Managed at the top only when present. A tool header with the startup budget sits above the layers.
-- **Inventory:** filter chips (facets) stick to the top of the pane. Groups follow the same layer order: Global, installed plugins, each plugin's contributions, Project, User. Rows are 36px in one bordered card per group.
+- **Inventory:** filter chips (facets) stick to the top of the pane. Groups follow the same layer order: Global, installed plugins, each plugin's contributions, Project, User. Rows are 36px in one bordered card per group. In a project, the groups it inherits (Managed, Global, plugins) sit behind one wash-filled disclosure row, collapsed by default; it opens by itself when the selection is inside it or the project has no groups of its own. The project's own groups (Project, User) carry the tool glyph, an ink label, and a card border in the tool hue at 50%. The Global view has no disclosure row.
 - **Reach (the Global view):** a fixed-layout table with a flexible source column and 104px project columns. The header and source column stay pinned while the table scrolls. When project columns are out of view, a surface-colored fade on the right edge says so, because macOS hides scrollbars until you scroll.
 - **Browser surfaces:** text selection uses Focus Blue at 24%; scrollbars are thin and use `hairline-strong` on a transparent track.
 - **Spacing rhythm:** 4 / 6 / 8 / 12 / 16 / 20px. Content gutters are 20px; card interiors are 4–12px.
