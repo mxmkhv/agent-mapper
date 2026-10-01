@@ -5,6 +5,12 @@ type EntryScope = Scope | "managed";
 type HookScope = Scope | "managed";
 type ReadState = "readable" | "missing" | "unreadable";
 
+/** The repo an installed skill came from, as recorded by the `skills` installer's lock file. */
+export interface SkillSource {
+  repo: string;
+  ref?: string;
+}
+
 export interface InventoryEntry {
   id: string;
   tool: ToolId;
@@ -26,6 +32,7 @@ export interface InventoryEntry {
   locator?: string;
   declarationOnly?: boolean;
   inlineContent?: boolean;
+  installedFrom?: SkillSource;
 }
 
 export type PluginState =

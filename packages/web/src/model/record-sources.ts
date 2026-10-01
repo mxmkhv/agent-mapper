@@ -42,8 +42,16 @@ export function entryDraft(
     locator: entry.locator,
     pluginId: entry.pluginId,
     readState: entry.readState,
+    installedFrom: entry.installedFrom,
     details: [
       ...detail("Description", entry.description),
+      ...detail(
+        "Installed from",
+        entry.installedFrom &&
+          [entry.installedFrom.repo, entry.installedFrom.ref]
+            .filter(Boolean)
+            .join(" @ ")
+      ),
       ...detail(
         "Declared in",
         entry.declarationOnly ? "configuration" : undefined

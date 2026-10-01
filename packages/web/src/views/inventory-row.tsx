@@ -20,6 +20,8 @@ interface RowProps {
   otherVersions?: number;
   /** Another row in the group has the same name, so the path is what tells them apart. */
   sharesName?: boolean;
+  /** Rank of the shared repo this skill was installed from; picks the dot color. */
+  tone?: number;
   onSelect(id: string): void;
 }
 
@@ -103,6 +105,7 @@ export function InventoryRow({
   context,
   otherVersions,
   sharesName,
+  tone,
   onSelect
 }: RowProps) {
   const inactive = record.tier === "inactive";
@@ -114,7 +117,7 @@ export function InventoryRow({
       title={stateText(record)}
     >
       <KindIcon kind={record.kind} />
-      <StateMarker tier={record.tier} />
+      <StateMarker tier={record.tier} tone={tone} />
       <span className="flex min-w-0 items-center gap-2">
         <span
           className={`truncate font-semibold ${inactive ? "text-ink-muted" : ""}`}

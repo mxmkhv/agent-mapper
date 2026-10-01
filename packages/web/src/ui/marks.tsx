@@ -45,12 +45,33 @@ const markerStyle = {
   problem: "bg-problem"
 } satisfies Record<Tier, string>;
 
-/** Shape carries the state: solid is normal, hollow is inactive, dashed is unknown, red is a problem. */
-export function StateMarker({ tier, large }: { tier: Tier; large?: boolean }) {
+const sourceTones = [
+  "bg-source-1",
+  "bg-source-2",
+  "bg-source-3",
+  "bg-source-4"
+];
+
+/** The dot color for the nth shared source repo in a group; the palette repeats past its end. */
+function sourceTone(index: number): string {
+  return sourceTones[index % sourceTones.length] ?? "";
+}
+
+/** Shape carries the state: solid is normal, hollow is inactive, dashed is unknown, red is a problem. A source tone (the repo's rank in its group) only recolors the normal dot. */
+export function StateMarker({
+  tier,
+  large,
+  tone
+}: {
+  tier: Tier;
+  large?: boolean;
+  tone?: number;
+}) {
+  const toned = tier === "active" && tone !== undefined;
   return (
     <span
       aria-hidden="true"
-      className={`inline-block shrink-0 rounded-full ${large ? "size-[9px]" : "size-[7px]"} ${markerStyle[tier]}`}
+      className={`inline-block shrink-0 rounded-full ${large ? "size-[9px]" : "size-[7px]"} ${toned ? sourceTone(tone) : markerStyle[tier]}`}
     />
   );
 }

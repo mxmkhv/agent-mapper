@@ -1,7 +1,13 @@
 import { expect, it } from "vitest";
 import { tildeText } from "../model/paths";
 import type { InventoryRecord } from "../model/record-types";
-import { groupRecords, kindCounts } from "./inventory-groups";
+import {
+  clusterBySource,
+  groupRecords,
+  isLocalGroup,
+  kindCounts,
+  sharedSources
+} from "./inventory-groups";
 import { searchRecords } from "./search";
 
 function record(
@@ -69,6 +75,84 @@ it("orders groups by the layer stack and kinds within a group", () => {
     "global-skill"
   ]);
   expect(groups[2]?.plugin).toEqual({ name: "review-kit", version: "1.2.3" });
+});
+
+it("lists only source repos shared by several skills, largest first", () => {
+  const from = (id: string, repo?: string) =>
+    record({
+      id,
+      name: id,
+      layer: "project",
+      installedFrom: repo ? { repo } : undefined
+    });
+  expect(
+    sharedSources([
+      from("a", "maplibre/skills"),
+      from("b", "software-mansion/argent"),
+      from("c", "software-mansion/argent"),
+      from("d", "maplibre/skills"),
+      from("e", "software-mansion/argent"),
+      from("f", "expo/skills"),
+      from("g")
+    ])
+  ).toEqual([
+    { repo: "software-mansion/argent", count: 3 },
+    { repo: "maplibre/skills", count: 2 }
+  ]);
+});
+
+it("gathers a shared repo's skills where the first of them sits", () => {
+  const from = (id: string, repo?: string) =>
+    record({
+      id,
+      name: id,
+      layer: "project",
+      installedFrom: repo ? { repo } : undefined
+    });
+  const clusters = clusterBySource([
+    from("a"),
+    from("b", "software-mansion/argent"),
+    from("c", "expo/skills"),
+    from("d", "software-mansion/argent")
+  ]);
+  expect(
+    clusters.map(({ source, records }) => [
+      source?.repo,
+      records.map((item) => item.id)
+    ])
+  ).toEqual([
+    [undefined, ["a"]],
+    ["software-mansion/argent", ["b", "d"]],
+    [undefined, ["c"]]
+  ]);
+  expect(clusters[1]?.source).toMatchObject({ count: 2, tone: 0 });
+});
+
+it("ranks tied repos by name so their tones stay stable", () => {
+  const from = (id: string, repo: string) =>
+    record({ id, name: id, layer: "project", installedFrom: { repo } });
+  const clusters = clusterBySource([
+    from("a", "zed/skills"),
+    from("b", "acme/skills"),
+    from("c", "zed/skills"),
+    from("d", "acme/skills")
+  ]);
+  expect(clusters.map(({ source }) => [source?.repo, source?.tone])).toEqual([
+    ["zed/skills", 1],
+    ["acme/skills", 0]
+  ]);
+});
+
+it("treats only project and user groups as the project's own", () => {
+  expect(
+    groupRecords(records).map((group) => [group.label, isLocalGroup(group)])
+  ).toEqual([
+    ["Global", false],
+    ["Installed plugins", false],
+    ["review-kit", false],
+    ["Project", true],
+    ["User", true]
+  ]);
 });
 
 it("counts kinds in display order", () => {

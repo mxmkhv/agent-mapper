@@ -44,6 +44,66 @@ function groupFor(record: InventoryRecord): Omit<InventoryGroup, "records"> {
   };
 }
 
+/** Project and user layers belong to the open project; every other layer comes from outside it. */
+export function isLocalGroup(group: InventoryGroup): boolean {
+  return group.layer === "project" || group.layer === "user";
+}
+
+export interface SharedSource {
+  repo: string;
+  count: number;
+}
+
+/** Repos that several of the group's skills were installed from, largest first; one-off sources are left out. */
+export function sharedSources(
+  records: readonly InventoryRecord[]
+): SharedSource[] {
+  const counts = new Map<string, number>();
+  for (const record of records) {
+    const repo = record.installedFrom?.repo;
+    if (repo) {
+      counts.set(repo, (counts.get(repo) ?? 0) + 1);
+    }
+  }
+  return [...counts]
+    .filter(([, count]) => count > 1)
+    .map(([repo, count]) => ({ repo, count }))
+    .sort((a, b) => b.count - a.count || a.repo.localeCompare(b.repo));
+}
+
+/** A repo shared by several skills in a group; `tone` is its rank among them, which picks its dot color. */
+export interface ClusterSource extends SharedSource {
+  tone: number;
+}
+
+export interface RowCluster {
+  /** Set when the rows are skills from one shared repo. */
+  source?: ClusterSource;
+  records: InventoryRecord[];
+}
+
+/** A group's rows in display order, with each shared repo's skills gathered where the first of them sits. */
+export function clusterBySource(
+  records: readonly InventoryRecord[]
+): RowCluster[] {
+  const shared = new Map<string, ClusterSource>(
+    sharedSources(records).map((source, tone) => [
+      source.repo,
+      { ...source, tone }
+    ])
+  );
+  const clusters = new Map<string, RowCluster>();
+  for (const record of records) {
+    const repo = record.installedFrom?.repo;
+    const source = repo ? shared.get(repo) : undefined;
+    const key = source?.repo ?? record.id;
+    const cluster = clusters.get(key) ?? { source, records: [] };
+    cluster.records.push(record);
+    clusters.set(key, cluster);
+  }
+  return [...clusters.values()];
+}
+
 function rank(group: InventoryGroup): number {
   return group.key === "installed-plugins"
     ? installedRank
