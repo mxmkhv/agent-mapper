@@ -77,6 +77,8 @@ export interface HookRecord {
   lane: HookLane;
   matcher?: string;
   handlerType: string;
+  /** Command, URL, MCP tool, or prompt the handler runs, with secret values masked. */
+  preview?: string;
   locator: string;
   sourcePath: string;
   scope: HookScope;

@@ -178,9 +178,10 @@ export function RecordInspector({
       <Details context={scope.context} record={record} />
       {reach ? <ReachSection reach={reach} record={record} /> : null}
       <div className="mt-5.5 flex gap-2">
+        {/* Files the app can edit already lead with Edit; keep one primary action per inspector. */}
         <Button
           onClick={() => void action.run(record.id, "open")}
-          variant="primary"
+          variant={record.sourceRef ? "secondary" : "primary"}
         >
           Open in editor
         </Button>

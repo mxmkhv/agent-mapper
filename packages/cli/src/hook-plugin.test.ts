@@ -4,6 +4,9 @@ import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { buildSnapshot } from "./service";
 
+// Secret-shaped handler values: previews must mask them before the snapshot leaves the server.
+const command = "./check.sh --token private-value";
+
 const roots: string[] = [];
 function fixture() {
   const home = mkdtempSync(join(tmpdir(), "agent-mapper-hooks-"));
@@ -27,7 +30,7 @@ it("links selected plugin hook declarations to their parent", async () => {
     join(pluginPath, "hooks", "hooks.json"),
     JSON.stringify({
       hooks: {
-        Stop: [{ hooks: [{ type: "command", command: "private-value" }] }]
+        Stop: [{ hooks: [{ type: "command", command }] }]
       }
     })
   );
@@ -81,10 +84,10 @@ it("reads portable plugin inline hook arrays with distinct locators", async () =
         "com.openai": {
           hooks: [
             {
-              Stop: [{ hooks: [{ type: "command", command: "private-value" }] }]
+              Stop: [{ hooks: [{ type: "command", command }] }]
             },
             {
-              Stop: [{ hooks: [{ type: "command", command: "private-value" }] }]
+              Stop: [{ hooks: [{ type: "command", command }] }]
             }
           ]
         }

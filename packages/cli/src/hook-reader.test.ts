@@ -10,6 +10,10 @@ import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { buildGlobalSnapshot, buildSnapshot } from "./service";
 
+// Secret-shaped handler values: previews must mask them before the snapshot leaves the server.
+const secret = "private-value";
+const command = `./check.sh --token ${secret}`;
+
 const roots: string[] = [];
 function fixture() {
   const home = realpathSync(mkdtempSync(join(tmpdir(), "agent-mapper-hooks-")));
@@ -38,7 +42,7 @@ function directHookFiles(options: ReturnType<typeof fixture>): void {
             hooks: [
               {
                 type: "command",
-                command: "private-value",
+                command,
                 async: true,
                 timeout: 10
               }
@@ -52,7 +56,11 @@ function directHookFiles(options: ReturnType<typeof fixture>): void {
     join(options.project, ".claude", "settings.json"),
     JSON.stringify({
       hooks: {
-        Stop: [{ hooks: [{ type: "prompt", prompt: "private-value" }] }]
+        Stop: [
+          {
+            hooks: [{ type: "prompt", prompt: `Review with API_KEY=${secret}` }]
+          }
+        ]
       }
     })
   );
@@ -60,9 +68,7 @@ function directHookFiles(options: ReturnType<typeof fixture>): void {
     join(options.codexHome, "hooks.json"),
     JSON.stringify({
       hooks: {
-        SessionStart: [
-          { hooks: [{ type: "command", command: "private-value" }] }
-        ]
+        SessionStart: [{ hooks: [{ type: "command", command }] }]
       }
     })
   );
@@ -83,9 +89,11 @@ it("reads direct Claude and Codex hooks without exporting handler content", asyn
     lane: "Before tool",
     matcher: "Bash",
     handlerType: "command",
+    preview: "./check.sh --token •••",
     locator: "hooks.PreToolUse[0].hooks[0]",
     flags: ["async", "timeout: 10"]
   });
+  expect(snapshot.hooks[1]?.preview).toBe("Review with API_KEY=•••");
   expect(JSON.stringify(snapshot)).not.toContain("private-value");
   const global = await buildGlobalSnapshot(options);
   expect(global.hooks.map((hook) => hook.event)).toEqual([
@@ -100,11 +108,11 @@ it("reads Codex inline TOML hooks and preserves project trust uncertainty", asyn
   mkdirSync(join(options.project, ".codex"));
   writeFileSync(
     join(options.codexHome, "config.toml"),
-    '[[hooks.Stop]]\n[[hooks.Stop.hooks]]\ntype = "command"\ncommand = "private-value"\n'
+    `[[hooks.Stop]]\n[[hooks.Stop.hooks]]\ntype = "command"\ncommand = "${command}"\n`
   );
   writeFileSync(
     join(options.project, ".codex", "config.toml"),
-    '[[hooks.PreToolUse]]\nmatcher = "Bash"\n[[hooks.PreToolUse.hooks]]\ntype = "command"\ncommand = "private-value"\n'
+    `[[hooks.PreToolUse]]\nmatcher = "Bash"\n[[hooks.PreToolUse.hooks]]\ntype = "command"\ncommand = "${command}"\n`
   );
   const snapshot = await buildSnapshot(options.project, options);
   expect(
@@ -138,7 +146,7 @@ it("marks Claude hook declarations disabled when settings disable hooks", async 
     JSON.stringify({
       disableAllHooks: true,
       hooks: {
-        Stop: [{ hooks: [{ type: "command", command: "private-value" }] }]
+        Stop: [{ hooks: [{ type: "command", command }] }]
       }
     })
   );

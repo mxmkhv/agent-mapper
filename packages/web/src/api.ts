@@ -1,4 +1,8 @@
-import type { InventorySnapshot, WorktreeRecord } from "@agent-mapper/core";
+import type {
+  InventorySnapshot,
+  PullRequestLookup,
+  WorktreeRecord
+} from "@agent-mapper/core";
 
 export interface ProjectSuggestion {
   path: string;
@@ -7,6 +11,8 @@ export interface ProjectSuggestion {
 }
 export interface ProjectList {
   projects: ProjectSuggestion[];
+  /** Folders the user removed from the list; saved by the local server. */
+  hidden: string[];
   errors: string[];
   exclusions: string[];
   maxDepth: number;
@@ -17,7 +23,11 @@ interface ActionRequest {
   action: "open" | "reveal";
 }
 type ApiPayload =
-  ProjectList | InventorySnapshot | { ok: true } | { error: string };
+  | ProjectList
+  | InventorySnapshot
+  | PullRequestLookup
+  | { ok: true }
+  | { error: string };
 
 export function sessionToken(): string {
   const token = window.location.hash.slice(1);
@@ -116,4 +126,43 @@ export async function sourceAction({
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ path, id, action })
   });
+}
+
+/** Removes a project from the sidebar, or brings it back. Stored in agent-mapper's own config file. */
+export async function setProjectHidden(
+  path: string,
+  hidden: boolean
+): Promise<void> {
+  await request(`/api/projects/${hidden ? "hide" : "restore"}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ path })
+  });
+}
+
+/** Runs `git worktree remove` without --force; Git's refusal comes back as the error message. */
+export async function removeWorktree(path: string): Promise<void> {
+  await request("/api/worktrees/remove", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ path })
+  });
+}
+
+/** Pull requests for the repository that contains `path`, read through the user's gh login. */
+export async function getPullRequests(
+  path: string,
+  signal?: AbortSignal
+): Promise<PullRequestLookup> {
+  const value = await request(
+    `/api/worktrees/pull-requests?path=${encodeURIComponent(path)}`,
+    { signal }
+  );
+  if (!value || typeof value !== "object" || !("status" in value)) {
+    throw new Error(
+      "Pull request lookup returned an invalid response. Rescan or restart agent-mapper."
+    );
+  }
+  // The local API owns this payload; validate its top-level shape before using the shared contract.
+  return value as PullRequestLookup;
 }

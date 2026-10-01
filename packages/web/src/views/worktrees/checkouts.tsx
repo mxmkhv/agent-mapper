@@ -1,16 +1,17 @@
 import {
   coverageProblems,
+  pullRequestFor,
   type InventorySnapshot,
   type ToolId,
   type WorktreeDifference,
   type WorktreeRecord
 } from "@agent-mapper/core";
-import { GitBranch } from "lucide-react";
 import type { Landing } from "../../shell/view-bar";
 import { EmptyState } from "../../ui/empty-state";
-import { StateLabel, StateMarker } from "../../ui/marks";
-import { tildePath, type PathContext } from "../../model/paths";
+import type { PathContext } from "../../model/paths";
 import { useFolderScans, type FolderScan } from "../../state/use-folder-scans";
+import { usePullRequests } from "../../state/use-pull-requests";
+import { CheckoutRow } from "./checkout-row";
 import { relevantDifferences } from "./difference-groups";
 import { ListPane, ListSection } from "./panes";
 
@@ -30,14 +31,13 @@ function readDifferences(snapshot: InventorySnapshot): CheckoutScan {
   };
 }
 
-const folderName = (path: string) => path.split("/").at(-1) ?? path;
-
 interface CheckoutsProps {
   worktrees: WorktreeRecord[];
   context: PathContext;
   tool: ToolId;
   refreshKey: number;
   onSelectPath(path: string, landing?: Landing): void;
+  onRemoved(): void;
 }
 
 function DifferenceCount({
@@ -67,6 +67,35 @@ function DifferenceCount({
   );
 }
 
+/** Why pull requests are missing or incomplete; silent while loading or when every PR is listed. */
+function PullRequestHint({
+  state
+}: {
+  state: ReturnType<typeof usePullRequests>;
+}) {
+  if (state.status === "error") {
+    return (
+      <p className="m-0 px-2.5 text-caption text-problem" role="alert">
+        Could not load pull requests: {state.message}
+      </p>
+    );
+  }
+  if (state.status !== "done") {
+    return null;
+  }
+  const { lookup } = state;
+  let message: string | undefined;
+  if (lookup.status === "unavailable") {
+    message = `Pull requests: ${lookup.reason}`;
+  } else if (lookup.truncated) {
+    message =
+      "Showing the newest 200 pull requests; branches with older ones have no badge.";
+  }
+  return message ? (
+    <p className="m-0 px-2.5 text-caption text-ink-muted">{message}</p>
+  ) : null;
+}
+
 /**
  * From the main checkout: every linked worktree Git knows about, including stale registrations. Rows lead with
  * the branch, as the sidebar does, and open that checkout's comparison.
@@ -76,7 +105,8 @@ export function Checkouts({
   context,
   tool,
   refreshKey,
-  onSelectPath
+  onSelectPath,
+  onRemoved
 }: CheckoutsProps) {
   const linked = worktrees.filter((tree) => !tree.isMain);
   const scans = useFolderScans(
@@ -88,6 +118,14 @@ export function Checkouts({
     },
     readDifferences
   );
+  const pullRequests = usePullRequests(
+    worktrees.find((tree) => tree.isMain)?.path,
+    refreshKey
+  );
+  const byBranch =
+    pullRequests.status === "done" && pullRequests.lookup.status === "ready"
+      ? pullRequests.lookup.byBranch
+      : {};
   if (!linked.length) {
     return worktrees.length ? (
       <EmptyState title="No linked worktrees">
@@ -102,49 +140,21 @@ export function Checkouts({
   return (
     <ListPane>
       <ListSection count={linked.length} title="Linked worktrees">
-        {linked.map((tree) => {
-          const available = tree.state === "available";
-          const folder = folderName(tree.path);
-          return (
-            <button
-              className="grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_minmax(0,1fr)_120px] items-center gap-2.5 px-3 text-left hover:bg-hover disabled:cursor-default disabled:hover:bg-transparent [&+&]:border-t [&+&]:border-wash"
-              disabled={!available}
-              key={tree.path}
-              onClick={() => onSelectPath(tree.path, { view: "worktrees" })}
-              title={tildePath(tree.path, context)}
-            >
-              <GitBranch
-                aria-hidden="true"
-                className="size-4 text-ink-muted"
-                strokeWidth={1.6}
-              />
-              <StateMarker tier={available ? "active" : "problem"} />
-              <span
-                className={`truncate font-semibold ${available ? "" : "text-ink-muted"}`}
-              >
-                {tree.branch ?? folder}
-              </span>
-              {available ? (
-                <span className="truncate font-mono text-mono text-ink-faint">
-                  {tree.branch ? folder : "detached"}
-                </span>
-              ) : (
-                // Git still lists the checkout but its folder is gone; say where to look.
-                <span className="truncate text-caption text-ink-muted">
-                  Folder unavailable · check git worktree list
-                </span>
-              )}
-              <span className="truncate text-right">
-                {available ? (
-                  <DifferenceCount scan={scans.get(tree.path)} tool={tool} />
-                ) : (
-                  <StateLabel text={tree.state} tier="problem" />
-                )}
-              </span>
-            </button>
-          );
-        })}
+        {linked.map((tree) => (
+          <CheckoutRow
+            context={context}
+            key={tree.path}
+            onOpen={() => onSelectPath(tree.path, { view: "worktrees" })}
+            onRemoved={onRemoved}
+            pullRequest={
+              tree.branch ? pullRequestFor(byBranch, tree.branch) : undefined
+            }
+            status={<DifferenceCount scan={scans.get(tree.path)} tool={tool} />}
+            tree={tree}
+          />
+        ))}
       </ListSection>
+      <PullRequestHint state={pullRequests} />
     </ListPane>
   );
 }

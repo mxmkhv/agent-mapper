@@ -5,6 +5,7 @@ import type {
   PluginRecord,
   ToolId
 } from "@agent-mapper/core";
+import { hookPreview } from "./hook-preview";
 import { object, type JsonMap } from "./plugin-reader-common";
 
 export interface HookSource {
@@ -145,6 +146,10 @@ function append(hooks: HookRecord[], input: HookInput): void {
   const matcher = visibleMatcher(group.matcher);
   if (matcher) {
     record.matcher = matcher;
+  }
+  const preview = hookPreview(handler);
+  if (preview) {
+    record.preview = preview;
   }
   if (source.plugin) {
     record.pluginId = source.plugin.id;

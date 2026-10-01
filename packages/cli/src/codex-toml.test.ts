@@ -51,11 +51,11 @@ it("reads inline and dotted hook groups with multiline handler strings", async (
   mkdirSync(join(options.project, ".codex"));
   writeFileSync(
     join(options.codexHome, "config.toml"),
-    'hooks = { Stop = [{ hooks = [{ type = "command", command = "private-value" }] }] }\nfeatures = { hooks = true }\n'
+    'hooks = { Stop = [{ hooks = [{ type = "command", command = "./check.sh --token private-value" }] }] }\nfeatures = { hooks = true }\n'
   );
   writeFileSync(
     join(options.project, ".codex", "config.toml"),
-    'hooks.PreToolUse = [{ matcher = "Bash", hooks = [{ type = """command\\\n""", timeout = 10, command = "private-value" }] }]\nfeatures.hooks = true\n'
+    'hooks.PreToolUse = [{ matcher = "Bash", hooks = [{ type = """command\\\n""", timeout = 10, command = "./check.sh --token private-value" }] }]\nfeatures.hooks = true\n'
   );
   const snapshot = await buildSnapshot(options.project, options);
   expect(

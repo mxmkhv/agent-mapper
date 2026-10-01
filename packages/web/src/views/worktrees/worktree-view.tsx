@@ -16,6 +16,8 @@ interface WorktreeViewProps {
   tool: ToolId;
   refreshKey: number;
   onSelectPath(path: string, landing?: Landing): void;
+  /** A linked worktree was removed; rescan so the list and sidebar drop it. */
+  onRemoved(): void;
 }
 
 /** A linked worktree compares itself with the main checkout; the main checkout lists its worktrees. */
@@ -31,6 +33,7 @@ export function WorktreeView(props: WorktreeViewProps) {
   ) : (
     <Checkouts
       context={props.context}
+      onRemoved={props.onRemoved}
       onSelectPath={props.onSelectPath}
       refreshKey={props.refreshKey}
       tool={props.tool}

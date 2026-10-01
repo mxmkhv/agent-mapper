@@ -31,7 +31,13 @@ afterEach(() => {
 function hook(event: string) {
   return {
     hooks: {
-      [event]: [{ hooks: [{ type: "command", command: "private-value" }] }]
+      [event]: [
+        {
+          hooks: [
+            { type: "command", command: "./check.sh --token private-value" }
+          ]
+        }
+      ]
     }
   };
 }

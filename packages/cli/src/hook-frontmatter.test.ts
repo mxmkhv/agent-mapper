@@ -36,11 +36,11 @@ it("reads skill and agent frontmatter hooks as conditional declarations", async 
   mkdirSync(join(options.home, ".claude", "agents"), { recursive: true });
   writeFileSync(
     skill,
-    '---\nname: check\nhooks:\n  PreToolUse:\n    - matcher: "Bash"\n      hooks:\n        - type: command\n          command: private-skill-command\n          once: true\n---\nSkill body'
+    '---\nname: check\nhooks:\n  PreToolUse:\n    - matcher: "Bash"\n      hooks:\n        - type: command\n          command: API_TOKEN=private-skill-command ./check.sh\n          once: true\n---\nSkill body'
   );
   writeFileSync(
     agent,
-    "---\nname: review\ndescription: Review code\nhooks:\n  Stop:\n    - hooks:\n        - type: prompt\n          prompt: private-agent-prompt\n---\nAgent body"
+    "---\nname: review\ndescription: Review code\nhooks:\n  Stop:\n    - hooks:\n        - type: prompt\n          prompt: Review with --api-key private-agent-prompt\n---\nAgent body"
   );
 
   const snapshot = await buildSnapshot(options.project, options);
@@ -97,7 +97,7 @@ it("marks hooks on a shadowed agent unresolved and project hooks trust-dependent
     recursive: true
   });
   const content =
-    "---\nname: review\ndescription: Review code\nhooks:\n  Stop:\n    - hooks:\n        - type: command\n          command: private-value\n---\nBody";
+    "---\nname: review\ndescription: Review code\nhooks:\n  Stop:\n    - hooks:\n        - type: command\n          command: ./check.sh --token private-value\n---\nBody";
   writeFileSync(global, content);
   writeFileSync(project, content);
 

@@ -8,6 +8,35 @@ export interface WorktreeRecord {
   head?: string;
 }
 
+/** The pull request that best describes a branch: open or draft first, then merged, then closed; newest within each. */
+export interface PullRequestSummary {
+  number: number;
+  state: "open" | "draft" | "merged" | "closed";
+  title: string;
+  url: string;
+}
+
+/** Head branch name → its pull request. */
+export type PullRequestsByBranch = Record<string, PullRequestSummary>;
+
+/** The branch's own entry only: names like "constructor" or "toString" must not reach inherited members. */
+export function pullRequestFor(
+  byBranch: PullRequestsByBranch,
+  branch: string
+): PullRequestSummary | undefined {
+  return Object.hasOwn(byBranch, branch) ? byBranch[branch] : undefined;
+}
+
+/** Pull requests by head branch name, or why GitHub could not be asked. */
+export type PullRequestLookup =
+  | {
+      status: "ready";
+      byBranch: PullRequestsByBranch;
+      /** gh hit its list limit, so older branches may have no badge. */
+      truncated: boolean;
+    }
+  | { status: "unavailable"; reason: string };
+
 export interface ComparisonSide {
   id: string;
   path: string;

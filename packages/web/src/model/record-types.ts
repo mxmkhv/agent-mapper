@@ -18,6 +18,8 @@ export type Tier = "active" | "inactive" | "unknown" | "approval" | "problem";
 export interface RecordDetail {
   label: string;
   value: string;
+  /** Commands, URLs, and other literal text shown in monospace. */
+  code?: boolean;
 }
 
 interface PluginRef {
