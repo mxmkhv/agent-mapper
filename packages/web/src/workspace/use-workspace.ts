@@ -3,6 +3,7 @@ import type { InventorySnapshot, ToolId } from "@agent-mapper/core";
 import { buildRecords } from "../model/build-records";
 import { pathContext } from "../model/paths";
 import { foldInactive } from "../model/plugin-versions";
+import { relationLabels } from "../model/precedence";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
 import type { Landing, View } from "../shell/view-bar";
 import { useSearchShortcut } from "../use-search-shortcut";
@@ -166,22 +167,39 @@ function useViewFilter(isProject: boolean, landing?: Landing) {
   };
 }
 
-/** All per-folder UI state: view, filters, selection, and the records the views render. */
-export function useWorkspace(input: WorkspaceInput) {
-  const { snapshot, isProject, tool } = input;
-  const filter = useViewFilter(isProject, input.landing);
+/** The scan's records, derived once per snapshot, plus records from other folders for lookups. */
+function useRecords({
+  snapshot,
+  isProject,
+  extraRecords
+}: Pick<WorkspaceInput, "snapshot" | "isProject" | "extraRecords">) {
   const records = useMemo(
     () => buildRecords(snapshot, isProject ? "project" : "global"),
     [snapshot, isProject]
   );
-  const context = useMemo(
-    () => pathContext(snapshot, isProject),
-    [snapshot, isProject]
-  );
-  const lookup = useMemo(
-    () => [...records, ...input.extraRecords],
-    [records, input.extraRecords]
-  );
+  return {
+    records,
+    context: useMemo(
+      () => pathContext(snapshot, isProject),
+      [snapshot, isProject]
+    ),
+    lookup: useMemo(
+      () => [...records, ...extraRecords],
+      [records, extraRecords]
+    ),
+    // Labels are keyed by record id, so both tools' records can share one map.
+    relations: useMemo(
+      () => relationLabels({ records, findings: snapshot.findings }),
+      [records, snapshot.findings]
+    )
+  };
+}
+
+/** All per-folder UI state: view, filters, selection, and the records the views render. */
+export function useWorkspace(input: WorkspaceInput) {
+  const { snapshot, isProject, tool } = input;
+  const filter = useViewFilter(isProject, input.landing);
+  const { records, context, lookup, relations } = useRecords(input);
   const selection = useRevealingSelection(lookup, {
     ...input,
     isFolded: foldedIn(records, tool)
@@ -211,6 +229,7 @@ export function useWorkspace(input: WorkspaceInput) {
     groupFocused: filter.groupFocused,
     records,
     lookup,
+    relations,
     ...forTool(records, { tool, showInactive: selection.showInactive }),
     findings: snapshot.findings.filter((finding) => finding.tool === tool),
     context

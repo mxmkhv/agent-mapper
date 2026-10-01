@@ -77,6 +77,9 @@ it("reads Claude scopes and redacts URL credentials, arguments, and secret value
     ["shared", "project", "shadowed"],
     ["local", "project", "approval required"]
   ]);
+  // Both lower declarations name the private one, the top of the three, as their winner.
+  expect(snapshot.mcpServers[0]?.shadowedBy).toBe(snapshot.mcpServers[1]?.id);
+  expect(snapshot.mcpServers[2]?.shadowedBy).toBe(snapshot.mcpServers[1]?.id);
   expect(snapshot.mcpServers[0]).toMatchObject({
     destination: "https://example.com",
     headerNames: ["Authorization"]

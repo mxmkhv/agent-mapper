@@ -1,6 +1,6 @@
 import type { InventoryRecord } from "./record-types";
 
-/** Names that repeat within a group, so their rows or chips can show what tells them apart. */
+/** Names that repeat within a group, so their rows can show what tells them apart. */
 export function repeatedNames(records: readonly InventoryRecord[]) {
   const seen = new Map<string, number>();
   for (const record of records) {

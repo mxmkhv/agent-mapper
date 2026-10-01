@@ -54,13 +54,13 @@ export function Workspace(props: WorkspaceProps) {
     [scanned]
   );
   const state = useWorkspace({ ...props, extraRecords });
-  const reach = scanned.map((project) => ({
+  const forTool = scanned.map((project) => ({
     ...project,
     records: project.records?.filter(
       (record) => record.tool === props.tool || record.tool === "unknown"
     )
   }));
-  const parts = { props, state, reach };
+  const parts = { props, state, scanned: forTool };
   const coverage = impactCoverage(props, scanned);
   const tabs = tabsFor(parts);
   const detailOpen = Boolean(state.selected ?? state.showCoverage);

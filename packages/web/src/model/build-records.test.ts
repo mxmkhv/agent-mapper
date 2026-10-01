@@ -133,7 +133,8 @@ it("keeps active records quiet and names shadowed ones plainly", () => {
   shadowed.resolution = {
     availability: "shadowed",
     loading: "not-applicable",
-    reason: "CLAUDE.md wins"
+    reason: "CLAUDE.md wins",
+    shadowedBy: "claude"
   };
   const [active, inactive] = buildRecords(
     snapshot({
@@ -144,6 +145,7 @@ it("keeps active records quiet and names shadowed ones plainly", () => {
   expect(active && stateLabel(active)).toBeUndefined();
   expect(active && stateText(active)).toBe("Loads at startup");
   expect(inactive && stateText(inactive)).toBe("Not used here");
+  expect(inactive?.shadowedBy).toBe("claude");
 });
 
 it("links symlinks and their sources in both directions", () => {

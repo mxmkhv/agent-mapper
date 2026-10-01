@@ -1,7 +1,6 @@
 import type { InventorySnapshot, ToolId } from "@agent-mapper/core";
 import { layerHint } from "../model/layers";
 import { tildePath } from "../model/paths";
-import { relationLabels } from "../model/precedence";
 import type { InventoryRecord } from "../model/record-types";
 import type { ScannedProject } from "../model/scanned-project";
 import { CoverageInspector } from "../inspector/coverage-inspector";
@@ -38,7 +37,7 @@ export interface PartsProps {
   props: WorkspaceProps;
   state: WorkspaceState;
   /** Other projects' inventories, scanned only for the Global view. */
-  reach: ScannedProject[];
+  scanned: ScannedProject[];
 }
 
 export function tabsFor({ props, state }: PartsProps): ViewTab[] {
@@ -96,7 +95,7 @@ export function titleFor({ props, state }: PartsProps): HeaderTitle {
   };
 }
 
-export function Content({ props, state, reach }: PartsProps) {
+export function Content({ props, state, scanned }: PartsProps) {
   const common = { context: state.context, selectedId: state.selected?.id };
   if (state.view === "findings") {
     return (
@@ -132,9 +131,9 @@ export function Content({ props, state, reach }: PartsProps) {
         onSelect={(record: InventoryRecord) =>
           state.select(record.id, { reveal: false })
         }
-        projects={reach}
+        projects={scanned}
         showInactive={state.showInactive}
-        summary={summary("Every project starts with", false)}
+        summary={summary("Your global setup loads", false)}
         tool={props.tool}
       />
     );
@@ -174,10 +173,7 @@ export function Content({ props, state, reach }: PartsProps) {
       onSelect={state.select}
       otherVersions={state.showInactive ? undefined : state.otherVersions}
       records={state.visible}
-      relations={relationLabels({
-        records: state.toolRecords,
-        findings: state.findings
-      })}
+      relations={state.relations}
       revealRequest={state.revealRequest}
       summary={
         props.isProject ? summary("A new session starts with", true) : undefined
@@ -192,7 +188,7 @@ export function Content({ props, state, reach }: PartsProps) {
   );
 }
 
-export function Inspector({ props, state, reach }: PartsProps) {
+export function Inspector({ props, state, scanned }: PartsProps) {
   if (state.showCoverage) {
     return (
       <CoverageInspector
@@ -228,7 +224,7 @@ export function Inspector({ props, state, reach }: PartsProps) {
       reach={
         props.isProject
           ? undefined
-          : { projects: reach, onOpen: props.onSelectPath }
+          : { projects: scanned, onOpen: props.onSelectPath }
       }
       record={state.selected}
       scope={scope}

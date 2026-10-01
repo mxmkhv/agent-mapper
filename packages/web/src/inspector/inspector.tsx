@@ -128,7 +128,7 @@ export function RecordInspector({
   onOpenDocument,
   reach
 }: RecordInspectorProps) {
-  // An instruction or skill picked from Global reach carries its own project's scan; other kinds use this view's.
+  // An instruction or skill picked in the Global view carries its own project's scan; other kinds use this view's.
   const workingDirectory =
     record.sourceRef?.workingDirectory ?? scope.workingDirectory;
   const action = useSourceAction(workingDirectory);

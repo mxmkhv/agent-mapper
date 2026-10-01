@@ -112,6 +112,7 @@ export function StartupSummary(props: StartupSummaryProps) {
         {files.map((file, index) => (
           <li className="min-w-0" key={file.id}>
             <button
+              aria-current={file.id === props.selectedId ? "true" : undefined}
               className={`inline-flex h-6 max-w-full items-center gap-1.5 rounded-control px-1.5 ${file.id === props.selectedId ? "bg-selected" : "hover:bg-hover"}`}
               onClick={() => props.onSelect(file.id)}
             >

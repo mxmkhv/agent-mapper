@@ -51,8 +51,11 @@ function shortCommand(command: string, context: PathContext): string {
 function Detail({
   record,
   context,
-  sharesName
-}: Pick<RowProps, "record" | "context" | "sharesName">) {
+  showPath
+}: Pick<RowProps, "record" | "context"> & {
+  /** Show the path even where it is conventional, because it is what tells this row apart. */
+  showPath?: boolean;
+}) {
   if (record.kind === "hook") {
     // What the hook runs comes first: it says more than the matcher or handler type, and long matchers would truncate it away.
     const runs =
@@ -88,7 +91,7 @@ function Detail({
     );
   }
   // The row already names the item; a conventional path would only repeat the group and the name.
-  if (!isLink(record) && !sharesName && isConventionalPath(record, context)) {
+  if (!isLink(record) && !showPath && isConventionalPath(record, context)) {
     return <span />;
   }
   return (
@@ -209,7 +212,7 @@ export function InventoryRow({
       <Detail
         context={context}
         record={record}
-        sharesName={sharesName || Boolean(relation)}
+        showPath={sharesName || Boolean(relation)}
       />
       {/* A fixed last column keeps every row's detail column aligned, labelled or not. */}
       {/* The floating actions may be narrower than the label, so it steps aside instead of peeking out. */}

@@ -69,3 +69,14 @@ it("labels only winners and shared names; everything else stays quiet", () => {
     ["b", "shared name"]
   ]);
 });
+
+it("counts several overridden sources once each, and an override outranks a shared name", () => {
+  const first = record({ id: "x", name: "x", shadowedBy: "a" });
+  const second = record({ id: "y", name: "y", shadowedBy: "a" });
+  // The Global view merges several scans, so the same record can arrive twice.
+  const labels = relationLabels({
+    records: [skillA, first, second, { ...first }],
+    findings
+  });
+  expect(labels.get("a")).toBe("overrides 2");
+});

@@ -156,3 +156,28 @@ it("links a provided server to the exclusive declaration that replaces it", asyn
   expect(provided?.availability).toBe("shadowed");
   expect(provided?.shadowedBy).toBe(exclusive?.id);
 });
+
+it("drops a server's winner when an exclusive policy excludes every ordinary source", async () => {
+  const options = fixture();
+  writeFileSync(
+    join(options.home, ".claude.json"),
+    JSON.stringify({ mcpServers: { shared: { command: "node" } } })
+  );
+  writeFileSync(
+    join(options.project, ".mcp.json"),
+    JSON.stringify({ mcpServers: { shared: { command: "deno" } } })
+  );
+  writeFileSync(
+    join(options.managedClaudeDir, "managed-mcp.json"),
+    JSON.stringify({ mcpServers: {} })
+  );
+  const snapshot = await buildSnapshot(options.project, options);
+  const ordinary = snapshot.mcpServers.filter(
+    (server) => server.scope !== "managed"
+  );
+  expect(ordinary.length).toBeGreaterThan(1);
+  for (const server of ordinary) {
+    expect(server.availability).toBe("shadowed");
+    expect(server.shadowedBy).toBeUndefined();
+  }
+});

@@ -72,6 +72,8 @@ function markOrdinary(
     if (options.exclusivePath) {
       record.availability = "shadowed";
       record.reason = `Local managed MCP policy excludes ordinary sources if selected: ${options.exclusivePath}`;
+      // The policy, not another declaration, excludes it; an earlier link to a winner no longer applies.
+      record.shadowedBy = undefined;
     } else if (
       options.managedNames.has(record.name) &&
       record.availability !== "disabled" &&

@@ -8,12 +8,11 @@ import type { Landing } from "../../shell/view-bar";
 import { EmptyState } from "../../ui/empty-state";
 import { FindingCounts } from "../../ui/finding-counts";
 import { KindIcon, kindLabel, kindSingular } from "../../ui/kind-icon";
+import { cellLinkClass, Differences } from "./differences";
 import {
   differencesFromGlobal,
   projectOwn,
-  startupTokens,
-  type Difference,
-  type DifferenceGroup
+  startupTokens
 } from "./projects-model";
 
 interface ProjectsViewProps {
@@ -34,54 +33,6 @@ type RowProps = Pick<
   "globalRecords" | "tool" | "showInactive" | "onSelect" | "onOpenProject"
 > & { project: ScannedProject };
 
-const linkClass =
-  "rounded-control px-1 -mx-1 text-left hover:bg-hover hover:underline";
-
-/** How many sources a state names before the rest fold into a count. */
-const namedDifferences = 3;
-
-function Differences({
-  groups,
-  project,
-  onSelect,
-  onOpenProject
-}: Pick<RowProps, "project" | "onSelect" | "onOpenProject"> & {
-  groups: DifferenceGroup[];
-}) {
-  if (!groups.length) {
-    return <span className="text-ink-faint">Same as global</span>;
-  }
-  // A source the project's scan lists opens there; one it never reached is explained by the global record.
-  const open = ({ source, match }: Difference) =>
-    match
-      ? onOpenProject(project.path, { selectId: match.id })
-      : onSelect(source);
-  return (
-    <div className="grid gap-0.5">
-      {groups.map((group) => {
-        const more = group.items.length - namedDifferences;
-        return (
-          <p className="m-0 flex flex-wrap gap-x-2" key={group.state}>
-            <span className="text-ink-muted">{group.state}</span>
-            {group.items.slice(0, namedDifferences).map((item) => (
-              <button
-                className={`font-semibold ${linkClass}`}
-                key={item.source.id}
-                onClick={() => open(item)}
-              >
-                {item.source.name}
-              </button>
-            ))}
-            {more > 0 ? (
-              <span className="text-ink-faint">+{more} more</span>
-            ) : null}
-          </p>
-        );
-      })}
-    </div>
-  );
-}
-
 function Findings({
   project,
   tool,
@@ -95,7 +46,7 @@ function Findings({
   }
   return (
     <button
-      className={linkClass}
+      className={cellLinkClass}
       onClick={() => onOpenProject(project.path, { view: "findings" })}
     >
       <FindingCounts findings={findings} />
@@ -117,7 +68,7 @@ function Scanned(props: RowProps) {
           <span className="flex flex-wrap gap-x-3 gap-y-0.5">
             {own.map(([kind, count]) => (
               <button
-                className={`inline-flex items-center gap-1 whitespace-nowrap ${linkClass}`}
+                className={`inline-flex items-center gap-1 whitespace-nowrap ${cellLinkClass}`}
                 key={kind}
                 onClick={() =>
                   props.onOpenProject(project.path, { view: "inventory", kind })
@@ -153,15 +104,19 @@ function Scanned(props: RowProps) {
 }
 
 /**
- * A row never claims results for a project that is still scanning or failed to scan. While a project rescans,
- * its previous results stay in place, faded, so the table does not blank out; a previous error reads as scanning.
+ * A row never presents results as current while its project is scanning, and claims none for a failed scan.
+ * While a project rescans, its previous results stay in place, faded, so the table does not blank out; a
+ * previous error reads as scanning.
  */
 function ProjectRow(props: RowProps & { context: PathContext }) {
   const { project } = props;
   const pending = () =>
     scanFailed(project) ? (
       <td className="text-problem" colSpan={4}>
-        Scan failed: {project.error} Rescan to try again.
+        {/* Scan errors already say what to do next; only a bare failure needs the hint. */}
+        {project.error
+          ? `Scan failed: ${project.error}`
+          : "Scan failed. Rescan to try again."}
       </td>
     ) : (
       <td className="text-ink-faint" colSpan={4}>
@@ -175,7 +130,7 @@ function ProjectRow(props: RowProps & { context: PathContext }) {
     >
       <th className="text-left font-normal" scope="row">
         <button
-          className={`block max-w-full truncate font-semibold ${linkClass}`}
+          className={`block max-w-full truncate font-semibold ${cellLinkClass}`}
           onClick={() => props.onOpenProject(project.path)}
         >
           {project.name}

@@ -20,11 +20,12 @@ export const scanSettled = (project: ScannedProject): boolean =>
 
 /** The project's current scan failed. */
 export const scanFailed = (project: ScannedProject): boolean =>
-  Boolean(project.error) && !project.refreshing;
+  project.error !== undefined && !project.refreshing;
 
 /** No current answer yet: never scanned, or rescanning. */
 export const scanPending = (project: ScannedProject): boolean =>
-  Boolean(project.refreshing) || (!project.records && !project.error);
+  Boolean(project.refreshing) ||
+  (project.records === undefined && project.error === undefined);
 
 /** Stable identity for the same declaration seen from different folders. */
 export function recordKey(record: InventoryRecord): string {

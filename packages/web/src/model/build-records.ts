@@ -85,7 +85,7 @@ function documentIds(snapshot: InventorySnapshot): Set<string> {
 
 /**
  * One uniform list for every view: each record knows its layer, state tier and provenance.
- * `scope` names the scan that produced the snapshot, so a record shown elsewhere (Global reach)
+ * `scope` names the scan that produced the snapshot, so a record shown elsewhere (the Global view)
  * still opens through its own project.
  */
 export function buildRecords(

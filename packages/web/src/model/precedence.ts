@@ -2,7 +2,7 @@ import type { Finding } from "@agent-mapper/core";
 import type { InventoryRecord } from "./record-types";
 
 export interface Precedence {
-  /** The source that wins over this one. */
+  /** The next source that wins over this one. It may itself be shadowed by another. */
   overriddenBy?: InventoryRecord;
   /** Sources this one wins over. */
   overrides: InventoryRecord[];
@@ -49,17 +49,36 @@ export function precedenceOf(
   };
 }
 
+/** Records grouped by the id of the record that wins over them, each source once. */
+function losersByWinner(records: readonly InventoryRecord[]) {
+  const losers = new Map<string, Map<string, InventoryRecord>>();
+  for (const record of records) {
+    if (record.shadowedBy) {
+      const group = losers.get(record.shadowedBy) ?? new Map();
+      losers.set(record.shadowedBy, group.set(record.id, record));
+    }
+  }
+  return losers;
+}
+
 /**
  * Short row labels for records that would otherwise look normal: the winner of an override, and skills that
- * share a name. An overridden record already carries its own state label.
+ * share a name. An overridden record already carries its own state label. One pass over the records, since
+ * it runs for every row the Inventory shows.
  */
 export function relationLabels(scope: {
   records: readonly InventoryRecord[];
   findings: readonly Finding[];
 }): Map<string, string> {
+  const losers = losersByWinner(scope.records);
+  const sharedNames = new Set(
+    scope.findings
+      .filter((finding) => finding.code === "duplicate-skill-name")
+      .flatMap((finding) => finding.sources.map((source) => source.id))
+  );
   const labels = new Map<string, string>();
   for (const record of scope.records) {
-    const { overrides, sameName } = precedenceOf(record, scope);
+    const overrides = [...(losers.get(record.id)?.values() ?? [])];
     const [only] = overrides;
     if (only) {
       labels.set(
@@ -68,7 +87,7 @@ export function relationLabels(scope: {
           ? `overrides ${only.name}`
           : `overrides ${overrides.length}`
       );
-    } else if (sameName.length) {
+    } else if (sharedNames.has(record.id)) {
       labels.set(record.id, "shared name");
     }
   }

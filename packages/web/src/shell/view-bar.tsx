@@ -3,8 +3,9 @@ import type { RecordKind } from "../model/record-types";
 
 export type View = "projects" | "inventory" | "findings" | "worktrees";
 
-/** Where to land after switching folders: an item to select, or a view with an optional kind filter. */
-export type Landing = { selectId: string } | { view: View; kind?: RecordKind };
+/** Where to land after switching to a project: an item to select, or a view with an optional kind filter. */
+export type Landing =
+  { selectId: string } | { view: Exclude<View, "projects">; kind?: RecordKind };
 
 export interface ViewTab {
   id: View;

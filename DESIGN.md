@@ -148,18 +148,6 @@ components:
     textColor: "#ffffff"
     rounded: "{rounded.glyph}"
     size: "15px"
-  chip:
-    backgroundColor: "{colors.wash}"
-    textColor: "{colors.ink}"
-    typography: "{typography.label}"
-    rounded: "{rounded.control}"
-    height: "24px"
-    padding: "0 8px"
-  chip-inactive:
-    backgroundColor: "transparent"
-    textColor: "{colors.ink-muted}"
-    rounded: "{rounded.control}"
-    height: "24px"
   facet:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink-muted}"
@@ -194,10 +182,6 @@ components:
     rounded: "{rounded.pill}"
     height: "18px"
     padding: "0 6px"
-  layer-card:
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.card}"
-    padding: "4px"
   provenance:
     backgroundColor: "{colors.wash}"
     typography: "{typography.label}"
@@ -234,7 +218,7 @@ Warm neutral grays carry the whole interface. Saturated color is reserved for to
 
 ### Secondary
 
-- **Claude Terracotta** (`claude`): Claude Code identity only. Used for the tool glyph, the skill-index segment of the startup budget bar, the border of the open project's own Inventory groups, and nothing else.
+- **Claude Terracotta** (`claude`): Claude Code identity only. Used for the tool glyph, the skill-index segment of the startup summary bar, the border of the open project's own Inventory groups, and nothing else.
 - **Codex Blue** (`codex`): Codex identity only, in the same places. It is never green, so it cannot be confused with a success state.
 - **Favicon**: a disc filled with the selected tool's hue (the light-theme value in both color schemes) and a white bot icon at 60% in its center. It swaps when the tool toggle changes.
 
@@ -250,10 +234,10 @@ Warm neutral grays carry the whole interface. Saturated color is reserved for to
 - **Sidebar Stone** (`sidebar`): sidebar background.
 - **Muted Ink** (`ink-muted`): secondary text, icons, and state labels.
 - **Faint Ink** (`ink-faint`): tertiary text, counts, path prefixes, and captions. Still meets WCAG AA (4.5:1) on canvas, surface, wash and selected rows; never go lighter.
-- **Hairline** (`hairline`, `hairline-strong`): borders and dividers. The strong variant is used for hover borders and absent-cell dashes.
+- **Hairline** (`hairline`, `hairline-strong`): borders and dividers. The strong variant is used for hover borders and the "not reached" dash in the inspector's reach list.
 - **Wash** (`wash`): provenance breadcrumb, the inherited-groups panel, bar tracks, and toggle track.
 - **Hover / Selected** (`hover`, `selected`): row and nav states.
-- **Layer tones** (`layer-global`, `layer-plugins`, `layer-project`): startup budget bar segments by layer. These three grays are the only place layers get a color.
+- **Layer tones** (`layer-global`, `layer-plugins`, `layer-project`): startup summary bar segments and load-list swatches, by layer. These three grays are the only place layers get a color.
 - **Source tones** (`source-1` to `source-4`: soft violet, gold, cyan, pink): the state dot of an active skill in the Inventory, by the repo it was installed from (read from the `skills` installer's lock files). Only repos with two or more skills in a group get a tone, largest repo first; a fifth repo in one group reuses the first tone. Those skills sit together under a 32px wash row inside the card that names the repo, carries the same dot and a count, and folds them away (open by default); one-off and hand-written skills stay gray. Never red, green, terracotta or Codex blue, so a tone cannot read as a problem, a link or a tool. Inactive, unknown and problem dots keep their state styling.
 - **Link green** (`link`: soft sage): symlinks. It tints the symlink chip (45% border, 10% fill, the link icon; the text stays Muted Ink for contrast) and colors the state dot of an active symlinked item that has no source tone. A source tone wins on the dot, so a cluster's dots still match its head.
 
@@ -280,7 +264,7 @@ Every neutral and signal token has a `-dark` twin in the frontmatter. Dark mode 
 - **Title** (650, 17px, 1.3, -0.015em): the page title in the header (project name or "Global").
 - **Large** (550–650, 15px, 1.35): the search input and contribution counts in the inspector.
 - **Body** (400, 13px, 1.45): default UI text, reasons, and descriptions.
-- **Body Strong** (550, 13px): item names in rows, the startup load list, and project names in the Projects table.
+- **Body Strong** (550, 13px): item names in rows.
 - **Label** (550, 12px): buttons, facets, table cells, and the startup summary title.
 - **Caption** (500, 11px): counts, state labels, badges, and inspector section headings (650 weight, faint).
 - **Mono** (400, 11.5–12px): paths, versions, locators, matchers, and layer location hints that are paths (`~/.claude`). Prose hints such as "In this repo" stay in sans.
@@ -300,7 +284,7 @@ Every neutral and signal token has a `-dark` twin in the frontmatter. Dark mode 
 - **Narrow windows (below 1024px):** the inspector leaves the grid and floats over the content from the right, only while something is selected or coverage notes are open, with a close button. Worktrees stack the detail pane under the list. The Show inactive switch shortens to "Inactive (N)".
 - **Main area:**
   - A 56px header: title, path, and branch on the left; tool toggle, Search ⌘K, scan time, and Rescan on the right.
-  - A 36px view bar: view tabs (Inventory and Findings, led by Projects in the Global view) on the left; the Show inactive switch and the coverage notes link on the right.
+  - A 36px view bar: view tabs (Projects, Inventory, Findings in the Global view; Inventory, Findings, and Worktrees when the project has linked checkouts) on the left; the Show inactive switch and the coverage notes link on the right.
   - Content and a 380px inspector in two columns, each scrolling independently.
 - **Inventory:** the landing view of a project. The startup summary sits on top and scrolls away; filter chips (facets) stick to the top of the pane. Groups follow the same layer order: Global, installed plugins, each plugin's contributions, Project, User. Rows are 36px in one bordered card per group. In a project, the groups it inherits (Managed, Global, plugins) sit behind one wash-filled disclosure row, collapsed by default; it starts open when the project has no groups of its own, and selecting an item inside it (from search or the inspector) opens it. The project's own groups (Project, User) carry the tool glyph, an ink label, and a card border in the tool hue at 50%. The Global view has no disclosure row.
 - **Projects (the Global landing view):** the global startup summary, then a fixed-layout table with one row per project and five columns: Project, Startup, Adds, Differs from global, Findings. Rows grow with their content; the table scrolls sideways below 640px. The inspector appears only while something is selected, so the table keeps the width.
@@ -325,10 +309,10 @@ The system is flat. Depth comes from tonal layering (canvas → sheet → wash) 
 Corners are softly rounded and grow with the element's size:
 
 - 4px for tool glyphs;
-- 6px for nav items, chips, and rows inside cards;
+- 6px for nav items, inline buttons, and rows inside cards;
 - 7px for buttons and facets;
 - 8px for panels, the breadcrumb, and the toggle track;
-- 10px for layer cards, row groups, and the matrix;
+- 10px for row groups, the startup summary, and the Projects table;
 - 12px for the search dialog;
 - 9px pills for badges.
 
@@ -358,7 +342,7 @@ A 7px marker leads every item. Its shape carries the state, so no colored badge 
 
 ### Startup Summary (signature)
 
-One card above a project's Inventory ("A new session starts with") and above the Projects table ("Every project starts with").
+One card above a project's Inventory ("A new session starts with") and above the Projects table ("Your global setup loads"). The Global title describes the global sources only: a project can disable some of them, which its row then shows.
 
 - **Numbers:** "Startup ~7.4k · On demand ~102k", then the visible note "Estimated tokens: characters ÷ 4". Values always carry "~".
 - **Bar:** a 6px segmented bar with one gray segment per startup instruction file (toned by layer) plus a tool-colored skill-index segment.
@@ -367,12 +351,12 @@ One card above a project's Inventory ("A new session starts with") and above the
 
 ### Symlink Badge and Links (signature)
 
-- **Badge:** a white pill with a link icon and the word "symlink" (11px, muted, hairline border). It appears on any entry whose resolved path differs from its entry path, in the Inventory and the inspector.
+- **Badge:** a pill tinted Link green with a link icon and the word "symlink" (11px, muted text). It appears on any entry whose resolved path differs from its entry path, in the Inventory and the inspector.
 - **Two-way links:** the inspector for a symlink shows **Symlink to** with a clickable row to the source file. The source's inspector shows **Linked from N places**, with a clickable row for each link. Rows from the other tool show that tool's glyph.
 
 ### Inventory Rows
 
-A 36px row: kind icon, state marker, name (body-strong), a symlink badge slot, a detail slot (path, matcher, or version, in faint mono), and a right-aligned state label. An active row that wins an override or shares its name with another skill carries a faint note there instead ("overrides AGENTS.md", "shared name") and always shows its path. The hover fill is Hover and the selected fill is Selected. Group heads sit above each card: layer icon, label, count, and a mono location hint. Plugin groups show the plugin name and version. In a project, its own groups swap the layer icon for the tool glyph and use an ink label. Skills that share a source repo sit under a 32px wash row (chevron, source-tone dot, repo in mono, count) that folds them away. The name is the row's button, stretched over the row; two things sit above it as buttons of their own. The symlink chip opens a popover (native `popover`, anchored under the chip) with the folder the link resolves into and **Open in Finder**. Rows for files the app can edit show 28px buttons while hovered, focused or selected: primary **Edit**, then on skills and agents secondary **Copy** and a Delete icon button (not on plugin or managed items). They float over the right end of the row on the row's own fill, so the columns keep their widths. In a project, everything inherited (Global and plugins) sits inside one wash panel whose head row folds it away, so the groups read as its contents; it is closed by default.
+A 36px row: kind icon, state marker, name (body-strong), a symlink badge slot, a detail slot (path, matcher, or version, in faint mono), and a right-aligned state label. An active row that wins an override or shares its name with another skill carries a faint note there instead ("overrides AGENTS.md", "shared name") and shows its path even where the path is conventional. The hover fill is Hover and the selected fill is Selected. Group heads sit above each card: layer icon, label, count, and a mono location hint. Plugin groups show the plugin name and version. In a project, its own groups swap the layer icon for the tool glyph and use an ink label. Skills that share a source repo sit under a 32px wash row (chevron, source-tone dot, repo in mono, count) that folds them away. The name is the row's button, stretched over the row; two things sit above it as buttons of their own. The symlink chip opens a popover (native `popover`, anchored under the chip) with the folder the link resolves into and **Open in Finder**. Rows for files the app can edit show 28px buttons while hovered, focused or selected: primary **Edit**, then on skills and agents secondary **Copy** and a Delete icon button (not on plugin or managed items). They float over the right end of the row on the row's own fill, so the columns keep their widths. In a project, everything inherited (Global and plugins) sits inside one wash panel whose head row folds it away, so the groups read as its contents; it is closed by default.
 
 ### Facets
 
@@ -388,9 +372,9 @@ One row per project; the row header opens the project.
 
 - **Startup:** the project's approximate startup tokens.
 - **Adds:** what the project's own folder contributes, as kind icon, count, and kind name ("2 Skills"). Each opens that project's Inventory filtered to the kind. Empty reads "Nothing of its own".
-- **Differs from global:** global sources that apply globally but not plainly here, grouped by their state in the project ("Not used here reviewer"). Up to three names per state, then "+N more". A name opens the item in that project. No differences reads "Same as global" in faint text.
+- **Differs from global:** global sources that apply globally but not plainly here, grouped by their state in the project ("Not used here reviewer", "Disabled context7"), or "Does not reach" when the project's scan does not list them. Hooks add their matcher, since several share an event name. Up to three names per state, then a "+N more" button that shows the rest. A name opens the item in that project; one the project never reached opens the global record in the inspector. No differences reads "Same as global" in faint text.
 - **Findings:** "1 problem · 2 other" linking to that project's Findings, or "None".
-- A project that is still scanning or failed to scan says so across the row and claims nothing.
+- A project that is still scanning or failed to scan says so across the row and claims nothing. While a project rescans, its previous results stay, faded, and a previous error reads "Rescanning…".
 
 ### Confirmations
 
@@ -434,8 +418,8 @@ A stack of cards (10px radius, hairline): an info or alert icon, the title, a le
 - **Do** order layers Global → Plugins → Project → User everywhere: Inventory groups and breadcrumbs.
 - **Do** keep active items silent. Put a text label only on non-active states.
 - **Do** hide inactive items (not used, disabled, cached) behind the Show inactive switch and always show the hidden count.
-- **Do** collapse repeats: cached plugin versions, shared source repos, and projects that match the global setup.
-- **Do** make every item selectable and explain it in the inspector: state, reason, provenance, links, reach.
+- **Do** collapse repeats: cached plugin versions and shared source repos. A project that matches the global setup says "Same as global" instead of listing anything.
+- **Do** make every item selectable and explain it in the inspector: state, reason, provenance, precedence, links, reach.
 - **Do** keep the filename visible when paths are cut, and show project paths relative to the project root.
 - **Do** check every screen in light and dark mode, including empty, loading, error, and partial-coverage states.
 

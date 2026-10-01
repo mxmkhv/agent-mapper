@@ -166,3 +166,27 @@ it("reads Codex developer_instructions that contain lines starting with a bracke
   ]);
   expect(snapshot.agents[0]?.reason).toContain("could not be parsed");
 });
+
+it("names no winner over a global agent when the nearer agents are ambiguous", async () => {
+  const options = fixture();
+  const global = join(options.home, ".claude", "agents");
+  const project = join(options.project, ".claude", "agents");
+  mkdirSync(global, { recursive: true });
+  mkdirSync(project, { recursive: true });
+  const agent = "---\nname: same\ndescription: Review code\n---\nPrompt";
+  writeFileSync(join(global, "same.md"), agent);
+  writeFileSync(join(project, "first.md"), agent);
+  writeFileSync(join(project, "second.md"), agent);
+  const snapshot = await buildSnapshot(options.nested, options);
+  expect(
+    snapshot.agents.map(({ scope, availability, shadowedBy }) => [
+      scope,
+      availability,
+      shadowedBy
+    ])
+  ).toEqual([
+    ["global", "shadowed", undefined],
+    ["project", "unknown", undefined],
+    ["project", "unknown", undefined]
+  ]);
+});

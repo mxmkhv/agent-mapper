@@ -127,3 +127,41 @@ it("sums the startup estimate for the selected tool once the project is scanned"
     startupTokens({ name: "slow", path: "/slow" }, "claude")
   ).toBeUndefined();
 });
+
+it("compares a plugin by itself, not by what it contributes or its background versions", () => {
+  const selected = record({
+    id: "kit",
+    kind: "plugin",
+    path: "/home/.claude/plugins/kit/1.0",
+    summary: "1.0"
+  });
+  const candidate = record({
+    id: "kit-2",
+    kind: "plugin",
+    path: "/home/.claude/plugins/kit/2.0",
+    summary: "2.0",
+    tier: "unknown",
+    label: "unknown"
+  });
+  const contribution = record({
+    id: "kit-skill",
+    kind: "skill",
+    path: "/home/.claude/plugins/kit/1.0/skills/x/SKILL.md",
+    plugin: { id: "kit", name: "kit", state: "selected" }
+  });
+  const project: ScannedProject = {
+    name: "app",
+    path: "/home/code/app",
+    records: [{ ...selected, tier: "inactive", label: "disabled" }]
+  };
+  const groups = differencesFromGlobal(
+    [selected, candidate, contribution],
+    project
+  );
+  expect(
+    groups.map((group) => [
+      group.state,
+      group.items.map((item) => item.source.id)
+    ])
+  ).toEqual([["Disabled", ["kit"]]]);
+});

@@ -60,7 +60,7 @@ function reachLabel(project: ScannedProject, match?: InventoryRecord): string {
   if (project.refreshing) {
     return "Rescanning…";
   }
-  if (project.error) {
+  if (project.error !== undefined) {
     return "Scan failed";
   }
   if (!project.records) {

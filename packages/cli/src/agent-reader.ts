@@ -168,6 +168,12 @@ function markShadowed(agents: AgentRecord[]): void {
       previous.reason = reason;
       agent.availability = "unknown";
       agent.reason = reason;
+      // Something nearer still wins over the agents it shadowed, but which one is unclear, so none is named.
+      for (const loser of agents) {
+        if (loser.shadowedBy === previous.id) {
+          loser.shadowedBy = undefined;
+        }
+      }
       ambiguous.set(key, root);
       winners.delete(key);
       continue;
