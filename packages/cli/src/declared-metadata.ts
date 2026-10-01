@@ -21,19 +21,20 @@ export interface DeclaredMetadata {
   name?: string;
   /** Characters up to the end of the frontmatter block, the part a tool reads before selecting the source. */
   characters?: number;
-  /** The first problem that would block saving this document, with its line; a tool may also refuse it. */
+  /** The first problem a save check reports, errors before warnings, with its line; a tool may refuse or misread it. */
   problem?: string;
 }
 
-/** A skill's or command's declared name, frontmatter size, and first blocking problem, read as a save checks them. */
+/** A skill's or command's declared name, frontmatter size, and first problem, read as a save checks them. */
 export function declaredMetadata(
   content: string,
   kind: "skill" | "command"
 ): DeclaredMetadata {
   const { diagnostics, block, document } = inspectDocument(content, kind);
-  const problem = diagnostics.find(
-    (diagnostic) => diagnostic.severity === "error"
-  );
+  // A missing frontmatter block or description is only a warning to a save, but leaves a skill undescribed.
+  const problem =
+    diagnostics.find((diagnostic) => diagnostic.severity === "error") ??
+    diagnostics[0];
   let name: string | undefined;
   if (document) {
     name = textName(document);

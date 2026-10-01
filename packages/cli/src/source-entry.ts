@@ -146,6 +146,7 @@ export function makeEntry(options: {
     lineCount: readable ? lineCount(source.content) : undefined,
     metadataCharacters: readable ? details.characters : undefined,
     error: source.error,
-    frontmatterProblem: readable ? details.problem : undefined
+    frontmatterProblem:
+      readable && candidate.kind === "skill" ? details.problem : undefined
   };
 }

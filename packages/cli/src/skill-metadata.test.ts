@@ -44,6 +44,19 @@ it("keeps a skill with an unquoted colon readable and named, showing the problem
   ).toBeUndefined();
 });
 
+it("flags a skill with no frontmatter while keeping it readable", async () => {
+  const { home, project } = fixture();
+  const folder = join(project, ".agents", "skills", "plain");
+  mkdirSync(folder, { recursive: true });
+  writeFileSync(join(folder, "SKILL.md"), "not frontmatter\n");
+  const result = await scanInventory({ workingDirectory: project, home });
+  expect(result.entries.find((entry) => entry.kind === "skill")).toMatchObject({
+    name: "plain",
+    readState: "readable",
+    frontmatterProblem: expect.stringContaining("has no frontmatter")
+  });
+});
+
 it("does not read a source over the size cap", async () => {
   const { home, project } = fixture();
   const path = join(project, "CLAUDE.md");

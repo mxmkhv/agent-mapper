@@ -30,8 +30,9 @@ export interface InventoryEntry {
   /** Why the source could not be read. */
   error?: string;
   /**
-   * A readable skill whose frontmatter fails the checks a save runs. Whether each tool still loads it is not
-   * verified, so it stays expected and the problem is shown alongside.
+   * The first frontmatter problem a save check finds in a readable skill: malformed YAML, no frontmatter, or a
+   * missing or non-text name or description. Whether each tool still loads it is not verified, so it stays
+   * expected and the problem is shown alongside.
    */
   frontmatterProblem?: string;
   preview?: string;

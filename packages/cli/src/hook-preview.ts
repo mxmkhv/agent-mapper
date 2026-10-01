@@ -7,8 +7,9 @@ const secretName =
 // Flags whose next word is a credential even though the flag name does not say so: curl -u user:pass, also
 // at the end of a short-flag cluster (-su), -U and --proxy-user for the proxy.
 const credentialFlag = /^(-[A-Za-z]*[uU]|--user|--proxy-user)$/;
-// The same credential attached to its flag: curl -ualice:pw, --user=alice:pw. Without a colon it is only a user name.
-const attachedCredential = /^(-[uU]|--user=|--proxy-user=)(.*:.*)$/s;
+// The same credential attached to its flag, alone or ending a cluster: curl -ualice:pw, -sualice:pw,
+// --user=alice:pw. Without a colon it is only a user name.
+const attachedCredential = /^(-[A-Za-z]*?[uU]|--user=|--proxy-user=)(.*:.*)$/s;
 // Authorization schemes stay visible; the word after them is the credential.
 const authScheme = /^(bearer|basic|token|digest|bot)$/i;
 // Known credential formats, JWTs, and long opaque strings. A path or dotted name only matches the length rule

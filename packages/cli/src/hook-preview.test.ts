@@ -45,6 +45,7 @@ it("masks secret env assignments, flags, headers, and credential-shaped words", 
     ],
     ["curl -uadmin:hunter2 x", "curl -u••• x"],
     ["curl -sSu admin:hunter2 x", "curl -sSu ••• x"],
+    ["curl -sualice:hunter2 x", "curl -su••• x"],
     ["curl -U admin:hunter2 x", "curl -U ••• x"],
     ["curl --proxy-user=admin:hunter2 x", "curl --proxy-user=••• x"],
     ["curl --user=admin x", "curl --user=admin x"],
@@ -90,6 +91,7 @@ it("never lets a known secret through, whatever its shape", () => {
     `curl --user=alice:${secret}`,
     `curl -ualice:${secret}`,
     `curl -su alice:${secret}`,
+    `curl -sualice:${secret}`,
     `curl --proxy-user alice:${secret}`,
     `curl -H "Authorization: Bearer ${secret}"`
   ];

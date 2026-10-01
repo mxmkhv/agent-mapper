@@ -54,6 +54,17 @@ it("reports hook declarations of the wrong shape instead of dropping them", asyn
   );
 });
 
+it("reports a hooks value that is not an event map in settings", async () => {
+  const options = fixture();
+  mkdirSync(join(options.home, ".claude"));
+  const settings = join(options.home, ".claude", "settings.json");
+  writeFileSync(settings, JSON.stringify({ hooks: "garbage" }));
+  const snapshot = await buildSnapshot(options.project, options);
+  expect(skipped(snapshot.coverage)).toEqual([
+    `${settings}: hooks must be an object of events; it was skipped.`
+  ]);
+});
+
 it("adds no shape notes for well-formed or absent declarations", async () => {
   const options = fixture();
   mkdirSync(join(options.home, ".claude"));

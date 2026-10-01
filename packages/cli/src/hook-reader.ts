@@ -16,7 +16,7 @@ import type { CodexTomlReader } from "./codex-toml";
 
 function hookMaps(
   data: JsonMap,
-  report: (problem: string) => void
+  options: { fileReferences: boolean; report(problem: string): void }
 ): { events: JsonMap; prefix: string }[] {
   const extension = object(object(data.extensions)?.["com.openai"]);
   const value = extension?.hooks ?? data.hooks;
@@ -29,7 +29,7 @@ function hookMaps(
   const maps: { events: JsonMap; prefix: string }[] = [];
   for (const [index, item] of values.entries()) {
     // A plugin manifest may list hook files by path; those files are read as their own sources.
-    if (typeof item === "string") {
+    if (options.fileReferences && typeof item === "string") {
       continue;
     }
     const inline = object(item);
@@ -38,7 +38,7 @@ function hookMaps(
     if (events) {
       maps.push({ events, prefix: locator });
     } else {
-      report(`${locator} must be an object of events; it was skipped.`);
+      options.report(`${locator} must be an object of events; it was skipped.`);
     }
   }
   return maps;
@@ -54,7 +54,8 @@ async function addJson(
     return;
   }
   const report = (problem: string) => errors.push(`${source.path}: ${problem}`);
-  for (const map of hookMaps(data, report)) {
+  const fileReferences = Boolean(source.plugin);
+  for (const map of hookMaps(data, { fileReferences, report })) {
     addGroups(hooks, {
       source: { ...source, locatorPrefix: map.prefix },
       events: map.events,
