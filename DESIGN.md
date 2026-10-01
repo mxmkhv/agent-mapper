@@ -260,12 +260,12 @@ Every neutral and signal token has a `-dark` twin in the frontmatter. Dark mode 
 
 ### Hierarchy
 
-- **Headline** (650, 18px, 1.3, -0.015em): the name of the selected item at the top of the inspector.
+- **Headline** (650, 18px, 1.3, -0.015em): the name of the selected item at the top of the inspector. The startup summary's startup number borrows the size at 600, without the tracking.
 - **Title** (650, 17px, 1.3, -0.015em): the page title in the header (project name or "Global").
 - **Large** (550–650, 15px, 1.35): the search input and contribution counts in the inspector.
 - **Body** (400, 13px, 1.45): default UI text, reasons, and descriptions.
 - **Body Strong** (550, 13px): item names in rows.
-- **Label** (550, 12px): buttons, facets, table cells, and the startup summary title.
+- **Label** (550, 12px): buttons, facets, and table cells. The startup summary title uses the size at regular weight, muted.
 - **Caption** (500, 11px): counts, state labels, badges, and inspector section headings (650 weight, faint).
 - **Mono** (400, 11.5–12px): paths, versions, locators, matchers, and layer location hints that are paths (`~/.claude`). Prose hints such as "In this repo" stay in sans.
 - **Glyph** (700, 9px): the letter inside a tool glyph, and nothing else.
@@ -344,10 +344,10 @@ A 7px marker leads every item. Its shape carries the state, so no colored badge 
 
 One card above a project's Inventory ("A new session starts with") and above the Projects table ("Your global setup loads"). The Global title describes the global sources only: a project can disable some of them, which its row then shows.
 
-- **Head:** the title as a muted label, with the findings link at the right end.
+- **Head:** the title as a muted label; in a project, the findings link sits at the right end.
 - **Numbers:** their own line under the title: "~7.4k startup" at headline size in ink, then a quieter "~102k on demand" (the bar does not include it). Values always carry "~".
 - **Bar:** a 6px segmented bar with one gray segment per startup instruction file (toned by layer) plus a tool-colored skill-index segment.
-- **Load list:** under the bar, each startup instruction in load order as a button: swatch, its estimate (ink, semibold), then its path in mono. The path tells same-named files apart: global files read from `~`, project files lead with the project's folder name ("agent-mapper/CLAUDE.md"). Selecting one opens it in the inspector. The skill index closes the list, and the visible note "Estimated tokens: characters ÷ 4" sits at the right end of the row.
+- **Load list:** under the bar, each startup instruction in load order as a button: swatch, its estimate (ink, semibold), then its path in mono. The path tells same-named files apart: files outside the project read from `~` where they sit under the home folder (otherwise as an absolute path), project files lead with the project's folder name ("agent-mapper/CLAUDE.md"). Selecting one opens it in the inspector. The skill index closes the list, and the visible note "Estimated tokens: characters ÷ 4" sits at the right end of the row, or right-aligned on its own line when the list fills the row.
 - **Findings link:** in a project, the right end links to Findings with "2 problems · 3 other" (only problems are red). Absent when there are none.
 
 ### Symlink Badge and Links (signature)

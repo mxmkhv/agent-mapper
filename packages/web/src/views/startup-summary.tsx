@@ -38,7 +38,7 @@ interface StartupSummaryProps {
   findings?: { list: readonly Finding[]; onOpen(): void };
 }
 
-/** The path is what tells two CLAUDE.md files apart; a project file leads with the project's folder name. */
+/** The path is what tells two CLAUDE.md files apart: a project file leads with the project's folder name, anything else reads from `~`. */
 function loadPath(record: InventoryRecord, context: PathContext): string {
   const root = context.projectRoot;
   if (root && isInside(record.path, root)) {
@@ -116,7 +116,7 @@ export function StartupSummary(props: StartupSummaryProps) {
           style={{ width: share(estimate.skillMetadata) }}
         />
       </div>
-      <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-0.5 text-caption">
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-caption">
         <ol className="m-0 -ml-1.5 flex min-w-0 list-none flex-wrap gap-x-1.5 gap-y-0.5 p-0 text-ink-muted">
           {files.map((file) => (
             <li className="min-w-0" key={file.id}>
@@ -149,7 +149,9 @@ export function StartupSummary(props: StartupSummaryProps) {
             Skill index
           </li>
         </ol>
-        <span className="text-ink-faint">Estimated tokens: characters ÷ 4</span>
+        <span className="ml-auto text-ink-faint">
+          Estimated tokens: characters ÷ 4
+        </span>
       </div>
     </section>
   );
