@@ -9,7 +9,12 @@ import { stateText } from "../../model/states";
 import { KindIcon, kindLabel } from "../../ui/kind-icon";
 import { StateMarker, SymlinkBadge } from "../../ui/marks";
 import { PathLine } from "../../ui/path-line";
-import type { buildReach, ReachProject, ReachRow } from "./reach-model";
+import {
+  scanSettled,
+  type buildReach,
+  type ReachProject,
+  type ReachRow
+} from "./reach-model";
 
 /** How many names preview a collapsed "reach every project" row. */
 const previewNames = 4;
@@ -25,7 +30,11 @@ export interface ReachViewProps {
   onOpenProject(path: string, landing?: Landing): void;
 }
 
-/** Column cells never claim a result for a project that is still scanning or failed to scan. */
+/**
+ * Column cells never claim a result for a project that is still scanning or failed to scan. While a project
+ * rescans, its previous records stay in place, faded, so the table does not blank out; a previous error
+ * shows as scanning.
+ */
 export function ScanCell({
   project,
   children
@@ -33,6 +42,17 @@ export function ScanCell({
   project: ReachProject;
   children: ReactNode;
 }) {
+  if (project.refreshing) {
+    return (
+      <td className="text-center opacity-40" title="Rescanning">
+        {project.records ? (
+          children
+        ) : (
+          <span className="text-caption text-ink-faint">…</span>
+        )}
+      </td>
+    );
+  }
   if (project.error) {
     return (
       <td
@@ -128,7 +148,7 @@ function SourceRow({ row, props }: { row: ReachRow; props: ReachViewProps }) {
  * While any project is scanning or failed, each column keeps its own cell so no result is claimed for it.
  */
 function UniformCells({ projects }: { projects: ReachProject[] }) {
-  const settled = projects.every((project) => project.records);
+  const settled = projects.every(scanSettled);
   if (!settled) {
     return projects.map((project) => (
       <ScanCell key={project.path} project={project}>

@@ -9,7 +9,11 @@ import {
 import type { Landing } from "../../shell/view-bar";
 import { EmptyState } from "../../ui/empty-state";
 import type { PathContext } from "../../model/paths";
-import { useFolderScans, type FolderScan } from "../../state/use-folder-scans";
+import {
+  useFolderScans,
+  type FolderResult,
+  type FolderScan
+} from "../../state/use-folder-scans";
 import { usePullRequests } from "../../state/use-pull-requests";
 import { CheckoutRow } from "./checkout-row";
 import { relevantDifferences } from "./difference-groups";
@@ -44,22 +48,30 @@ function DifferenceCount({
   scan,
   tool
 }: {
-  scan?: CheckoutScan;
+  scan?: FolderResult<WorktreeDifference[]>;
   tool: ToolId;
 }) {
   if (!scan) {
     return <span className="text-caption text-ink-faint">…</span>;
   }
+  // A rescan keeps the previous answer in place, faded, until the new one arrives.
+  const stale = scan.refreshing ? "opacity-40" : "";
   if (scan.status === "error") {
     return (
-      <span className="text-caption text-problem" title={scan.message}>
+      <span
+        className={`text-caption text-problem ${stale}`}
+        title={scan.refreshing ? "Rescanning" : scan.message}
+      >
         not compared · rescan
       </span>
     );
   }
   const count = relevantDifferences(scan.value, tool).length;
   return (
-    <span className="text-caption whitespace-nowrap text-ink-muted tabular-nums">
+    <span
+      className={`text-caption whitespace-nowrap text-ink-muted tabular-nums ${stale}`}
+      title={scan.refreshing ? "Rescanning" : undefined}
+    >
       {count
         ? `${count} ${count === 1 ? "file differs" : "files differ"}`
         : "no differences"}

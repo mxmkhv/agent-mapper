@@ -39,6 +39,17 @@ it("masks secret env assignments, flags, headers, and credential-shaped words", 
       "curl -u admin:hunter2 https://api.example.com",
       "curl -u ••• https://api.example.com/"
     ],
+    [
+      "curl --user=admin:hunter2 https://api.example.com",
+      "curl --user=••• https://api.example.com/"
+    ],
+    ["curl -uadmin:hunter2 x", "curl -u••• x"],
+    ["curl -sSu admin:hunter2 x", "curl -sSu ••• x"],
+    ["curl -sualice:hunter2 x", "curl -su••• x"],
+    ["curl -U admin:hunter2 x", "curl -U ••• x"],
+    ["curl --proxy-user=admin:hunter2 x", "curl --proxy-user=••• x"],
+    ["curl --user=admin x", "curl --user=admin x"],
+    ['curl --user="admin:two words" x', 'curl --user="•••" x'],
     ["mysql -uroot -phunter2 app", "mysql -uroot -p••• app"],
     ['MY_TOKEN="abc def" ./run.sh', 'MY_TOKEN="•••" ./run.sh'],
     ["run --token 'two words' --fast", "run --token '•••' --fast"],
@@ -77,6 +88,11 @@ it("never lets a known secret through, whatever its shape", () => {
     `psql postgres://user:${secret}@db/app`,
     `API_KEY=${secret} run`,
     `run --password ${secret}`,
+    `curl --user=alice:${secret}`,
+    `curl -ualice:${secret}`,
+    `curl -su alice:${secret}`,
+    `curl -sualice:${secret}`,
+    `curl --proxy-user alice:${secret}`,
     `curl -H "Authorization: Bearer ${secret}"`
   ];
   for (const shape of shapes) {

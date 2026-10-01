@@ -1,15 +1,10 @@
 import { createHash } from "node:crypto";
-import { lstat, readFile, realpath } from "node:fs/promises";
+import { lstat, readFile, realpath, stat } from "node:fs/promises";
 import { basename, dirname } from "node:path";
 import type { InventoryEntry, ToolId } from "@agent-mapper/core";
+import { declaredMetadata, type DeclaredMetadata } from "./declared-metadata";
 
-const frontmatterStart = 4;
-const frontmatterEndLength = 4;
 const idLength = 20;
-interface SkillMetadata {
-  name?: string;
-  characters?: number;
-}
 
 export interface Candidate {
   tool: ToolId;
@@ -50,22 +45,40 @@ export function lineCount(content: string): number {
   return lines - Number(/[\r\n]$/.test(content));
 }
 
-function skillMetadata(content: string): SkillMetadata {
-  if (!content.startsWith("---\n")) {
-    return {};
+/** agent-mapper's own read cap for any scanned source; configuration text is far smaller. */
+const maxSourceBytes = 10_485_760;
+
+function unreadable(isSymlink: boolean, error: string): SourceRead {
+  return { state: "unreadable", content: "", isSymlink, error };
+}
+
+/** Only a regular file under the size cap is read: a link to a pipe, socket or device would block forever. */
+async function readTarget(
+  path: string,
+  isSymlink: boolean
+): Promise<SourceRead> {
+  const target = await stat(path);
+  if (!target.isFile()) {
+    return unreadable(
+      isSymlink,
+      "The link leads to something other than a regular file, so it was not read. Point it at a file."
+    );
   }
-  const end = content.indexOf("\n---", frontmatterStart);
-  if (end < 0) {
-    return {};
+  if (target.size > maxSourceBytes) {
+    return unreadable(
+      isSymlink,
+      "The file is larger than 10 MiB, so it was not read. Open it in an editor to review it."
+    );
   }
-  const header = content.slice(frontmatterStart, end);
-  const name = /^name:\s*(.+)$/m.exec(header)?.[1]?.trim();
   return {
-    name,
-    characters: end + frontmatterEndLength
+    state: "readable",
+    realPath: await realpath(path),
+    content: await readFile(path, "utf8"),
+    isSymlink
   };
 }
 
+/** Reads a source file or the file a link leads to. */
 export async function readSource(
   path: string
 ): Promise<SourceRead | undefined> {
@@ -76,24 +89,16 @@ export async function readSource(
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return undefined;
     }
-    return {
-      state: "unreadable",
-      content: "",
-      isSymlink: false,
-      error: error instanceof Error ? error.message : String(error)
-    };
+    return unreadable(
+      false,
+      error instanceof Error ? error.message : String(error)
+    );
   }
   if (!info.isFile() && !info.isSymbolicLink()) {
     return undefined;
   }
   try {
-    const realPath = await realpath(path);
-    return {
-      state: "readable",
-      content: await readFile(path, "utf8"),
-      isSymlink: info.isSymbolicLink(),
-      realPath
-    };
+    return await readTarget(path, info.isSymbolicLink());
   } catch (error) {
     return {
       state:
@@ -113,10 +118,11 @@ export function makeEntry(options: {
   key: string;
 }): InventoryEntry {
   const { candidate, source, key } = options;
-  const details =
+  const details: DeclaredMetadata =
+    source.state === "readable" &&
     !candidate.declarationOnly &&
     (candidate.kind === "skill" || candidate.kind === "command")
-      ? skillMetadata(source.content)
+      ? declaredMetadata(source.content, candidate.kind)
       : {};
   const readable = source.state === "readable" && !candidate.declarationOnly;
   return {
@@ -139,6 +145,8 @@ export function makeEntry(options: {
     characters: readable ? source.content.length : undefined,
     lineCount: readable ? lineCount(source.content) : undefined,
     metadataCharacters: readable ? details.characters : undefined,
-    error: source.error
+    error: source.error,
+    frontmatterProblem:
+      readable && candidate.kind === "skill" ? details.problem : undefined
   };
 }

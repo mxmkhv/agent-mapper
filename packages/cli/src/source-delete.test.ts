@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  symlinkSync,
+  truncateSync,
+  writeFileSync
+} from "node:fs";
 import { join } from "node:path";
 import type { SourceDeletePlan } from "@agent-mapper/core";
 import { afterEach, expect, it } from "vitest";
@@ -104,8 +111,31 @@ it("refuses a folder too large to check before deleting", async () => {
     writeFileSync(join(folder, `${index}.txt`), "x");
   }
   const { plan, apply } = await remove(await ref("deploy/SKILL.md", "project"));
-  expect(plan.tooLarge).toBe(true);
-  expect(plan.blocked).toContain("too many to check before deleting");
+  expect(plan.tooLarge).toBe("items");
+  expect(plan.blocked).toContain("too much to check before deleting");
   expect(apply.status).toBe(403);
   expect(trashed).toEqual([]);
+});
+
+it("refuses a folder over the byte cap without reading it", async () => {
+  const { fixture, trashed, ref, remove } = await setupDeletes();
+  // Sparse: the size is what the cap sees, without writing 51 MiB.
+  const big = join(fixture.project, ".claude/skills/deploy/big.bin");
+  writeFileSync(big, "");
+  truncateSync(big, 51 * 1024 * 1024);
+  const { plan, apply } = await remove(await ref("deploy/SKILL.md", "project"));
+  expect(plan.tooLarge).toBe("bytes");
+  expect(plan.blocked).toContain("more than 50 MiB");
+  expect(apply.status).toBe(403);
+  expect(trashed).toEqual([]);
+});
+
+it("deletes a folder holding a pipe without reading the pipe", async () => {
+  const { fixture, trashed, ref, remove } = await setupDeletes();
+  const folder = join(fixture.project, ".claude/skills/deploy");
+  execFileSync("mkfifo", [join(folder, "pipe")]);
+  const { plan, apply } = await remove(await ref("deploy/SKILL.md", "project"));
+  expect(plan.blocked).toBeUndefined();
+  expect(apply.status).toBe(200);
+  expect(trashed).toEqual([folder]);
 });

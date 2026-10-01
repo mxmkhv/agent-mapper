@@ -67,6 +67,22 @@ it("keeps skills available on demand without counting their bodies as startup", 
   });
 });
 
+it("keeps a skill with a frontmatter problem expected, since loading is not verified", () => {
+  const [result] = resolveInventory(
+    [
+      entry({
+        kind: "skill",
+        name: "writer",
+        path: "/work/.agents/skills/writer/SKILL.md",
+        projectPath: "/work",
+        frontmatterProblem: "Frontmatter YAML could not be parsed. (line 2)"
+      })
+    ],
+    { workingDirectory: "/work", tool: "codex" }
+  );
+  expect(result?.resolution.availability).toBe("expected");
+});
+
 it("shows Codex's same-folder override as the winner", () => {
   const results = resolveInventory(
     [

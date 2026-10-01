@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstat, readFile, readlink } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
@@ -17,43 +16,8 @@ import {
 } from "./skill-folder";
 import { inside, realOrSelf } from "./skill-transfer-paths";
 import { documentError, errnoCode, ioError } from "./source-document-errors";
+import { systemTrash, type MoveToTrash } from "./system-trash";
 import type { SourceDocumentRegistry } from "./source-document-registry";
-
-/** Moves paths to the user's Trash, where Finder's Put Back can restore them. */
-export type MoveToTrash = (path: string) => Promise<void>;
-
-/** macOS 15 and later ship `/usr/bin/trash`. Its own explanation of a refusal is passed on. */
-function systemTrash(path: string): Promise<void> {
-  return new Promise((finish, reject) => {
-    const child = spawn("/usr/bin/trash", [path], {
-      stdio: ["ignore", "ignore", "pipe"]
-    });
-    let stderr = "";
-    child.stderr.on("data", (chunk) => {
-      stderr += String(chunk);
-    });
-    child.once("error", (error) =>
-      reject(
-        errnoCode(error) === "ENOENT"
-          ? documentError(
-              "io_error",
-              "Moving to the Trash needs macOS 15 or later. Delete the file in Finder instead."
-            )
-          : error
-      )
-    );
-    child.once("close", (code, signal) =>
-      code === 0
-        ? finish()
-        : reject(
-            documentError(
-              "io_error",
-              `The Trash refused ${path} (${stderr.trim() || (signal ? `trash stopped by ${signal}` : `trash exited with status ${code}`)}). Delete it in Finder instead.`
-            )
-          )
-    );
-  });
-}
 
 const sha = (text: string) => createHash("sha256").update(text).digest("hex");
 
@@ -82,26 +46,27 @@ const skillFile = (entry: InventoryEntry) =>
   entry.kind === "skill" && basename(entry.path) === "SKILL.md";
 
 /**
- * The listing stops at a cap, so a larger folder cannot be checked for changes before it goes; it is reported
- * as too large and the delete is refused rather than trashing files nobody reviewed.
+ * Past either folder cap the contents are not checked for changes before they go; the folder is reported as
+ * too large and the delete is refused rather than trashing files nobody reviewed. Links and special files that
+ * would block a copy do not block a delete, so the fingerprint is taken here when the listing skipped it.
  */
 async function folderTarget(path: string) {
   const folder = await readSkillFolder(path);
   const files = folder.items.filter((item) => item.type !== "directory");
-  const tooLarge = folder.items.length >= maxFolderItems;
   return {
     path,
     target: "folder" as const,
     files: files.length,
-    tooLarge,
+    tooLarge: folder.tooLarge,
     totalBytes: folder.totalBytes,
     // Content, not just names and sizes: a same-size edit after the dialog opened must stop the delete.
     // Too large to read is blocked anyway; the placeholder only keeps the request well-formed.
-    fingerprint: tooLarge
+    fingerprint: folder.tooLarge
       ? sha(`too-large:${path}`)
-      : await fingerprintOf(folder.items).catch((error: unknown) => {
+      : folder.fingerprint ||
+        (await fingerprintOf(folder.items).catch((error: unknown) => {
           throw ioError(error, `Reading the skill folder ${path}`);
-        })
+        }))
   };
 }
 
@@ -132,6 +97,12 @@ async function targetOf(entry: InventoryEntry) {
   if (entry.kind === "skill") {
     return folderTarget(path);
   }
+  if (!info.isFile()) {
+    throw documentError(
+      "invalid_request",
+      `${path} is not a regular file. Rescan to update the inventory.`
+    );
+  }
   const content = await readFile(path).catch((error: unknown) => {
     throw ioError(error, `Reading ${path}`);
   });
@@ -157,7 +128,7 @@ async function blockedReason(
     return "Only your own global and project files can be deleted here.";
   }
   if (input.target.target === "folder" && input.target.tooLarge) {
-    return `${input.target.path} holds more than ${maxFolderItems} files and folders, too many to check before deleting. Delete it in Finder instead.`;
+    return `${input.target.path} holds ${input.target.tooLarge === "items" ? `${maxFolderItems} or more items` : "more than 50 MiB"}, too much to check before deleting. Delete it in Finder instead.`;
   }
   // A link is removed from its folder; anything else is removed where it really lives.
   const touched =

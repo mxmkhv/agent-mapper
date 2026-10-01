@@ -6,7 +6,7 @@ import type {
   PluginRecord
 } from "@agent-mapper/core";
 import { addGroups, type HookSource } from "./hook-record";
-import { addToml, codexHooksSetting } from "./hook-toml";
+import { addCodexTomlHooks, codexHooksSetting } from "./hook-toml";
 import { json, object, type JsonMap } from "./plugin-reader-common";
 import { addFrontmatterHooks } from "./hook-frontmatter";
 import { addManagedHooks, markManagedHookRestrictions } from "./hook-managed";
@@ -14,21 +14,31 @@ import type { ManagedSettingsFile } from "./managed-claude-reader";
 import { codexProjectConfigPaths } from "./codex-config-paths";
 import type { CodexTomlReader } from "./codex-toml";
 
-function hookMaps(data: JsonMap): { events: JsonMap; prefix: string }[] {
+function hookMaps(
+  data: JsonMap,
+  options: { fileReferences: boolean; report(problem: string): void }
+): { events: JsonMap; prefix: string }[] {
   const extension = object(object(data.extensions)?.["com.openai"]);
   const value = extension?.hooks ?? data.hooks;
+  if (value === undefined) {
+    return [];
+  }
   const prefix =
     extension?.hooks === undefined ? "hooks" : "extensions.com.openai.hooks";
   const values = Array.isArray(value) ? value : [value];
   const maps: { events: JsonMap; prefix: string }[] = [];
   for (const [index, item] of values.entries()) {
+    // A plugin manifest may list hook files by path; those files are read as their own sources.
+    if (options.fileReferences && typeof item === "string") {
+      continue;
+    }
     const inline = object(item);
     const events = object(inline?.hooks) ?? inline;
+    const locator = Array.isArray(value) ? `${prefix}[${index}]` : prefix;
     if (events) {
-      maps.push({
-        events,
-        prefix: Array.isArray(value) ? `${prefix}[${index}]` : prefix
-      });
+      maps.push({ events, prefix: locator });
+    } else {
+      options.report(`${locator} must be an object of events; it was skipped.`);
     }
   }
   return maps;
@@ -38,14 +48,18 @@ async function addJson(
   hooks: HookRecord[],
   options: { source: HookSource; errors: string[] }
 ): Promise<void> {
-  const data = await json(options.source.path, options.errors);
+  const { source, errors } = options;
+  const data = await json(source.path, errors);
   if (!data) {
     return;
   }
-  for (const map of hookMaps(data)) {
+  const report = (problem: string) => errors.push(`${source.path}: ${problem}`);
+  const fileReferences = Boolean(source.plugin);
+  for (const map of hookMaps(data, { fileReferences, report })) {
     addGroups(hooks, {
-      source: { ...options.source, locatorPrefix: map.prefix },
-      events: map.events
+      source: { ...source, locatorPrefix: map.prefix },
+      events: map.events,
+      errors
     });
   }
 }
@@ -168,34 +182,6 @@ async function applyCodexDisabled(
   }
 }
 
-async function addCodexTomlHooks(
-  hooks: HookRecord[],
-  options: {
-    root: string;
-    workingDirectory: string;
-    codexHome: string;
-    seen: Set<string>;
-    toml: CodexTomlReader;
-  }
-): Promise<void> {
-  const paths = [
-    { path: join(options.codexHome, "config.toml"), scope: "global" as const },
-    ...codexProjectConfigPaths(options.root, options.workingDirectory).map(
-      (path) => ({ path, scope: "project" as const })
-    )
-  ];
-  for (const source of paths) {
-    if (options.seen.has(source.path)) {
-      continue;
-    }
-    options.seen.add(source.path);
-    await addToml(hooks, {
-      source: { ...source, tool: "codex" },
-      toml: options.toml
-    });
-  }
-}
-
 export async function scanHooks(options: {
   root: string;
   claudeConfigDir: string;
@@ -220,13 +206,7 @@ export async function scanHooks(options: {
     seen.add(source.path);
     await addJson(hooks, { source, errors });
   }
-  await addCodexTomlHooks(hooks, {
-    root,
-    workingDirectory: options.workingDirectory,
-    codexHome: options.codexHome,
-    seen,
-    toml: options.toml
-  });
+  await addCodexTomlHooks(hooks, { ...options, seen, errors });
   await addPluginHooks(hooks, { plugins: options.plugins, errors });
   addManagedHooks(hooks, { files: options.managedSettings, errors });
   await addFrontmatterHooks(hooks, {

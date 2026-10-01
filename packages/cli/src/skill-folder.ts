@@ -7,6 +7,7 @@ import { errnoCode, ioError } from "./source-document-errors";
 /** A skill is a few documents and scripts; anything larger is likely a checkout or build output. */
 export const maxFolderItems = 1000;
 const maxBytes = 52_428_800;
+type SizeLimit = "items" | "bytes";
 const permissionBits = 0o7777;
 const executableBits = 0o111;
 
@@ -15,6 +16,8 @@ interface FolderItem extends SkillTransferFile {
   mode: number;
   /** The link text of a symlink, recreated verbatim. */
   link?: string;
+  /** A pipe, socket or device: listed, but never read, since reading one can block forever. */
+  special?: boolean;
 }
 
 export interface SkillFolder {
@@ -26,6 +29,8 @@ export interface SkillFolder {
   fingerprint: string;
   /** Why this folder cannot be transferred as it is. */
   problem?: string;
+  /** Which cap the folder reaches; the listing stops at the item cap, so a folder that reaches it may be incomplete. */
+  tooLarge?: SizeLimit;
 }
 
 const posixPath = (path: string) => path.split(sep).join("/");
@@ -94,7 +99,7 @@ async function readItem(
   }
   if (!info.isFile()) {
     return {
-      item: { ...base, type: "file", bytes: 0 },
+      item: { ...base, type: "file", bytes: 0, special: true },
       problem: `${path} is not a regular file, folder or link, so it cannot be copied.`
     };
   }
@@ -107,8 +112,11 @@ export async function fingerprintOf(
 ): Promise<string> {
   const hash = createHash("sha256");
   for (const item of items) {
-    hash.update(`${item.type}\0${item.path}\0${item.executable}\0`);
-    if (item.type === "file") {
+    // A special item hashes under its own tag, so it never matches a regular file at the same path.
+    hash.update(
+      `${item.special ? "special" : item.type}\0${item.path}\0${item.executable}\0`
+    );
+    if (item.type === "file" && !item.special) {
       hash.update(await readFile(item.absolutePath));
     } else if (item.link !== undefined) {
       hash.update(item.link);
@@ -118,17 +126,20 @@ export async function fingerprintOf(
   return hash.digest("hex");
 }
 
-function sizeProblem(
-  root: string,
-  size: { count: number; totalBytes: number }
-): string | undefined {
+function sizeLimit(size: {
+  count: number;
+  totalBytes: number;
+}): SizeLimit | undefined {
   if (size.count >= maxFolderItems) {
-    return `${root} holds more than ${maxFolderItems} files and folders. Skills this large are not copied here; use Finder or the shell.`;
+    return "items";
   }
-  if (size.totalBytes > maxBytes) {
-    return `${root} holds more than 50 MiB. Skills this large are not copied here; use Finder or the shell.`;
-  }
-  return undefined;
+  return size.totalBytes > maxBytes ? "bytes" : undefined;
+}
+
+function sizeProblem(root: string, limit: SizeLimit): string {
+  return limit === "items"
+    ? `${root} holds more than ${maxFolderItems} files and folders. Skills this large are not copied here; use Finder or the shell.`
+    : `${root} holds more than 50 MiB. Skills this large are not copied here; use Finder or the shell.`;
 }
 
 /** Lists a skill folder without following links, parents before children, siblings sorted by name. */
@@ -156,13 +167,14 @@ export async function readSkillFolder(root: string): Promise<SkillFolder> {
   let rootMode;
   let realRoot = root;
   let fingerprint = "";
+  let tooLarge: SizeLimit | undefined;
   try {
     rootMode = (await lstat(root)).mode & permissionBits;
     realRoot = await realpath(root);
     await walk(root);
-    const tooLarge = sizeProblem(root, { count: items.length, totalBytes });
+    tooLarge = sizeLimit({ count: items.length, totalBytes });
     if (tooLarge) {
-      problems.unshift(tooLarge);
+      problems.unshift(sizeProblem(root, tooLarge));
     }
     if (!problems.length) {
       fingerprint = await fingerprintOf(items);
@@ -176,7 +188,8 @@ export async function readSkillFolder(root: string): Promise<SkillFolder> {
     items,
     totalBytes,
     fingerprint,
-    problem: problems[0]
+    problem: problems[0],
+    tooLarge
   };
 }
 

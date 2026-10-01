@@ -188,3 +188,14 @@ it("reports malformed JSON without exposing its content", async () => {
   ).toBe(true);
   expect(JSON.stringify(snapshot)).not.toContain("private-value");
 });
+
+it("reports an mcpServers value that is not an object of servers", async () => {
+  const options = fixture();
+  const path = join(options.project, ".mcp.json");
+  writeFileSync(path, JSON.stringify({ mcpServers: "wrong" }));
+  const snapshot = await buildSnapshot(options.project, options);
+  expect(snapshot.mcpServers).toEqual([]);
+  expect(snapshot.coverage).toContain(
+    `${path}: mcpServers must be an object of servers; it was skipped.`
+  );
+});

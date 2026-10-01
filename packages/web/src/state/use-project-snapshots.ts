@@ -8,6 +8,7 @@ const projectName = (path: string) => path.split("/").at(-1) ?? path;
 /**
  * Scans every discovered project in parallel for the Global reach view.
  * Each project fills in as its scan finishes; a failed scan keeps its error instead of blocking the others.
+ * On a rescan each project keeps its last result, marked refreshing, until its new scan answers.
  */
 export function useProjectSnapshots(
   paths: readonly string[],
@@ -30,7 +31,8 @@ export function useProjectSnapshots(
             path,
             name: projectName(path),
             records: scan?.status === "ready" ? scan.value : undefined,
-            error: scan?.status === "error" ? scan.message : undefined
+            error: scan?.status === "error" ? scan.message : undefined,
+            refreshing: scan?.refreshing ?? false
           };
         }),
     [pathsKey, scans]

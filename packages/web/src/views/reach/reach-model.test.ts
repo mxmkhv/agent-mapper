@@ -3,6 +3,9 @@ import type { InventoryRecord } from "../../model/record-types";
 import {
   buildReach,
   projectOwn,
+  scanFailed,
+  scanPending,
+  scanSettled,
   skillReach,
   type ReachProject
 } from "./reach-model";
@@ -113,4 +116,37 @@ it("counts global skills and project-only items per project", () => {
   expect(projectOwn(projects, false)).toEqual([
     { kind: "skill", counts: [1, 0, 0] }
   ]);
+});
+
+it("keeps a rescanning project's last records deciding its row", () => {
+  const appOnly = record({ id: "x", path: "/home/.claude/rules.md" });
+  const sections = buildReach([appOnly], {
+    projects: [
+      { name: "app", path: "/a", records: [appOnly] },
+      { name: "site", path: "/s", records: [], refreshing: true }
+    ],
+    showInactive: false
+  });
+  expect(sections[0]?.varying.map((row) => row.record.id)).toEqual(["x"]);
+});
+
+it("classifies every scan state as exactly one of settled, pending or failed", () => {
+  const states: [ReachProject, "settled" | "pending" | "failed"][] = [
+    [{ name: "a", path: "/a", records: [] }, "settled"],
+    [{ name: "b", path: "/b", error: "boom" }, "failed"],
+    [{ name: "c", path: "/c" }, "pending"],
+    [{ name: "d", path: "/d", records: [], refreshing: true }, "pending"],
+    [{ name: "e", path: "/e", error: "boom", refreshing: true }, "pending"]
+  ];
+  for (const [project, state] of states) {
+    expect({
+      settled: scanSettled(project),
+      pending: scanPending(project),
+      failed: scanFailed(project)
+    }).toEqual({
+      settled: state === "settled",
+      pending: state === "pending",
+      failed: state === "failed"
+    });
+  }
 });

@@ -169,32 +169,47 @@ function append(hooks: HookRecord[], input: HookInput): void {
   }
 }
 
+/**
+ * Adds every handler in an event map. A declaration of the wrong shape is skipped but reported in `errors`, so a
+ * hook that will not run never disappears without a trace.
+ */
 export function addGroups(
   hooks: HookRecord[],
-  options: { source: HookSource; events?: JsonMap }
+  options: { source: HookSource; events?: JsonMap; errors: string[] }
 ): void {
-  const { source, events } = options;
+  const { source, events, errors } = options;
+  const prefix = source.locatorPrefix ?? "hooks";
   for (const [event, value] of Object.entries(events ?? {})) {
     if (!Array.isArray(value)) {
+      errors.push(
+        `${source.path}: ${prefix}.${event} must be a list of matcher groups; it was skipped.`
+      );
       continue;
     }
     for (const [groupIndex, rawGroup] of value.entries()) {
       const group = object(rawGroup);
       if (!group || !Array.isArray(group.hooks)) {
+        errors.push(
+          `${source.path}: ${prefix}.${event}[${groupIndex}] must be an object with a hooks list; it was skipped.`
+        );
         continue;
       }
       for (const [handlerIndex, rawHandler] of group.hooks.entries()) {
         const handler = object(rawHandler);
-        if (handler) {
-          append(hooks, {
-            source,
-            event,
-            group,
-            groupIndex,
-            handler,
-            handlerIndex
-          });
+        if (!handler) {
+          errors.push(
+            `${source.path}: ${prefix}.${event}[${groupIndex}].hooks[${handlerIndex}] must be an object; it was skipped.`
+          );
+          continue;
         }
+        append(hooks, {
+          source,
+          event,
+          group,
+          groupIndex,
+          handler,
+          handlerIndex
+        });
       }
     }
   }

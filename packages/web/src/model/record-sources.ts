@@ -57,7 +57,9 @@ export function entryDraft(
         entry.declarationOnly ? "configuration" : undefined
       )
     ],
-    problems: entry.error ? [entry.error] : []
+    problems: [entry.error, entry.frontmatterProblem].filter(
+      (problem): problem is string => Boolean(problem)
+    )
   };
 }
 

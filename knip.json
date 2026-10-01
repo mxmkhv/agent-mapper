@@ -20,5 +20,6 @@
       "project": ["src/**/*.{ts,tsx,css}"]
     }
   },
-  "includeEntryExports": true
+  "includeEntryExports": true,
+  "ignoreBinaries": ["mkfifo"]
 }

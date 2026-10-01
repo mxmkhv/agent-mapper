@@ -27,7 +27,14 @@ export interface InventoryEntry {
   characters?: number;
   metadataCharacters?: number;
   lineCount?: number;
+  /** Why the source could not be read. */
   error?: string;
+  /**
+   * The first frontmatter problem a save check finds in a readable skill: malformed YAML, no frontmatter, or a
+   * missing or non-text name or description. Whether each tool still loads it is not verified, so it stays
+   * expected and the problem is shown alongside.
+   */
+  frontmatterProblem?: string;
   preview?: string;
   pluginId?: string;
   locator?: string;

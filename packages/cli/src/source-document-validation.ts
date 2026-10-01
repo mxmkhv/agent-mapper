@@ -9,7 +9,8 @@ import {
   type YAMLError
 } from "yaml";
 
-const openingLine = "---\n";
+// Any line ending opens and closes the block; `$` in multiline mode also stops before a `\r`.
+const openingLine = /^---(?:\r\n?|\n)/;
 const closingLine = /^---[ \t]*$/m;
 /** Frontmatter starts after the opening `---` on line 1. */
 const headerLineOffset = 1;
@@ -68,15 +69,27 @@ function yamlDiagnostic(
   };
 }
 
+interface FrontmatterBlock {
+  header: string;
+  /** Where the closing `---` ends, in the content as given. */
+  end: number;
+}
+
 function frontmatterBlock(
   content: string
-): { header: string } | "unterminated" | undefined {
-  if (!content.startsWith(openingLine)) {
+): FrontmatterBlock | "unterminated" | undefined {
+  const opening = openingLine.exec(content);
+  if (!opening) {
     return undefined;
   }
-  const rest = content.slice(openingLine.length);
-  const end = closingLine.exec(rest);
-  return end ? { header: rest.slice(0, end.index) } : "unterminated";
+  const rest = content.slice(opening[0].length);
+  const close = closingLine.exec(rest);
+  return close
+    ? {
+        header: rest.slice(0, close.index),
+        end: opening[0].length + close.index + close[0].length
+      }
+    : "unterminated";
 }
 
 /**
@@ -113,73 +126,101 @@ function fieldDiagnostics(
   return diagnostics;
 }
 
+export interface Inspection {
+  diagnostics: SourceDiagnostic[];
+  block?: FrontmatterBlock;
+  /** The parsed frontmatter, when it parsed as a set of fields. */
+  document?: Document;
+}
+
+/** Validates a document and keeps what validation found, for readers that need its declared fields. */
+export function inspectDocument(
+  content: string,
+  kind: DocumentKind
+): Inspection {
+  if (kind === "agent-toml") {
+    return { diagnostics: validateAgentToml(content) };
+  }
+  const fields = declaredBy(kind);
+  const severity = fields ? "error" : "warning";
+  const block = frontmatterBlock(content);
+  if (block === "unterminated") {
+    return {
+      diagnostics: [
+        {
+          severity,
+          code: "frontmatter-unterminated",
+          message:
+            "Frontmatter starts with `---` but has no closing `---` line.",
+          line: 1
+        }
+      ]
+    };
+  }
+  if (!block) {
+    return {
+      diagnostics: fields
+        ? [
+            {
+              severity: "warning",
+              code: `${fields.label}-frontmatter-missing`,
+              message: `This ${fields.label} has no frontmatter. Add \`name\` and \`description\` between \`---\` lines.`
+            }
+          ]
+        : []
+    };
+  }
+  return { block, ...frontmatterDiagnostics(block.header, fields) };
+}
+
 /**
  * Checks only a leading YAML frontmatter block. For skills and Claude Code agents, YAML syntax,
  * shape and non-text `name`/`description` block a save; missing fields only warn. Instruction files
  * are plain Markdown to both tools, so every finding there is a warning. A Codex agent is TOML and
- * is checked as a whole. Line endings are normalized first, matching what a save writes.
+ * is checked as a whole. Any line ending opens and closes the block; the header is normalized to LF
+ * before parsing, matching what a save writes.
  */
 export function validateDocument(
   content: string,
   kind: DocumentKind
 ): SourceDiagnostic[] {
-  if (kind === "agent-toml") {
-    return validateAgentToml(content);
-  }
-  const fields = declaredBy(kind);
-  const severity = fields ? "error" : "warning";
-  const block = frontmatterBlock(content.replace(/\r\n?/g, "\n"));
-  if (block === "unterminated") {
-    return [
-      {
-        severity,
-        code: "frontmatter-unterminated",
-        message: "Frontmatter starts with `---` but has no closing `---` line.",
-        line: 1
-      }
-    ];
-  }
-  if (!block) {
-    return fields
-      ? [
-          {
-            severity: "warning",
-            code: `${fields.label}-frontmatter-missing`,
-            message: `This ${fields.label} has no frontmatter. Add \`name\` and \`description\` between \`---\` lines.`
-          }
-        ]
-      : [];
-  }
-  return frontmatterDiagnostics(block.header, fields);
+  return inspectDocument(content, kind).diagnostics;
 }
 
 function frontmatterDiagnostics(
   header: string,
   fields: Declared | undefined
-): SourceDiagnostic[] {
+): Pick<Inspection, "diagnostics" | "document"> {
   const severity = fields ? "error" : "warning";
-  const document = parseDocument(header, { uniqueKeys: true });
+  const document = parseDocument(header.replace(/\r\n?/g, "\n"), {
+    uniqueKeys: true
+  });
   const problems = [
     ...document.errors.map((error) => yamlDiagnostic(error, severity)),
     ...document.warnings.map((warning) => yamlDiagnostic(warning, "warning"))
   ];
   if (document.errors.length) {
-    return problems;
+    return { diagnostics: problems };
   }
   if (document.contents !== null && !isMap(document.contents)) {
-    return [
-      ...problems,
-      {
-        severity,
-        code: "frontmatter-shape",
-        message: "Frontmatter must be a set of `key: value` fields.",
-        line: 2
-      }
-    ];
+    return {
+      diagnostics: [
+        ...problems,
+        {
+          severity,
+          code: "frontmatter-shape",
+          message: "Frontmatter must be a set of `key: value` fields.",
+          line: 2
+        }
+      ]
+    };
   }
-  return fields
-    ? [...problems, ...fieldDiagnostics(document, fields)]
-    : problems;
+  return {
+    document,
+    diagnostics: fields
+      ? [...problems, ...fieldDiagnostics(document, fields)]
+      : problems
+  };
 }
 
 /** Validates content as the kind of document its entry is. */
