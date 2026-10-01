@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
 import { supportedTools, type ToolId } from "@agent-mapper/core";
+import packageJson from "../package.json" with { type: "json" };
 import { createAppServer } from "./service";
 
 const usage = `agent-mapper
@@ -12,7 +13,8 @@ Local configuration inventory for ${supportedTools.join(" and ")}.
 
 Usage:
   agent-mapper [--tools claude,codex]
-  agent-mapper --help`;
+  agent-mapper --help
+  agent-mapper --version`;
 
 function selectedTools(value: string | undefined): ToolId[] {
   if (!value) {
@@ -50,11 +52,16 @@ async function main(): Promise<void> {
     allowPositionals: true,
     options: {
       help: { type: "boolean", short: "h" },
-      tools: { type: "string" }
+      tools: { type: "string" },
+      version: { type: "boolean", short: "v" }
     }
   });
   if (values.help) {
     console.log(usage);
+    return;
+  }
+  if (values.version) {
+    console.log(packageJson.version);
     return;
   }
   if (positionals.length > 0) {
