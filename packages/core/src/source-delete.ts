@@ -16,7 +16,7 @@ export interface SourceDeletePlan {
   /** Files inside the folder, or 1 for a file or link. */
   files: number;
   /**
-   * The folder holds more than can be checked, so the delete is blocked. Past the item cap the listing stops and
+   * The folder is too large to check, so the delete is blocked. Past the item cap the listing stops and
    * counts are a lower bound; past the byte cap the counts are complete.
    */
   tooLarge?: "items" | "bytes";

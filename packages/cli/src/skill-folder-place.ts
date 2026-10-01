@@ -24,6 +24,13 @@ async function writeItems(folder: SkillFolder, target: string): Promise<void> {
   await mkdir(target);
   for (const item of folder.items) {
     const destination = join(target, ...item.path.split("/"));
+    if (item.special) {
+      // Planning blocks folders with special files; this keeps a copy from ever reading one.
+      throw documentError(
+        "invalid_request",
+        `${item.path} is not a regular file, folder or link, so it cannot be copied.`
+      );
+    }
     if (item.type === "directory") {
       await mkdir(destination);
     } else if (item.type === "symlink" && item.link !== undefined) {

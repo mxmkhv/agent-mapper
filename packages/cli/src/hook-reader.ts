@@ -28,6 +28,10 @@ function hookMaps(
   const values = Array.isArray(value) ? value : [value];
   const maps: { events: JsonMap; prefix: string }[] = [];
   for (const [index, item] of values.entries()) {
+    // A plugin manifest may list hook files by path; those files are read as their own sources.
+    if (typeof item === "string") {
+      continue;
+    }
     const inline = object(item);
     const events = object(inline?.hooks) ?? inline;
     const locator = Array.isArray(value) ? `${prefix}[${index}]` : prefix;

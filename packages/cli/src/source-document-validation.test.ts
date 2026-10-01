@@ -1,9 +1,9 @@
 import { expect, it } from "vitest";
 import {
   blockingDiagnostics,
-  declaredMetadata,
   validateDocument
 } from "./source-document-validation";
+import { declaredMetadata } from "./declared-metadata";
 
 const codes = (content: string, kind: "skill" | "instruction" = "skill") =>
   validateDocument(content, kind).map(
@@ -116,8 +116,8 @@ it("reports the blocking problem of malformed skill frontmatter", () => {
   expect(
     declaredMetadata("---\nname: a\nname: b\n---\n", "skill")
   ).toMatchObject({
-    name: undefined,
-    problem: "Frontmatter repeats a key. Keep one of them."
+    name: "a",
+    problem: "Frontmatter repeats a key. Keep one of them. (line 3)"
   });
   expect(declaredMetadata("---\nname: [a]\n---\n", "command")).toMatchObject({
     name: undefined,

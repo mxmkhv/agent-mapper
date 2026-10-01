@@ -4,10 +4,11 @@ const maxPreviewLength = 400;
 const mask = "•••";
 const secretName =
   /(token|secret|passw(or)?d|pass|api[-_]?key|access[-_]?key|private[-_]?key|auth|credential|cookie|session|bearer)/i;
-// Flags whose next word is a credential even though the flag name does not say so: curl -u user:pass.
-const credentialFlag = /^(-u|--user)$/;
+// Flags whose next word is a credential even though the flag name does not say so: curl -u user:pass, also
+// at the end of a short-flag cluster (-su), -U and --proxy-user for the proxy.
+const credentialFlag = /^(-[A-Za-z]*[uU]|--user|--proxy-user)$/;
 // The same credential attached to its flag: curl -ualice:pw, --user=alice:pw. Without a colon it is only a user name.
-const attachedCredential = /^(-u|--user=)(.*:.*)$/s;
+const attachedCredential = /^(-[uU]|--user=|--proxy-user=)(.*:.*)$/s;
 // Authorization schemes stay visible; the word after them is the credential.
 const authScheme = /^(bearer|basic|token|digest|bot)$/i;
 // Known credential formats, JWTs, and long opaque strings. A path or dotted name only matches the length rule
@@ -176,9 +177,10 @@ function redactWords(words: string[]): string[] {
 
 /**
  * Masks secret values in free-form handler text while keeping its shape: secret-named env assignments,
- * `--flag=value`s and `Key:value` pairs anywhere in a word, the word after a secret-named flag, `-u`, a
- * secret-named `Header:`, or an auth scheme (Bearer, Basic, token…), a `user:password` attached to `-u` or
- * `--user=`, URL credentials, query and fragment values, secret-looking path segments, webhook paths, mysql's
+ * `--flag=value`s and `Key:value` pairs anywhere in a word, the word after a secret-named flag or curl's
+ * `-u`, `-U`, `--user` or `--proxy-user`, a
+ * secret-named `Header:`, or an auth scheme (Bearer, Basic, token…), a `user:password` attached to one of those
+ * flags, URL credentials, query and fragment values, secret-looking path segments, webhook paths, mysql's
  * attached `-p`, and credential-shaped words. Quotes group words; this is not a full shell parser, so it errs
  * toward masking.
  */

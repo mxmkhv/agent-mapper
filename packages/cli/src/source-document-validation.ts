@@ -126,14 +126,18 @@ function fieldDiagnostics(
   return diagnostics;
 }
 
-interface Inspection {
+export interface Inspection {
   diagnostics: SourceDiagnostic[];
   block?: FrontmatterBlock;
   /** The parsed frontmatter, when it parsed as a set of fields. */
   document?: Document;
 }
 
-function inspect(content: string, kind: DocumentKind): Inspection {
+/** Validates a document and keeps what validation found, for readers that need its declared fields. */
+export function inspectDocument(
+  content: string,
+  kind: DocumentKind
+): Inspection {
   if (kind === "agent-toml") {
     return { diagnostics: validateAgentToml(content) };
   }
@@ -173,13 +177,14 @@ function inspect(content: string, kind: DocumentKind): Inspection {
  * Checks only a leading YAML frontmatter block. For skills and Claude Code agents, YAML syntax,
  * shape and non-text `name`/`description` block a save; missing fields only warn. Instruction files
  * are plain Markdown to both tools, so every finding there is a warning. A Codex agent is TOML and
- * is checked as a whole. Line endings are normalized first, matching what a save writes.
+ * is checked as a whole. Any line ending opens and closes the block; the header is normalized to LF
+ * before parsing, matching what a save writes.
  */
 export function validateDocument(
   content: string,
   kind: DocumentKind
 ): SourceDiagnostic[] {
-  return inspect(content, kind).diagnostics;
+  return inspectDocument(content, kind).diagnostics;
 }
 
 function frontmatterDiagnostics(
@@ -215,35 +220,6 @@ function frontmatterDiagnostics(
     diagnostics: fields
       ? [...problems, ...fieldDiagnostics(document, fields)]
       : problems
-  };
-}
-
-function textField(document: Document | undefined, field: string) {
-  const node: unknown = document?.get(field, true);
-  return isScalar(node) && typeof node.value === "string"
-    ? node.value.trim() || undefined
-    : undefined;
-}
-
-export interface DeclaredMetadata {
-  name?: string;
-  /** Characters up to the end of the frontmatter block, the part a tool reads before selecting the source. */
-  characters?: number;
-  /** The first problem that would block saving this document, which may also stop a tool from loading it. */
-  problem?: string;
-}
-
-/** A skill's or command's declared name, read with the same YAML parsing that validates a save. */
-export function declaredMetadata(
-  content: string,
-  kind: "skill" | "command"
-): DeclaredMetadata {
-  const { diagnostics, block, document } = inspect(content, kind);
-  return {
-    name: textField(document, "name"),
-    characters: block?.end,
-    problem: diagnostics.find((diagnostic) => diagnostic.severity === "error")
-      ?.message
   };
 }
 

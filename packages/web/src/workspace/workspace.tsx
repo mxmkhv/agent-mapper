@@ -9,6 +9,7 @@ import { ViewBar } from "../shell/view-bar";
 import { useProjectSnapshots } from "../state/use-project-snapshots";
 import { toolName } from "../ui/marks";
 import {
+  scanFailed,
   scanPending,
   scanSettled,
   type ReachProject
@@ -39,8 +40,7 @@ function impactCoverage(
     total: scanned.length,
     scanned: scanned.filter(scanSettled).length,
     pending: scanned.filter(scanPending).length,
-    failed: scanned.filter((project) => project.error && !project.refreshing)
-      .length
+    failed: scanned.filter(scanFailed).length
   };
 }
 

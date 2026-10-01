@@ -67,7 +67,7 @@ it("keeps skills available on demand without counting their bodies as startup", 
   });
 });
 
-it("does not claim a skill with malformed frontmatter loads", () => {
+it("keeps a skill with a frontmatter problem expected, since loading is not verified", () => {
   const [result] = resolveInventory(
     [
       entry({
@@ -75,16 +75,12 @@ it("does not claim a skill with malformed frontmatter loads", () => {
         name: "writer",
         path: "/work/.agents/skills/writer/SKILL.md",
         projectPath: "/work",
-        error: "Frontmatter repeats a key. Keep one of them."
+        frontmatterProblem: "Frontmatter YAML could not be parsed. (line 2)"
       })
     ],
     { workingDirectory: "/work", tool: "codex" }
   );
-  expect(result?.resolution).toMatchObject({
-    availability: "unknown",
-    loading: "unknown"
-  });
-  expect(result?.resolution.reason).toContain("Frontmatter repeats a key.");
+  expect(result?.resolution.availability).toBe("expected");
 });
 
 it("shows Codex's same-folder override as the winner", () => {

@@ -29,7 +29,7 @@ export interface SkillFolder {
   fingerprint: string;
   /** Why this folder cannot be transferred as it is. */
   problem?: string;
-  /** Which cap the folder reaches; the listing stops at the item cap, so a folder that reaches it is incomplete. */
+  /** Which cap the folder reaches; the listing stops at the item cap, so a folder that reaches it may be incomplete. */
   tooLarge?: SizeLimit;
 }
 
@@ -112,10 +112,11 @@ export async function fingerprintOf(
 ): Promise<string> {
   const hash = createHash("sha256");
   for (const item of items) {
-    hash.update(`${item.type}\0${item.path}\0${item.executable}\0`);
-    if (item.special) {
-      hash.update("special");
-    } else if (item.type === "file") {
+    // A special item hashes under its own tag, so it never matches a regular file at the same path.
+    hash.update(
+      `${item.special ? "special" : item.type}\0${item.path}\0${item.executable}\0`
+    );
+    if (item.type === "file" && !item.special) {
       hash.update(await readFile(item.absolutePath));
     } else if (item.link !== undefined) {
       hash.update(item.link);

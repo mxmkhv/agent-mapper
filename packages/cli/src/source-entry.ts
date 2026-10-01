@@ -2,10 +2,7 @@ import { createHash } from "node:crypto";
 import { lstat, readFile, realpath, stat } from "node:fs/promises";
 import { basename, dirname } from "node:path";
 import type { InventoryEntry, ToolId } from "@agent-mapper/core";
-import {
-  declaredMetadata,
-  type DeclaredMetadata
-} from "./source-document-validation";
+import { declaredMetadata, type DeclaredMetadata } from "./declared-metadata";
 
 const idLength = 20;
 
@@ -48,7 +45,7 @@ export function lineCount(content: string): number {
   return lines - Number(/[\r\n]$/.test(content));
 }
 
-/** Instruction and skill files are text; anything larger is not something either tool loads whole. */
+/** agent-mapper's own read cap for any scanned source; configuration text is far smaller. */
 const maxSourceBytes = 10_485_760;
 
 function unreadable(isSymlink: boolean, error: string): SourceRead {
@@ -148,6 +145,7 @@ export function makeEntry(options: {
     characters: readable ? source.content.length : undefined,
     lineCount: readable ? lineCount(source.content) : undefined,
     metadataCharacters: readable ? details.characters : undefined,
-    error: source.error ?? details.problem
+    error: source.error,
+    frontmatterProblem: readable ? details.problem : undefined
   };
 }

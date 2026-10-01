@@ -6,7 +6,7 @@ import { isBackgroundVersion } from "../../model/plugin-versions";
 export interface ReachProject {
   name: string;
   path: string;
-  /** Undefined while the project is still scanning or when its scan failed. */
+  /** Undefined until a scan answers with records, or when the latest answered scan failed; see `refreshing`. */
   records?: InventoryRecord[];
   error?: string;
   /** The records or error are from the previous scan; a rescan is still running. */
@@ -16,6 +16,10 @@ export interface ReachProject {
 /** The project's current scan has answered with records. */
 export const scanSettled = (project: ReachProject): boolean =>
   project.records !== undefined && !project.refreshing;
+
+/** The project's current scan failed. */
+export const scanFailed = (project: ReachProject): boolean =>
+  Boolean(project.error) && !project.refreshing;
 
 /** No current answer yet: never scanned, or rescanning. */
 export const scanPending = (project: ReachProject): boolean =>
@@ -122,10 +126,8 @@ export function buildReach(
               (cell) => cell && cell.tier !== "inactive"
             )
         );
-      const scanned = (index: number) => {
-        const project = projects[index];
-        return project !== undefined && scanSettled(project);
-      };
+      // A rescanning project keeps deciding its rows from its last records, so the table does not collapse.
+      const scanned = (index: number) => projects[index]?.records !== undefined;
       const isUniform = (row: ReachRow) =>
         row.cells.every(
           (cell, index) => !scanned(index) || cell?.tier === "active"

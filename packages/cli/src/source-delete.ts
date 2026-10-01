@@ -46,7 +46,7 @@ const skillFile = (entry: InventoryEntry) =>
   entry.kind === "skill" && basename(entry.path) === "SKILL.md";
 
 /**
- * Past either folder cap the contents cannot be checked for changes before they go; the folder is reported as
+ * Past either folder cap the contents are not checked for changes before they go; the folder is reported as
  * too large and the delete is refused rather than trashing files nobody reviewed. Links and special files that
  * would block a copy do not block a delete, so the fingerprint is taken here when the listing skipped it.
  */
@@ -128,7 +128,7 @@ async function blockedReason(
     return "Only your own global and project files can be deleted here.";
   }
   if (input.target.target === "folder" && input.target.tooLarge) {
-    return `${input.target.path} holds more than ${input.target.tooLarge === "items" ? `${maxFolderItems} files and folders` : "50 MiB"}, too much to check before deleting. Delete it in Finder instead.`;
+    return `${input.target.path} holds ${input.target.tooLarge === "items" ? `${maxFolderItems} or more items` : "more than 50 MiB"}, too much to check before deleting. Delete it in Finder instead.`;
   }
   // A link is removed from its folder; anything else is removed where it really lives.
   const touched =

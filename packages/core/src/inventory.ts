@@ -27,7 +27,13 @@ export interface InventoryEntry {
   characters?: number;
   metadataCharacters?: number;
   lineCount?: number;
+  /** Why the source could not be read. */
   error?: string;
+  /**
+   * A readable skill whose frontmatter fails the checks a save runs. Whether each tool still loads it is not
+   * verified, so it stays expected and the problem is shown alongside.
+   */
+  frontmatterProblem?: string;
   preview?: string;
   pluginId?: string;
   locator?: string;

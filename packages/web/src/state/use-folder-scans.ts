@@ -40,10 +40,13 @@ export function useFolderScans<T>(
       }
     }
     for (const path of list) {
-      getInventory(path, controller.signal).then(
-        (snapshot) => update(path, readSnapshot(snapshot)),
-        (error: unknown) => update(path, failed(error))
-      );
+      // A reader that throws counts as a failed scan instead of leaving the folder refreshing forever.
+      getInventory(path, controller.signal)
+        .then((snapshot) => readSnapshot(snapshot))
+        .then(
+          (scan) => update(path, scan),
+          (error: unknown) => update(path, failed(error))
+        );
     }
     return () => controller.abort();
   }, [list, round]);

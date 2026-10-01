@@ -32,7 +32,8 @@ export interface ReachViewProps {
 
 /**
  * Column cells never claim a result for a project that is still scanning or failed to scan. While a project
- * rescans, its previous result stays in place, faded, so the table does not blank out.
+ * rescans, its previous records stay in place, faded, so the table does not blank out; a previous error
+ * shows as scanning.
  */
 export function ScanCell({
   project,

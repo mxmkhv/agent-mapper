@@ -150,13 +150,6 @@ function unavailableEntry(
       reason: `Source is ${entry.readState}; loading cannot be determined.`
     });
   }
-  // A readable skill carries an error only when its frontmatter is malformed, which a tool may refuse to load.
-  if (entry.kind === "skill" && entry.error) {
-    return unresolved(entry, {
-      availability: "unknown",
-      reason: `Frontmatter problem: ${entry.error} Whether the skill loads cannot be determined.`
-    });
-  }
   if (
     entry.tool === "codex" &&
     entry.kind === "instruction" &&
