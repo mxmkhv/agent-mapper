@@ -53,7 +53,7 @@ function EditorPane({ draft }: { draft: Draft }) {
           ⌘S to review
         </span>
         <span className="sr-only">
-          Ctrl+M switches Tab between indenting and moving focus.
+          Tab indents. Press Escape, then Tab, to move focus out of the editor.
         </span>
       </div>
       {view === "source" ? (
