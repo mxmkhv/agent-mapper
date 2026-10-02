@@ -3,6 +3,7 @@ import type { ToolId } from "@agent-mapper/core";
 import { GitBranch, RefreshCw, Search } from "lucide-react";
 import { Button } from "../ui/button";
 import { ToolGlyph, toolName } from "../ui/marks";
+import { shortcutLabel } from "../ui/shortcut";
 
 export interface HeaderTitle {
   name: string;
@@ -90,7 +91,9 @@ export function Header(props: HeaderProps) {
         <Button onClick={props.onSearch}>
           <Search aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
           Search
-          <kbd className="font-mono text-caption text-ink-faint">⌘K</kbd>
+          <kbd className="font-mono text-caption text-ink-faint">
+            {shortcutLabel("K")}
+          </kbd>
         </Button>
         <Button
           aria-label="Rescan"

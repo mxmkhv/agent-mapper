@@ -8,6 +8,7 @@ import type {
   SourceDocument
 } from "@agent-mapper/core";
 import { afterEach, expect, it } from "vitest";
+import { createDesktop, type Desktop } from "./desktop";
 import {
   documentFixture,
   removeFixture,
@@ -26,10 +27,10 @@ afterEach(async () => {
   }
 });
 
-async function setup() {
+async function setup(options: { desktop?: Desktop } = {}) {
   const fixture = documentFixture();
   fixtures.push(fixture);
-  const server = await startDocumentServer(fixture);
+  const server = await startDocumentServer(fixture, options);
   servers.push(server);
   return { fixture, server };
 }
@@ -170,6 +171,23 @@ it("reveals the saved-versions folder once a version exists", async () => {
   });
   expect(reveal.body).toEqual({ revealed: true });
   expect(server.launched).toEqual([
-    ["-R", join(fixture.history, document.sourceKey)]
+    { action: "reveal", path: join(fixture.history, document.sourceKey) }
   ]);
+});
+
+it("explains why the saved-versions folder cannot be shown without a desktop", async () => {
+  const { server } = await setup({
+    desktop: createDesktop({
+      platform: "linux",
+      env: {},
+      procVersion: () => "Linux version 6.8.0-generic"
+    })
+  });
+  const document = (await server.open(".claude/CLAUDE.md")).body;
+  await save(server, { document, content: "changed\n" });
+  const reveal = await server.post<HistoryReveal>("reveal-history", {
+    documentId: document.documentId
+  });
+  expect(reveal.status).toBe(500);
+  expect(reveal.body.error?.message).toContain("no desktop session");
 });

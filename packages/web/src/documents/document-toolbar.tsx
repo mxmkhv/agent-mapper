@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { SymlinkBadge, ToolGlyph } from "../ui/marks";
 import { ConfirmButton } from "./confirm-button";
 import type { DocumentMode } from "./source-document-panel";
-import { hasBlockingErrors, metadataNote } from "./source-review";
+import { hasBlockingErrors, useMetadataNote } from "./source-review";
 
 interface ToolbarProps {
   draft: Draft;
@@ -66,6 +66,7 @@ function ConflictActions({
 function PhaseActions(props: ToolbarProps) {
   const { draft } = props;
   const { store, onMutated } = useDocuments();
+  const metadataNote = useMetadataNote();
   const context = { store, sourceKey: draft.sourceKey };
   if (draft.phase === "conflict") {
     return <ConflictActions draft={draft} onOpen={props.onOpen} />;

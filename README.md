@@ -9,7 +9,7 @@
 npx agent-mapper
 ```
 
-macOS, Node 22 or newer. Runs locally: scans are read-only, and it never executes hooks or contacts MCP servers.
+macOS or Linux, Node 22 or newer. Runs locally: scans are read-only, and it never executes hooks or contacts MCP servers.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/project-map-dark.png">
@@ -36,7 +36,7 @@ It answers the questions that otherwise mean digging through home folders, repos
 npx agent-mapper
 ```
 
-On macOS the browser opens on its own. The terminal also prints the local URL. Keep the terminal running while you use the app, and press `Ctrl+C` to stop it.
+The browser opens on its own, and the terminal also prints the local URL. Keep the terminal running while you use the app, and press `Ctrl+C` to stop it.
 
 Choose a project in the sidebar, or use **Add folder** if it isn't listed. Inspect its startup summary, then open **Findings** to review potential problems.
 
@@ -47,7 +47,13 @@ npx agent-mapper --tools claude
 npx agent-mapper --tools codex
 ```
 
-Built and tested on macOS. Opening files in an editor, revealing them in Finder, and moving items to the Trash use macOS features. Delete requires macOS 15 or newer.
+### Platforms
+
+- **macOS:** Delete requires macOS 15 or newer.
+- **Linux:** Opening the browser, Open in editor, and Show in file manager use `xdg-open` and `gdbus`. Delete uses `gio trash`. Install `xdg-utils` and `libglib2.0-bin` (on Fedora and Arch, `xdg-utils` and `glib2`). Show in file manager opens the parent folder when your file manager can't select the file. Files with no default app, such as `.toml`, can't be opened in an editor until you set one.
+- **SSH, containers, and WSL:** With no desktop session, the browser doesn't open on its own. Open the printed URL yourself, for example through a forwarded port. Open in editor and Show in file manager return an error. Delete still moves items to the Trash. On WSL, the browser, Open, and Reveal aren't supported yet.
+
+Windows is not supported yet.
 
 ## What you can see
 
@@ -63,7 +69,7 @@ In **Global**, **Projects** compares every project: its startup size, what it ad
 
 Trace an instruction through parent folders, imports, and symlinks to the file that loads. Follow a plugin to its installed versions and the items it contributes. Select any item to see its source, the reason for its state, and what it overrides or what overrides it.
 
-Press `⌘K` to search by name or source path. **Open in editor** and **Reveal in Finder** take you to any source file.
+Press `⌘K` (`Ctrl+K` on Linux) to search by name or source path. **Open in editor** and **Reveal in Finder** (**Show in file manager** on Linux) take you to any source file.
 
 ### What needs review
 
@@ -85,7 +91,7 @@ In a project with linked Git checkouts, **Worktrees** compares their configurati
 
 ### Clean up from the same place
 
-Edit instructions, skills, and agents with a diff review that lists the other projects using the file. Each save keeps the replaced version in **History**, so you can restore it. Copy skills and agents between projects or tools, and move unwanted ones to the macOS Trash.
+Edit instructions, skills, and agents with a diff review that lists the other projects using the file. Each save keeps the replaced version in **History**, so you can restore it. Copy skills and agents between projects or tools, and move unwanted ones to the Trash.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/edit-review-dark.png">
@@ -137,7 +143,7 @@ Counts describe discovered declarations, not runtime capabilities.
 Issues and pull requests are welcome. Two kinds of report help most:
 
 - **Configuration that resolves incorrectly.** If agent-mapper shows something as applying, shadowed, or missing and the tool behaves differently, open an issue with a minimal, sanitized example of the files involved.
-- **Platform problems.** CI runs on Linux and macOS, but the full desktop workflows have only been manually tested on macOS.
+- **Platform problems.** CI runs on Linux and macOS. Linux desktop actions are new and vary by desktop environment and file manager, so reports from GNOME, KDE, and other desktops help.
 
 See [CONTRIBUTING.md](https://github.com/mxmkhv/agent-mapper/blob/main/CONTRIBUTING.md) for development setup, checks, and the release process.
 

@@ -7,7 +7,11 @@ import {
 } from "node:http";
 import type { AddressInfo } from "node:net";
 import { homedir } from "node:os";
-import type { InventorySnapshot, PullRequestLookup } from "@agent-mapper/core";
+import type {
+  HostInfo,
+  InventorySnapshot,
+  PullRequestLookup
+} from "@agent-mapper/core";
 import { ConfigStore, defaultConfigPath } from "./app-config";
 import { projectRoute, type ProjectsPayload } from "./project-routes";
 import { buildGlobalSnapshot, buildSnapshot } from "./service";
@@ -15,30 +19,18 @@ import { serveAsset } from "./server-assets";
 import {
   createServices,
   rememberProjects,
-  type ServerServices
+  type ServerServices,
+  type ServiceOptions
 } from "./server-services";
 import { worktreeRoute } from "./worktree-routes";
-import type { MoveToTrash } from "./system-trash";
 import { handleItemRoute } from "./source-delete-routes";
 import { handleDocumentRoute, isDocumentRoute } from "./source-document-routes";
-import {
-  launchOpen,
-  performSourceAction,
-  sourcePathIndex
-} from "./source-actions";
+import { performSourceAction, sourcePathIndex } from "./source-actions";
 
-export interface AppServerOptions {
-  home?: string;
-  codexHome?: string;
+export interface AppServerOptions extends ServiceOptions {
   webRoot: string;
-  managedClaudeDir?: string;
-  /** Private revision snapshots; defaults to the platform data folder. */
-  historyRoot?: string;
   /** agent-mapper preferences such as removed projects; defaults to ~/.config/agent-mapper/config.json (XDG_CONFIG_HOME aware). */
   configPath?: string;
-  launchSource?: (args: string[]) => Promise<void>;
-  /** Moves deleted skills and agents away; defaults to the macOS Trash. */
-  trash?: MoveToTrash;
 }
 export interface AppServer {
   token: string;
@@ -56,6 +48,7 @@ interface RequestContext extends ServerServices {
 }
 
 type ApiPayload =
+  | HostInfo
   | ProjectsPayload
   | InventorySnapshot
   | PullRequestLookup
@@ -148,6 +141,10 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
   if (await handleProjectRoute(context, url)) {
     return;
   }
+  if (request.method === "GET" && url.pathname === "/api/host") {
+    sendJson({ response, status: status.ok, payload: context.host });
+    return;
+  }
   if (request.method === "GET" && url.pathname === "/api/inventory") {
     sendJson({
       response,
@@ -157,12 +154,11 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
     return;
   }
   if (isDocumentRoute(url.pathname)) {
-    const launch = context.options.launchSource ?? launchOpen;
     await handleDocumentRoute(context.documents, {
       request,
       response,
       url,
-      launch
+      desktop: context.desktop
     });
     return;
   }
@@ -173,7 +169,7 @@ async function handleApi(context: RequestContext, url: URL): Promise<void> {
     await performSourceAction({
       request,
       paths: context.sourcePaths,
-      launch: context.options.launchSource
+      desktop: context.desktop
     });
     sendJson({ response, status: status.ok, payload: { ok: true } });
     return;

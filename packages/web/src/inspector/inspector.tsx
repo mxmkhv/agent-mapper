@@ -6,6 +6,7 @@ import type { CopyTarget } from "../model/copy-targets";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
 import { stateText } from "../model/states";
 import type { DocumentMode } from "../documents/source-document-panel";
+import { useFileManagerWords } from "../state/use-host";
 import { useSourceAction } from "../state/use-source-action";
 import { Button } from "../ui/button";
 import { PathText } from "../ui/path-text";
@@ -132,6 +133,7 @@ export function RecordInspector({
   const workingDirectory =
     record.sourceRef?.workingDirectory ?? scope.workingDirectory;
   const action = useSourceAction(workingDirectory);
+  const fileManager = useFileManagerWords();
   const imports = scope.imports.filter(
     (item) => item.sourceEntryId === record.id
   );
@@ -200,7 +202,7 @@ export function RecordInspector({
           Open in editor
         </Button>
         <Button onClick={() => void action.run(record.id, "reveal")}>
-          Reveal in Finder
+          {fileManager.reveal}
         </Button>
       </div>
       {error ? (

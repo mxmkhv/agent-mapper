@@ -1,6 +1,7 @@
 import { Suspense, useState } from "react";
 import type { PathContext } from "../model/paths";
 import type { Draft } from "../state/draft-store";
+import { useHost } from "../state/use-host";
 import { Diagnostics } from "./diagnostics";
 import { editorLanguage } from "./document-format";
 import { ImpactSummary, type ImpactCoverage } from "./impact-summary";
@@ -17,8 +18,12 @@ export const splitLayout =
 export const notesPane =
   "max-h-[45vh] overflow-auto border-t border-hairline p-5 lg:max-h-none lg:border-t-0 lg:border-l";
 
-export const metadataNote =
-  "Saving replaces the file. Its text, symlinks and permission mode are kept; macOS extended attributes, ACLs, Finder tags and the original creation date are not.";
+/** What a save or restore keeps, in the server platform's terms. */
+export function useMetadataNote(): string {
+  return useHost().platform === "macos"
+    ? "Saving replaces the file. Its text, symlinks and permission mode are kept; macOS extended attributes, ACLs, Finder tags and the original creation date are not."
+    : "Saving replaces the file. Its text, symlinks and permission mode are kept; extended attributes, ACLs and the original creation date are not.";
+}
 
 export function hasBlockingErrors(draft: Draft): boolean {
   return Boolean(

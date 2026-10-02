@@ -1,5 +1,5 @@
 import { lstat, mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import {
   DocumentApiError,
   documentError,
@@ -22,7 +22,7 @@ export function defaultHistoryRoot(home: string): string {
   }
   const xdg = process.env.XDG_DATA_HOME;
   return join(
-    xdg?.startsWith("/") ? xdg : join(home, ".local", "share"),
+    xdg && isAbsolute(xdg) ? xdg : join(home, ".local", "share"),
     "agent-mapper",
     "revisions"
   );

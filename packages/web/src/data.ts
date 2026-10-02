@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import type { InventorySnapshot } from "@agent-mapper/core";
-import { getInventory, getProjects, type ProjectList } from "./api";
+import type { HostInfo, InventorySnapshot } from "@agent-mapper/core";
+import { getHost, getInventory, getProjects, type ProjectList } from "./api";
 
 interface LoadState<T> {
   value?: T;
@@ -32,6 +32,27 @@ export function useProjects(refresh: number): LoadState<ProjectList> {
     return () => controller.abort();
   }, [key]);
   return state.key === key ? state : { ...state, loading: true };
+}
+
+/** The server's platform, fetched once: it cannot change while the server runs. */
+export function useHost(): LoadState<HostInfo> {
+  const [state, setState] = useState<LoadState<HostInfo>>({ loading: true });
+  useEffect(() => {
+    const controller = new AbortController();
+    void getHost(controller.signal).then(
+      (value) => setState({ value, loading: false }),
+      (error: unknown) => {
+        if (!controller.signal.aborted) {
+          setState({
+            error: error instanceof Error ? error.message : String(error),
+            loading: false
+          });
+        }
+      }
+    );
+    return () => controller.abort();
+  }, []);
+  return state;
 }
 
 export function useInventory(

@@ -1,13 +1,13 @@
-import { spawn } from "node:child_process";
 import { lstat, realpath } from "node:fs/promises";
 import type { IncomingMessage } from "node:http";
 import { extname } from "node:path";
 import type { InventorySnapshot } from "@agent-mapper/core";
+import type { Desktop, DesktopRequest } from "./desktop";
 
 interface ActionContext {
   request: IncomingMessage;
   paths: SourcePathStore;
-  launch?: (args: string[]) => Promise<void>;
+  desktop: Desktop;
 }
 export type SourcePathStore = Map<
   string,
@@ -45,18 +45,6 @@ export async function readJson(
     }
   }
   return result;
-}
-
-export function launchOpen(args: string[]): Promise<void> {
-  return new Promise((finish, reject) => {
-    const child = spawn("open", args, { stdio: "ignore" });
-    child.once("error", reject);
-    child.once("exit", (code) =>
-      code === 0
-        ? finish()
-        : reject(new Error(`macOS open exited with status ${code}.`))
-    );
-  });
 }
 
 export function sourcePathIndex(
@@ -104,7 +92,7 @@ function isSourceAction(value: string): value is SourceAction {
   return sourceActions.includes(value);
 }
 
-/** The file a symlinked source resolves to, which is what Finder should select for "reveal-target". */
+/** The file a symlinked source resolves to, which is what the file manager should select for "reveal-target". */
 async function linkTarget(source: string): Promise<string> {
   try {
     return await realpath(source);
@@ -119,18 +107,25 @@ async function linkTarget(source: string): Promise<string> {
   }
 }
 
-export async function openArguments(
+/**
+ * Only regular files with a text extension are opened, on every platform.
+ * Symlinks, folders, apps and scripts are revealed so nothing executable is launched.
+ */
+export async function desktopRequest(
   action: SourceAction,
   source: string
-): Promise<string[]> {
+): Promise<DesktopRequest> {
   if (action === "reveal-target") {
-    return ["-R", await linkTarget(source)];
+    return { action: "reveal", path: await linkTarget(source) };
   }
+  const reveal: DesktopRequest = { action: "reveal", path: source };
   if (action === "reveal" || !safeTextExtensions.has(extname(source))) {
-    return ["-R", source];
+    return reveal;
   }
   try {
-    return (await lstat(source)).isFile() ? [source] : ["-R", source];
+    return (await lstat(source)).isFile()
+      ? { action: "open", path: source }
+      : reveal;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       throw new Error(`${source} no longer exists. Rescan and try again.`);
@@ -155,7 +150,5 @@ export async function performSourceAction(
   if (!source) {
     throw new Error("Source is no longer in this scan. Rescan and try again.");
   }
-  await (context.launch ?? launchOpen)(
-    await openArguments(body.action, source)
-  );
+  await context.desktop(await desktopRequest(body.action, source));
 }
