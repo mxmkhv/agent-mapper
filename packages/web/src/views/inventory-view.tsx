@@ -42,6 +42,9 @@ interface InventoryViewProps extends RowActionScope {
   onKind(kind: RecordKind | "all"): void;
 }
 
+/** Faint beside an idle facet; the selected facet's count takes its inverted colour. */
+const facetCount = "font-mono text-mono opacity-70";
+
 function Facet({
   active,
   onClick,
@@ -54,18 +57,13 @@ function Facet({
   return (
     <button
       aria-pressed={active}
-      className={`inline-flex h-7 items-center gap-1.5 rounded-button border bg-surface px-2.5 text-label font-semibold ${active ? "border-ink text-ink" : "border-hairline text-ink-muted hover:border-hairline-strong"}`}
+      className={`-mr-px inline-flex h-7 items-center gap-[7px] border border-b-0 px-[11px] text-label ${active ? "border-ink bg-ink font-semibold text-canvas" : "border-rule font-medium hover:bg-wash"}`}
       onClick={onClick}
     >
       {children}
     </button>
   );
 }
-
-const localBorder = {
-  claude: "border-claude/50",
-  codex: "border-codex/50"
-} satisfies Record<ToolId, string>;
 
 export function InventoryView(props: InventoryViewProps) {
   const [inheritedChoice, setInheritedChoice] = useState<boolean>();
@@ -125,7 +123,7 @@ export function InventoryView(props: InventoryViewProps) {
     const isOwn = props.isProject && isLocalGroup(group);
     return (
       <section
-        className="mb-3.5 scroll-mt-24"
+        className="mb-3.5 scroll-mt-24 border-2 border-rule"
         id={groupElementId(group.key)}
         key={group.key}
       >
@@ -134,9 +132,7 @@ export function InventoryView(props: InventoryViewProps) {
           hint={props.hintFor(group)}
           localTool={isOwn ? props.tool : undefined}
         />
-        <div
-          className={`overflow-hidden rounded-card border bg-surface ${isOwn ? localBorder[props.tool] : "border-hairline"}`}
-        >
+        <div>
           {clusterBySource(group.records).map(({ source, records }) => {
             const key = `${group.key}:${source?.repo}`;
             const open = !source || !collapsed.has(key);
@@ -165,7 +161,6 @@ export function InventoryView(props: InventoryViewProps) {
                         relation={props.relations.get(record.id)}
                         selected={record.id === props.selectedId}
                         sharesName={repeated.has(record.name)}
-                        tone={source?.tone}
                         workingDirectory={props.transfer.workingDirectory}
                       />
                     ))
@@ -180,15 +175,12 @@ export function InventoryView(props: InventoryViewProps) {
   return (
     <div className="px-5 pt-3 pb-10">
       {props.summary ? <div className="pt-1">{props.summary}</div> : null}
-      <div className="sticky top-0 z-10 -mx-1 mb-3 flex flex-wrap gap-1.5 bg-canvas px-1 pt-1 pb-2">
+      <div className="sticky top-0 z-10 mb-3.5 flex flex-wrap border-b-2 border-rule bg-canvas pt-2">
         <Facet
           active={props.kind === "all"}
           onClick={() => props.onKind("all")}
         >
-          All{" "}
-          <span className="text-ink-faint tabular-nums">
-            {props.records.length}
-          </span>
+          All <span className={facetCount}>{props.records.length}</span>
         </Facet>
         {kindCounts(props.records).map(([kind, count]) => (
           <Facet
@@ -196,9 +188,8 @@ export function InventoryView(props: InventoryViewProps) {
             active={props.kind === kind}
             onClick={() => props.onKind(kind)}
           >
-            <KindIcon kind={kind} small />
-            {kindLabel[kind]}{" "}
-            <span className="text-ink-faint tabular-nums">{count}</span>
+            <KindIcon kind={kind} />
+            {kindLabel[kind]} <span className={facetCount}>{count}</span>
           </Facet>
         ))}
       </div>

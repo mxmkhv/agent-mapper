@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import type { SkillTransferPlan, ToolId } from "@agent-mapper/core";
-import { TriangleAlert } from "lucide-react";
 import type { CopyTarget } from "../model/copy-targets";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
 import type { PlanState } from "../state/use-skill-transfer";
 import { ToolGlyph, toolName } from "../ui/marks";
 import { PathText } from "../ui/path-text";
+import { PixelIcon } from "../ui/pixel-icon";
 
 const kilobyte = 1024;
 const megabyte = kilobyte * kilobyte;
@@ -42,7 +42,7 @@ export function ProjectPicker({
     <label className={`grid gap-1 ${fieldLabel}`}>
       To project
       <select
-        className="h-8 min-w-0 rounded-control border border-hairline bg-surface px-2 text-label font-normal text-ink"
+        className="h-7 min-w-0 border border-ink bg-surface px-2 text-label font-normal text-ink"
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >
@@ -72,7 +72,7 @@ export function ToolPicker({
           <label className="flex items-center gap-1.5 text-label" key={tool}>
             <input
               checked={value.includes(tool)}
-              className="accent-ink"
+              className="m-0 size-[11px] appearance-none border border-ink bg-surface checked:bg-ink"
               onChange={(event) =>
                 onChange(
                   tools.filter((item) =>
@@ -163,12 +163,8 @@ export function Warnings({
   context: PathContext;
 }) {
   return (
-    <div className="flex gap-2 rounded-panel bg-wash px-3 py-2.5 text-label">
-      <TriangleAlert
-        aria-hidden="true"
-        className="mt-0.5 size-3.5 shrink-0 text-ink-muted"
-        strokeWidth={1.8}
-      />
+    <div className="flex gap-2 border border-dotted border-ink-muted px-2.5 py-[9px] text-label">
+      <PixelIcon className="mt-[3px] shrink-0" name="alert" />
       <ul className="m-0 grid list-none gap-1 p-0">
         {warnings.map((warning) => (
           <li key={warning}>{tildeText(warning, context)}</li>

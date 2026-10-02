@@ -1,5 +1,5 @@
-import { Info } from "lucide-react";
 import type { RecordKind } from "../model/record-types";
+import { PixelIcon } from "../ui/pixel-icon";
 
 export type View = "projects" | "inventory" | "findings" | "worktrees";
 
@@ -25,23 +25,31 @@ interface ViewBarProps {
   onCoverage(): void;
 }
 
+/** On the accent tab the count takes the tab's own text colour; red on the accent would not be readable. */
+function activeCount(active: boolean, alert?: boolean): string {
+  if (active) {
+    return "";
+  }
+  return alert ? "text-problem" : "text-ink-faint";
+}
+
 export function ViewBar(props: ViewBarProps) {
   return (
     <nav
       aria-label="Views"
-      className="flex items-center gap-1 border-b border-hairline px-5"
+      className="flex items-end gap-1 border-b-2 border-rule px-5"
     >
       {props.tabs.map((tab) => (
         <button
           key={tab.id}
           aria-current={props.view === tab.id ? "page" : undefined}
-          className={`relative inline-flex h-9 items-center gap-1.5 px-2.5 font-semibold ${props.view === tab.id ? "text-ink after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:rounded-full after:bg-ink" : "text-ink-muted hover:text-ink"}`}
+          className={`inline-flex h-[30px] items-center gap-2 border-2 border-b-0 px-3 font-semibold ${props.view === tab.id ? "border-ink bg-accent text-on-accent dark:border-accent" : "border-transparent text-ink-muted hover:text-ink"}`}
           onClick={() => props.onView(tab.id)}
         >
           {tab.label}
           {tab.count === undefined ? null : (
             <span
-              className={`text-caption tabular-nums ${tab.alert ? "text-problem" : "text-ink-faint"}`}
+              className={`font-mono text-mono ${activeCount(props.view === tab.id, tab.alert)}`}
             >
               {tab.count}
             </span>
@@ -51,11 +59,11 @@ export function ViewBar(props: ViewBarProps) {
       <span className="flex-1" />
       <button
         aria-pressed={props.showInactive}
-        className="mr-2 inline-flex shrink-0 items-center gap-2 text-label whitespace-nowrap text-ink-muted hover:text-ink"
+        className="mr-2 inline-flex h-9 shrink-0 items-center gap-2 text-label whitespace-nowrap text-ink-muted hover:text-ink"
         onClick={props.onToggleInactive}
       >
         <span
-          className={`relative h-4 w-[26px] rounded-full transition-colors after:absolute after:top-0.5 after:left-0.5 after:size-3 after:rounded-full after:bg-surface after:transition-transform ${props.showInactive ? "bg-ink after:translate-x-2.5" : "bg-hairline-strong"}`}
+          className={`relative h-3.5 w-7 border-2 border-current after:absolute after:top-0.5 after:left-0.5 after:size-1.5 after:bg-current ${props.showInactive ? "bg-ink text-canvas after:translate-x-3.5" : ""}`}
         />
         <span>
           <span className="lg:hidden">Inactive</span>
@@ -64,12 +72,12 @@ export function ViewBar(props: ViewBarProps) {
         </span>
       </button>
       <button
-        className="inline-flex h-[26px] items-center gap-1.5 rounded-control px-1.5 text-label text-ink-muted hover:bg-hover hover:text-ink"
+        className="mb-[5px] inline-flex h-[26px] items-center gap-1.5 px-1.5 text-ink-muted hover:bg-wash hover:text-ink"
         onClick={props.onCoverage}
         title={`${props.coverageCount} coverage notes`}
       >
-        <Info aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
-        <span className="tabular-nums">{props.coverageCount}</span>
+        <PixelIcon name="info" />
+        <span className="font-mono text-mono">{props.coverageCount}</span>
         <span className="sr-only">coverage notes</span>
       </button>
     </nav>

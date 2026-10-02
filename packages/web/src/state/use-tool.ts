@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import type { ToolId } from "@agent-mapper/core";
 
 const storageKey = "agent-mapper:tool";
@@ -29,7 +29,12 @@ function showFavicon(tool: ToolId): void {
 
 export function useTool(): [ToolId, (tool: ToolId) => void] {
   const [tool, setTool] = useState<ToolId>(initialTool);
-  useEffect(() => showFavicon(tool), [tool]);
+  // Before paint, so a Codex session never flashes the Claude accent.
+  useLayoutEffect(() => {
+    showFavicon(tool);
+    // The accent in theme.css follows this attribute.
+    document.documentElement.dataset.tool = tool;
+  }, [tool]);
   function choose(next: ToolId) {
     window.localStorage.setItem(storageKey, next);
     setTool(next);

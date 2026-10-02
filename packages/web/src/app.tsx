@@ -68,7 +68,6 @@ export function App() {
           projects={visibility.projects}
           selectedPath={selectedPath}
           theme={theme}
-          tool={tool}
         />
         <main className="grid min-h-0 min-w-0">
           <DocumentErrorBoundary
@@ -101,10 +100,12 @@ export function App() {
               <div className="grid place-items-center p-10 text-center">
                 {inventory.error ? (
                   <div role="alert">
-                    <h2 className="text-headline font-semibold">
+                    <h2 className="m-0 font-mono text-title">
                       Could not scan this folder
                     </h2>
-                    <p className="text-ink-muted">{inventory.error}</p>
+                    <p className="mt-2 mb-4 text-ink-muted">
+                      {inventory.error}
+                    </p>
                     <Button onClick={rescan}>Try again</Button>
                   </div>
                 ) : (

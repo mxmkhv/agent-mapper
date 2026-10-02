@@ -43,7 +43,7 @@ export function SearchPalette({
     }
   }
   return (
-    <div className="fixed inset-0 z-40 grid place-items-start justify-center bg-black/20 pt-[12vh]">
+    <div className="fixed inset-0 z-40 grid place-items-start justify-center bg-black/40 pt-[12vh]">
       <button
         aria-label="Close search"
         className="absolute inset-0 cursor-default"
@@ -51,13 +51,13 @@ export function SearchPalette({
       />
       <dialog
         aria-label="Search"
-        className="relative m-0 w-[min(640px,92vw)] overflow-hidden rounded-dialog border border-hairline bg-surface p-0 text-ink shadow-dialog"
+        className="relative m-0 w-[min(640px,92vw)] overflow-hidden border-2 border-ink bg-surface p-0 text-ink"
         open
       >
         <input
           aria-label={`Search ${toolName} inventory`}
           autoFocus
-          className="h-12 w-full border-0 border-b border-hairline bg-transparent px-4 text-large text-ink outline-none"
+          className="h-12 w-full border-0 border-b-2 border-rule bg-transparent px-3 text-large text-ink outline-none placeholder:text-ink-faint"
           onChange={(event) => {
             setQuery(event.target.value);
             setIndex(0);
@@ -66,7 +66,7 @@ export function SearchPalette({
           placeholder={`Search ${toolName} skills, hooks, MCP servers, files…`}
           value={query}
         />
-        <div className="max-h-[50vh] overflow-auto p-1.5">
+        <div className="max-h-[50vh] overflow-auto">
           {results.length === 0 ? (
             <p className="py-8 text-center text-ink-faint">
               No matches for {toolName}.
@@ -74,14 +74,14 @@ export function SearchPalette({
           ) : null}
           {results.map((record, position) => (
             <button
-              className={`grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_auto_auto] items-center gap-2.5 rounded-button px-3 text-left ${position === active ? "bg-selected" : "hover:bg-hover"}`}
+              className={`grid h-9 w-full grid-cols-[11px_7px_minmax(0,1fr)_auto_auto] items-center gap-3 px-3 text-left [&+&]:border-t [&+&]:border-dotted [&+&]:border-hairline ${position === active ? "on-accent bg-accent" : "hover:bg-wash"}`}
               key={record.id}
               onClick={() => onPick(record.id)}
               onMouseEnter={() => setIndex(position)}
             >
               <KindIcon kind={record.kind} />
               <StateMarker tier={record.tier} />
-              <span className="flex min-w-0 items-baseline gap-2">
+              <span className="flex min-w-0 items-center gap-3">
                 <span
                   className={`shrink-0 font-semibold ${record.tier === "inactive" ? "text-ink-muted" : ""}`}
                 >
@@ -104,7 +104,7 @@ export function SearchPalette({
             </button>
           ))}
         </div>
-        <div className="flex gap-3.5 border-t border-hairline px-3.5 py-2 text-caption text-ink-faint">
+        <div className="flex gap-4 border-t-2 border-rule px-3 py-2 font-mono text-mono text-ink-muted">
           <span>↑↓ navigate</span>
           <span>↵ inspect</span>
           <span>esc close</span>

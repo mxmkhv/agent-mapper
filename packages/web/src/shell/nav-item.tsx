@@ -13,7 +13,7 @@ export function NavItem({
 }) {
   return (
     <button
-      className={`flex h-[30px] w-full items-center gap-2 rounded-control px-2 text-left ${active ? "bg-selected font-semibold" : "hover:bg-hover"}`}
+      className={`flex h-[30px] w-full items-center gap-2 px-2 text-left ${active ? "bg-ink text-canvas" : "hover:bg-wash"}`}
       onClick={onClick}
       title={title}
     >

@@ -10,7 +10,7 @@ export function FindingCounts({ findings }: { findings: readonly Finding[] }) {
   ).length;
   const others = findings.length - problems;
   return (
-    <span className="tabular-nums">
+    <span>
       {problems ? (
         <strong className="font-semibold text-problem">
           {count(problems, "problem")}

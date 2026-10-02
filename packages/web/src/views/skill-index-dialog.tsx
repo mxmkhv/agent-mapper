@@ -5,11 +5,6 @@ import { approxTokens, skillIndexRecords } from "../model/startup";
 import { KindIcon } from "../ui/kind-icon";
 import { Modal } from "../ui/modal";
 
-export const skillTone = {
-  claude: "bg-claude",
-  codex: "bg-codex"
-} satisfies Record<ToolId, string>;
-
 const percent = 100;
 
 interface SkillIndexDialogProps {
@@ -60,7 +55,7 @@ export function SkillIndexDialog(props: SkillIndexDialogProps) {
       </p>
       <p className="m-0 flex items-baseline justify-between gap-3 text-label text-ink-muted">
         <span>
-          <strong className="text-large font-semibold text-ink tabular-nums">
+          <strong className="mr-1 font-mono text-title text-ink">
             {approxTokens(props.total)}
           </strong>{" "}
           across {countText(rows.map((row) => row.record))}
@@ -73,26 +68,25 @@ export function SkillIndexDialog(props: SkillIndexDialogProps) {
         {rows.map(({ record, tokens }) => (
           <li key={record.id}>
             <button
-              className={`grid h-9 w-full items-center ${mixedSources ? "grid-cols-[3.25rem_auto_minmax(0,1fr)_auto_4rem]" : "grid-cols-[3.25rem_auto_minmax(0,1fr)_4rem]"} gap-2 rounded-control px-2 text-left text-label hover:bg-hover`}
+              className={`grid h-9 w-full items-center ${mixedSources ? "grid-cols-[3.25rem_auto_minmax(0,1fr)_auto_4rem]" : "grid-cols-[3.25rem_auto_minmax(0,1fr)_4rem]"} gap-2.5 px-2 text-left text-label hover:bg-wash`}
               onClick={() => props.onSelect(record.id)}
               type="button"
             >
-              <strong className="text-right font-semibold text-ink tabular-nums">
+              <strong className="text-right font-mono text-mono text-ink">
                 {approxTokens(tokens)}
               </strong>
-              <KindIcon kind={record.kind} small />
-              <span className="truncate text-ink">{record.name}</span>
+              <KindIcon kind={record.kind} />
+              <span className="truncate font-semibold text-ink">
+                {record.name}
+              </span>
               {mixedSources ? (
                 <span className="truncate text-caption text-ink-faint">
                   {sourceText(record)}
                 </span>
               ) : null}
-              <span
-                aria-hidden="true"
-                className="h-1.5 overflow-hidden rounded-full bg-wash"
-              >
+              <span aria-hidden="true" className="h-2 overflow-hidden bg-wash">
                 <span
-                  className={`block h-full rounded-full opacity-55 ${skillTone[props.tool]}`}
+                  className="dots-check block h-full bg-accent"
                   style={{ width: `${(tokens / largest) * percent}%` }}
                 />
               </span>

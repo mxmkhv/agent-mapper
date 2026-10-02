@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from "react";
 import type { PullRequestSummary, WorktreeRecord } from "@agent-mapper/core";
-import { GitBranch } from "lucide-react";
 import { pruneWorktree, removeWorktree } from "../../api";
 import { ConfirmButton } from "../../documents/confirm-button";
 import { tildePath, type PathContext } from "../../model/paths";
 import { StateLabel, StateMarker } from "../../ui/marks";
+import { PixelIcon } from "../../ui/pixel-icon";
 import { PullRequestBadge } from "./pull-request-badge";
 
 const folderName = (path: string) => path.split("/").at(-1) ?? path;
@@ -144,22 +144,18 @@ export function CheckoutRow({
     onRemoved
   );
   return (
-    <div className="group [&+&]:border-t [&+&]:border-wash">
-      <div className={`flex items-center ${available ? "hover:bg-hover" : ""}`}>
+    <div className="group [&+&]:border-t [&+&]:border-dotted [&+&]:border-hairline">
+      <div className={`flex items-center ${available ? "hover:bg-wash" : ""}`}>
         <button
-          className="grid h-9 min-w-0 flex-1 grid-cols-[16px_10px_minmax(0,1fr)_minmax(0,1fr)_120px] items-center gap-2.5 pl-3 text-left disabled:cursor-default"
+          className="grid h-9 min-w-0 flex-1 grid-cols-[11px_7px_minmax(0,1fr)_minmax(0,1fr)_120px] items-center gap-3 pl-3 text-left disabled:cursor-default"
           disabled={!available}
           onClick={onOpen}
           title={tildePath(tree.path, context)}
         >
-          <GitBranch
-            aria-hidden="true"
-            className="size-4 text-ink-muted"
-            strokeWidth={1.6}
-          />
+          <PixelIcon name="branch" />
           <StateMarker tier={available ? "active" : "problem"} />
           <span
-            className={`truncate font-semibold ${available ? "" : "text-ink-muted"}`}
+            className={`truncate font-mono text-mono ${available ? "" : "text-ink-muted"}`}
           >
             {name}
           </span>
@@ -192,7 +188,7 @@ export function CheckoutRow({
       </div>
       {error ? (
         <p
-          className="m-0 px-3 pb-2 pl-[50px] text-label text-problem"
+          className="m-0 px-3 pb-2 pl-[54px] text-label text-problem"
           role="alert"
         >
           {error}
