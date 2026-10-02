@@ -473,7 +473,7 @@ Body text is 13px/20px grotesk. Headings are the pixel face in two sizes for six
 ### Editor and Review
 
 - **Document toolbar:** tool glyph, the file name at 22px, an "Unsaved changes" note with a 7px square, the path in pixel type, and the actions (Back to edit, primary Save changes, Back to inventory).
-- **Editor:** 13px/20px source font on paper. The caret is 2px ink; the active line is wash; a focused selection is the 40% accent tint; search matches are the 30% tint with a 1px ink outline, and the current match is a full accent fill with on-accent text. The find widget is a floating panel at the top right.
+- **Editor:** 13px/20px source font on paper. The caret is 2px ink; the active line is wash; a focused selection is the 40% accent tint; search matches are the 30% tint with a 1px ink outline and plain ink text, and the current match is a full accent fill with on-accent text. The find widget is a floating panel at the top right.
 - **Diff:** removed lines sit on wash and added lines on the 18% accent tint; `−` and `+` beside the line numbers mark them. Where one side has no lines, a light dot fill holds the gap.
 - **Review notes:** "3 lines changed" with dense and light swatches for added and removed counts, then the scanned contexts the file affects, each with its tool glyph, path and state. Scans still running or failed stay listed, so impact is never overstated.
 - **History:** a list of versions with dotted dividers; the chosen one is an accent fill.

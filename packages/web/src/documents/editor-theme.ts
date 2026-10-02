@@ -92,6 +92,8 @@ export const editorTheme = EditorView.theme({
     backgroundColor: accentMatch,
     outline: "1px solid var(--am-ink)"
   },
+  // Syntax hues drop under 4.5:1 on the match tint, so matched text is plain ink.
+  ".cm-searchMatch, .cm-searchMatch *": { color: "var(--am-ink)" },
   // The current match is a full accent fill, so its text takes the accent's ink whatever its syntax colour.
   ".cm-searchMatch.cm-searchMatch-selected, .cm-searchMatch.cm-searchMatch-selected *":
     { backgroundColor: "var(--am-accent)", color: "var(--am-on-accent)" },
@@ -171,7 +173,10 @@ export const editorTheme = EditorView.theme({
   },
   "&.cm-merge-a .cm-changedLineGutter, .cm-deletedLineGutter, &.cm-merge-b .cm-changedLineGutter":
     { background: "none" },
-  "&.cm-merge-a .cm-changedLineGutter::before": { content: '"−"' },
+  // The unified diff marks removed lines with its own gutter class.
+  "&.cm-merge-a .cm-changedLineGutter::before, .cm-deletedLineGutter::before": {
+    content: '"−"'
+  },
   "&.cm-merge-b .cm-changedLineGutter::before": { content: '"+"' },
   // Where one side has no lines, a light dot fill holds the gap.
   ".cm-mergeSpacer": {
