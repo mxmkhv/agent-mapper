@@ -9,7 +9,7 @@
 npx agent-mapper
 ```
 
-macOS or Linux, Node 22 or newer. Runs locally: scans are read-only, and it never executes hooks or contacts MCP servers.
+macOS, or Linux as a preview. Node 22 or newer. Runs locally: scans are read-only, and it never executes hooks or contacts MCP servers.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/project-map-dark.png">
@@ -50,7 +50,7 @@ npx agent-mapper --tools codex
 ### Platforms
 
 - **macOS:** Delete requires macOS 15 or newer.
-- **Linux:** Opening the browser, Open in editor, and Show in file manager use `xdg-open` and `gdbus`. Delete uses `gio trash`. Install `xdg-utils` and `libglib2.0-bin` on Debian and Ubuntu, `xdg-utils` and `glib2` on Fedora and Arch, or your distribution's equivalent. Show in file manager opens the parent folder when your file manager can't select the file. Files with no default app, such as `.toml`, can't be opened in an editor until you set one.
+- **Linux (preview):** Desktop actions have automated tests but haven't been checked by hand on a GNOME or KDE desktop yet ([#31](https://github.com/mxmkhv/agent-mapper/issues/31)). Opening the browser, Open in editor, and Show in file manager use `xdg-open` and `gdbus`. Delete uses `gio trash`. Install `xdg-utils` and `libglib2.0-bin` on Debian and Ubuntu, `xdg-utils` and `glib2` on Fedora and Arch, or your distribution's equivalent. Show in file manager opens the parent folder when your file manager can't select the file. Files with no default app, such as `.toml`, can't be opened in an editor until you set one.
 - **SSH, containers, and WSL:** With no desktop session, the browser doesn't open on its own. Open the printed URL yourself, for example through a forwarded port. Open in editor and Show in file manager return an error. Delete still moves items to the Trash. On WSL, opening the browser, Open in editor, and Show in file manager aren't supported yet.
 
 Windows is not supported yet.
