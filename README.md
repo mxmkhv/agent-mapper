@@ -57,13 +57,13 @@ Select a project to see its inventory. The summary on top lists what a fresh ses
 
 The sizes cover startup instruction files and the metadata of skills and commands. They leave out the content of imported files, memory, and anything the tool adds at runtime, such as its system prompt and MCP tool definitions.
 
-In **Global**, **Projects** compares every project: its startup size, what it adds, and where it differs from your global setup.
+In **Global**, **Projects** compares every project: its startup size, what it adds, where it differs from your global setup, and its findings.
 
 ### Where configuration comes from
 
 Trace an instruction through parent folders, imports, and symlinks to the file that loads. Follow a plugin to its installed versions and the items it contributes. Select any item to see its source, the reason for its state, and what it overrides or what overrides it.
 
-Press `⌘K` to search by name or source path. **Open** opens a source file in your editor, and **Reveal** finds it in Finder.
+Press `⌘K` to search by name or source path. **Open in editor** and **Reveal in Finder** take you to any source file.
 
 ### What needs review
 
@@ -81,7 +81,7 @@ Press `⌘K` to search by name or source path. **Open** opens a source file in y
   <img src="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/findings-light.png" alt="Findings for a project: a broken skill link, an instruction file importing a missing file, and two skills sharing a name, with the importing file's preview and import status beside them">
 </picture>
 
-In a project with linked Git checkouts, **Worktrees** compares their configuration.
+In a project with linked Git checkouts, **Worktrees** compares their configuration. Opened from a linked checkout, the same view is called **Differences**.
 
 ### Clean up from the same place
 
