@@ -1,9 +1,17 @@
 import type { ContextSummary, Finding, ToolId } from "@agent-mapper/core";
 import { ArrowRight } from "lucide-react";
-import { shortPath, splitPath, type PathContext } from "../model/paths";
+import { useState } from "react";
+import {
+  isInside,
+  shortPath,
+  splitPath,
+  tildePath,
+  type PathContext
+} from "../model/paths";
 import type { InventoryRecord, Layer } from "../model/record-types";
 import { approxTokens, startupFiles } from "../model/startup";
 import { FindingCounts } from "../ui/finding-counts";
+import { SkillIndexDialog, skillTone } from "./skill-index-dialog";
 
 const layerTone = {
   managed: "bg-layer-project",
@@ -12,11 +20,6 @@ const layerTone = {
   project: "bg-layer-project",
   user: "bg-layer-project"
 } satisfies Record<Layer, string>;
-
-const skillTone = { claude: "bg-claude", codex: "bg-codex" } satisfies Record<
-  ToolId,
-  string
->;
 
 const percent = 100;
 
@@ -32,10 +35,13 @@ interface StartupSummaryProps {
   findings?: { list: readonly Finding[]; onOpen(): void };
 }
 
-/** The folder is what tells two CLAUDE.md files apart, so it always follows the name. Empty at the repo root. */
-function folderOf(record: InventoryRecord, context: PathContext): string {
-  const { directory } = splitPath(shortPath(record.path, context));
-  return directory.replace(/\/$/, "");
+/** The path is what tells two CLAUDE.md files apart: a project file leads with the project's folder name, anything else reads from `~`. */
+function loadPath(record: InventoryRecord, context: PathContext): string {
+  const root = context.projectRoot;
+  if (root && isInside(record.path, root)) {
+    return `${splitPath(root).file}/${shortPath(record.path, context)}`;
+  }
+  return tildePath(record.path, context);
 }
 
 /**
@@ -44,6 +50,7 @@ function folderOf(record: InventoryRecord, context: PathContext): string {
  */
 export function StartupSummary(props: StartupSummaryProps) {
   const { estimate, tool } = props;
+  const [showSkillIndex, setShowSkillIndex] = useState(false);
   const files = startupFiles(props.records);
   const startup = estimate.startup + estimate.skillMetadata;
   const share = (value: number) =>
@@ -53,31 +60,13 @@ export function StartupSummary(props: StartupSummaryProps) {
       aria-labelledby="startup-summary-title"
       className="mb-4 rounded-card border border-hairline bg-surface px-3.5 pt-3 pb-2.5"
     >
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-label text-ink-muted">
+      <div className="flex items-center gap-x-4 text-label">
         <h2
-          className="m-0 text-label font-semibold text-ink"
+          className="m-0 text-label font-normal text-ink-muted"
           id="startup-summary-title"
         >
           {props.title}
         </h2>
-        <span>
-          Startup{" "}
-          <strong className="font-semibold text-ink tabular-nums">
-            {approxTokens(startup)}
-          </strong>
-        </span>
-        <span>
-          On demand{" "}
-          <strong className="font-semibold text-ink tabular-nums">
-            {approxTokens(estimate.onDemand)}
-          </strong>
-        </span>
-        {estimate.unaccountedSources ? (
-          <span>{estimate.unaccountedSources} unmeasured</span>
-        ) : null}
-        <span className="text-caption text-ink-faint">
-          Estimated tokens: characters ÷ 4
-        </span>
         {props.findings?.list.length ? (
           <button
             className="ml-auto inline-flex h-6 items-center gap-1.5 rounded-control px-1.5 text-label hover:bg-hover"
@@ -92,9 +81,26 @@ export function StartupSummary(props: StartupSummaryProps) {
           </button>
         ) : null}
       </div>
+      <p className="m-0 mt-1 flex flex-wrap items-baseline gap-x-5 gap-y-1 text-label text-ink-muted">
+        <span>
+          <strong className="text-headline font-semibold text-ink tabular-nums">
+            {approxTokens(startup)}
+          </strong>{" "}
+          startup
+        </span>
+        <span className="text-ink-faint">
+          <strong className="text-large font-semibold text-ink-muted tabular-nums">
+            {approxTokens(estimate.onDemand)}
+          </strong>{" "}
+          on demand
+        </span>
+        {estimate.unaccountedSources ? (
+          <span>{estimate.unaccountedSources} unmeasured</span>
+        ) : null}
+      </p>
       <div
         aria-hidden="true"
-        className="mt-2.5 flex h-1.5 gap-0.5 overflow-hidden rounded-full bg-wash"
+        className="mt-2 flex h-1.5 gap-0.5 overflow-hidden rounded-full bg-wash"
       >
         {files.map((file) => (
           <span
@@ -108,48 +114,63 @@ export function StartupSummary(props: StartupSummaryProps) {
           style={{ width: share(estimate.skillMetadata) }}
         />
       </div>
-      <ol className="m-0 mt-1.5 -ml-1.5 flex list-none flex-wrap gap-x-1 gap-y-0.5 p-0 text-caption text-ink-muted">
-        {files.map((file, index) => (
-          <li className="min-w-0" key={file.id}>
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-caption">
+        <ol className="m-0 -ml-1.5 flex min-w-0 list-none flex-wrap gap-x-1.5 gap-y-0.5 p-0 text-ink-muted">
+          {files.map((file) => (
+            <li className="min-w-0" key={file.id}>
+              <button
+                aria-current={file.id === props.selectedId ? "true" : undefined}
+                className={`inline-flex h-6 max-w-full items-center gap-1.5 rounded-control px-1.5 ${file.id === props.selectedId ? "bg-selected" : "hover:bg-hover"}`}
+                onClick={() => props.onSelect(file.id)}
+              >
+                <i
+                  aria-hidden="true"
+                  className={`inline-block size-2 shrink-0 rounded-[2px] ${layerTone[file.layer]}`}
+                />
+                <strong className="font-semibold whitespace-nowrap text-ink tabular-nums">
+                  {approxTokens(file.startupTokens)}
+                </strong>
+                <span className="truncate font-mono">
+                  {loadPath(file, props.context)}
+                </span>
+              </button>
+            </li>
+          ))}
+          <li>
             <button
-              aria-current={file.id === props.selectedId ? "true" : undefined}
-              className={`inline-flex h-6 max-w-full items-center gap-1.5 rounded-control px-1.5 ${file.id === props.selectedId ? "bg-selected" : "hover:bg-hover"}`}
-              onClick={() => props.onSelect(file.id)}
+              aria-haspopup="dialog"
+              className="inline-flex h-6 items-center gap-1.5 rounded-control px-1.5 hover:bg-hover disabled:pointer-events-none"
+              disabled={!estimate.skillMetadata}
+              onClick={() => setShowSkillIndex(true)}
+              title="See which skills and commands make up the skill index"
             >
               <i
                 aria-hidden="true"
-                className={`inline-block size-2 shrink-0 rounded-[2px] ${layerTone[file.layer]}`}
+                className={`inline-block size-2 shrink-0 rounded-[2px] opacity-55 ${skillTone[tool]}`}
               />
-              <span className="font-mono font-semibold text-ink-faint">
-                {index + 1}
-              </span>
-              <strong className="font-semibold whitespace-nowrap text-ink">
-                {file.name}
+              <strong className="font-semibold text-ink tabular-nums">
+                {approxTokens(estimate.skillMetadata)}
               </strong>
-              {folderOf(file, props.context) ? (
-                <span className="truncate font-mono text-ink-faint">
-                  {folderOf(file, props.context)}
-                </span>
-              ) : (
-                <span className="text-ink-faint">repo root</span>
-              )}
-              <span className="whitespace-nowrap tabular-nums">
-                {approxTokens(file.startupTokens)}
-              </span>
+              Skill index
             </button>
           </li>
-        ))}
-        <li className="inline-flex h-6 items-center gap-1.5 px-1.5">
-          <i
-            aria-hidden="true"
-            className={`inline-block size-2 shrink-0 rounded-[2px] opacity-55 ${skillTone[tool]}`}
-          />
-          Skill index
-          <span className="tabular-nums">
-            {approxTokens(estimate.skillMetadata)}
-          </span>
-        </li>
-      </ol>
+        </ol>
+        <span className="ml-auto text-ink-faint">
+          Estimated tokens: characters ÷ 4
+        </span>
+      </div>
+      {showSkillIndex ? (
+        <SkillIndexDialog
+          onClose={() => setShowSkillIndex(false)}
+          onSelect={(id) => {
+            setShowSkillIndex(false);
+            props.onSelect(id);
+          }}
+          records={props.records}
+          tool={tool}
+          total={estimate.skillMetadata}
+        />
+      ) : null}
     </section>
   );
 }

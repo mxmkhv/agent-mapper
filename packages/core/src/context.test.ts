@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { AgentRecord, MemoryRecord, ResolvedEntry } from "./inventory";
-import { summarizeContext } from "./context";
+import { skillIndexCharacters, summarizeContext } from "./context";
 
 function item(
   id: string,
@@ -129,4 +129,31 @@ it("counts unresolved sources without assigning them estimated tokens", () => {
     onDemand: 0,
     unaccountedSources: 2
   });
+});
+
+it("counts only expected skills and commands toward the skill index", () => {
+  const skill = item("skill", {
+    tool: "claude",
+    kind: "skill",
+    characters: 520,
+    metadataCharacters: 120
+  });
+  expect(skillIndexCharacters(skill)).toBe(120);
+  expect(
+    skillIndexCharacters({
+      ...skill,
+      resolution: { ...skill.resolution, availability: "shadowed" }
+    })
+  ).toBeUndefined();
+  expect(
+    skillIndexCharacters({
+      ...skill,
+      entry: { ...skill.entry, declarationOnly: true }
+    })
+  ).toBeUndefined();
+  expect(
+    skillIndexCharacters(
+      item("rules", { tool: "claude", kind: "instruction", characters: 80 })
+    )
+  ).toBeUndefined();
 });

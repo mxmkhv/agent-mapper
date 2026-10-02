@@ -25,15 +25,32 @@ function emptyEstimate(): ContextEstimate {
   return { startup: 0, skillMetadata: 0, onDemand: 0, unaccountedSources: 0 };
 }
 
-function tokenEstimate(characters: number): number {
+export function tokenEstimate(characters: number): number {
   return Math.round(characters / charactersPerToken);
 }
 
-function addEntry(
-  characters: ContextSummary,
-  { entry, resolution }: ResolvedEntry
-): void {
+/**
+ * Frontmatter characters an expected skill or command adds to every session's skill index, the listing the model
+ * reads to decide when to use one. Undefined when it adds none.
+ */
+export function skillIndexCharacters({
+  entry,
+  resolution
+}: ResolvedEntry): number | undefined {
+  if (
+    resolution.availability !== "expected" ||
+    entry.declarationOnly ||
+    (entry.kind !== "skill" && entry.kind !== "command")
+  ) {
+    return undefined;
+  }
+  return entry.metadataCharacters ?? 0;
+}
+
+function addEntry(characters: ContextSummary, item: ResolvedEntry): void {
+  const { entry, resolution } = item;
   const total = characters[entry.tool];
+  const index = skillIndexCharacters(item);
   if (resolution.availability === "unknown") {
     total.unaccountedSources += 1;
   } else if (resolution.availability === "expected") {
@@ -44,10 +61,9 @@ function addEntry(
       resolution.loading === "startup"
     ) {
       total.startup += entry.characters ?? 0;
-    } else if (entry.kind === "skill" || entry.kind === "command") {
-      const metadata = entry.metadataCharacters ?? 0;
-      total.skillMetadata += metadata;
-      total.onDemand += Math.max(0, (entry.characters ?? 0) - metadata);
+    } else if (index !== undefined) {
+      total.skillMetadata += index;
+      total.onDemand += Math.max(0, (entry.characters ?? 0) - index);
     }
   }
 }

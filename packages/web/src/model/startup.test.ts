@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { InventoryRecord } from "./record-types";
-import { approxTokens, startupFiles } from "./startup";
+import { approxTokens, skillIndexRecords, startupFiles } from "./startup";
 
 function instruction(
   input: Partial<InventoryRecord> & Pick<InventoryRecord, "id" | "order">
@@ -35,6 +35,34 @@ it("lists startup instructions in load order and leaves out what does not load",
     "global",
     "project"
   ]);
+});
+
+it("lists what makes up the skill index for the tool, largest first", () => {
+  const records = [
+    instruction({
+      id: "small",
+      order: 1,
+      kind: "skill",
+      skillIndexCharacters: 40
+    }),
+    instruction({
+      id: "large",
+      order: 2,
+      kind: "command",
+      skillIndexCharacters: 900
+    }),
+    instruction({ id: "disabled", order: 3, kind: "skill" }),
+    instruction({
+      id: "codex",
+      order: 4,
+      kind: "skill",
+      tool: "codex",
+      skillIndexCharacters: 500
+    })
+  ];
+  expect(
+    skillIndexRecords(records, "claude").map((record) => record.id)
+  ).toEqual(["large", "small"]);
 });
 
 it("formats approximate token counts", () => {

@@ -6,6 +6,7 @@ import type {
   PluginRecord,
   ResolvedEntry
 } from "@agent-mapper/core";
+import { skillIndexCharacters } from "@agent-mapper/core";
 import type { InventoryRecord, RecordDetail, RecordKind } from "./record-types";
 
 /** Fields every converter fills; build-records adds layer, tier and plugin provenance. */
@@ -20,10 +21,8 @@ export type RecordDraft = Omit<
 const detail = (label: string, value: string | undefined): RecordDetail[] =>
   value ? [{ label, value }] : [];
 
-export function entryDraft(
-  { entry, resolution }: ResolvedEntry,
-  order: number
-): RecordDraft {
+export function entryDraft(item: ResolvedEntry, order: number): RecordDraft {
+  const { entry, resolution } = item;
   return {
     id: entry.id,
     kind: entry.kind,
@@ -38,6 +37,7 @@ export function entryDraft(
     loading: resolution.loading,
     order,
     startupTokens: resolution.estimatedTokens?.startup ?? 0,
+    skillIndexCharacters: skillIndexCharacters(item),
     lines: entry.lineCount,
     characters: entry.characters,
     locator: entry.locator,

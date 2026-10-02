@@ -33,7 +33,7 @@ Built and tested on macOS. Opening files in an editor, revealing them in Finder,
 ## Usage
 
 1. Choose **Global** to browse your shared configuration, or select a project in the sidebar. Use **Add folder** for a project that wasn't discovered.
-2. A project opens on **Inventory**. The summary on top shows what a fresh session in that folder is expected to load, in load order, with approximate context sizes. Select an item to see its source, the reason for its state, and what it overrides or what overrides it.
+2. A project opens on **Inventory**. The summary on top shows what a fresh session in that folder is expected to load, in load order, with approximate context sizes. Click **Skill index** to see which skills and commands make up that share. Select an item to see its source, the reason for its state, and what it overrides or what overrides it.
 3. Check **Findings** for broken links, shadowed instructions, missing plugin files, repeated startup text, and other review suggestions.
 
 In **Global**, **Projects** lists every project with its startup size, what it adds, where it differs from your global setup, and its findings. In a project with linked Git checkouts, **Worktrees** compares their configuration.
