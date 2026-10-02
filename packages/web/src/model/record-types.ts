@@ -48,6 +48,8 @@ export interface InventoryRecord {
   /** Position in the source snapshot, used for startup load order. */
   order: number;
   startupTokens: number;
+  /** Frontmatter characters this skill or command adds to every session's skill index; undefined when it adds none. */
+  skillIndexCharacters?: number;
   lines?: number;
   characters?: number;
   /** File size, for records measured in bytes rather than characters (memory). */

@@ -1,5 +1,6 @@
 import type { ContextSummary, Finding, ToolId } from "@agent-mapper/core";
 import { ArrowRight } from "lucide-react";
+import { useState } from "react";
 import {
   isInside,
   shortPath,
@@ -10,6 +11,7 @@ import {
 import type { InventoryRecord, Layer } from "../model/record-types";
 import { approxTokens, startupFiles } from "../model/startup";
 import { FindingCounts } from "../ui/finding-counts";
+import { SkillIndexDialog, skillTone } from "./skill-index-dialog";
 
 const layerTone = {
   managed: "bg-layer-project",
@@ -18,11 +20,6 @@ const layerTone = {
   project: "bg-layer-project",
   user: "bg-layer-project"
 } satisfies Record<Layer, string>;
-
-const skillTone = { claude: "bg-claude", codex: "bg-codex" } satisfies Record<
-  ToolId,
-  string
->;
 
 const percent = 100;
 
@@ -53,6 +50,7 @@ function loadPath(record: InventoryRecord, context: PathContext): string {
  */
 export function StartupSummary(props: StartupSummaryProps) {
   const { estimate, tool } = props;
+  const [showSkillIndex, setShowSkillIndex] = useState(false);
   const files = startupFiles(props.records);
   const startup = estimate.startup + estimate.skillMetadata;
   const share = (value: number) =>
@@ -138,21 +136,41 @@ export function StartupSummary(props: StartupSummaryProps) {
               </button>
             </li>
           ))}
-          <li className="inline-flex h-6 items-center gap-1.5 px-1.5">
-            <i
-              aria-hidden="true"
-              className={`inline-block size-2 shrink-0 rounded-[2px] opacity-55 ${skillTone[tool]}`}
-            />
-            <strong className="font-semibold text-ink tabular-nums">
-              {approxTokens(estimate.skillMetadata)}
-            </strong>
-            Skill index
+          <li>
+            <button
+              aria-haspopup="dialog"
+              className="inline-flex h-6 items-center gap-1.5 rounded-control px-1.5 hover:bg-hover disabled:pointer-events-none"
+              disabled={!estimate.skillMetadata}
+              onClick={() => setShowSkillIndex(true)}
+              title="See which skills and commands make up the skill index"
+            >
+              <i
+                aria-hidden="true"
+                className={`inline-block size-2 shrink-0 rounded-[2px] opacity-55 ${skillTone[tool]}`}
+              />
+              <strong className="font-semibold text-ink tabular-nums">
+                {approxTokens(estimate.skillMetadata)}
+              </strong>
+              Skill index
+            </button>
           </li>
         </ol>
         <span className="ml-auto text-ink-faint">
           Estimated tokens: characters ÷ 4
         </span>
       </div>
+      {showSkillIndex ? (
+        <SkillIndexDialog
+          onClose={() => setShowSkillIndex(false)}
+          onSelect={(id) => {
+            setShowSkillIndex(false);
+            props.onSelect(id);
+          }}
+          records={props.records}
+          tool={tool}
+          total={estimate.skillMetadata}
+        />
+      ) : null}
     </section>
   );
 }

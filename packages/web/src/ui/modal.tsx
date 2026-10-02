@@ -8,8 +8,8 @@ interface ModalProps {
   busy?: boolean;
   onClose(): void;
   children: ReactNode;
-  /** The answers, right-aligned under the body. */
-  footer: ReactNode;
+  /** The answers, right-aligned under the body. A dialog that only informs has none. */
+  footer?: ReactNode;
 }
 
 /**
@@ -52,9 +52,11 @@ export function Modal(props: ModalProps) {
         <div className="grid min-h-0 gap-4 overflow-auto px-5 py-4">
           {props.children}
         </div>
-        <footer className="flex flex-wrap justify-end gap-2 border-t border-hairline px-5 py-3">
-          {props.footer}
-        </footer>
+        {props.footer ? (
+          <footer className="flex flex-wrap justify-end gap-2 border-t border-hairline px-5 py-3">
+            {props.footer}
+          </footer>
+        ) : null}
       </div>
       {/* After the panel in the DOM, so opening the dialog focuses a control inside the panel first. */}
       <button
