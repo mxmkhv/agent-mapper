@@ -38,8 +38,8 @@ function WorkspacePending(props: {
     <div className="grid place-items-center p-10 text-center">
       {failure ? (
         <div role="alert">
-          <h2 className="text-headline font-semibold">{failure.title}</h2>
-          <p className="text-ink-muted">{failure.message}</p>
+          <h2 className="m-0 font-mono text-title">{failure.title}</h2>
+          <p className="mt-2 mb-4 text-ink-muted">{failure.message}</p>
           {failure.retry}
         </div>
       ) : (
@@ -106,7 +106,6 @@ export function App() {
           projects={visibility.projects}
           selectedPath={selectedPath}
           theme={theme}
-          tool={tool}
         />
         <main className="grid min-h-0 min-w-0">
           <DocumentErrorBoundary

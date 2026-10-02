@@ -1,10 +1,10 @@
 import { useId } from "react";
-import { FolderOpen } from "lucide-react";
 import { splitPath } from "../model/paths";
 import { useFileManagerWords } from "../state/use-host";
 import { useSourceAction } from "../state/use-source-action";
 import { Button } from "./button";
 import { PathText } from "./path-text";
+import { PixelIcon } from "./pixel-icon";
 import { SymlinkGlyph, symlinkChip } from "./marks";
 
 interface SymlinkPopoverProps {
@@ -32,7 +32,7 @@ export function SymlinkPopover({
   return (
     <>
       <button
-        className={`${symlinkChip} relative hover:border-link`}
+        className={`${symlinkChip} relative hover:border-solid`}
         popoverTarget={popoverId}
         style={{ anchorName: anchor }}
         title={`Symlink → ${target}`}
@@ -42,7 +42,7 @@ export function SymlinkPopover({
         symlink
       </button>
       <div
-        className="inset-auto top-[anchor(bottom)] left-[anchor(left)] m-0 mt-1.5 w-[min(340px,90vw)] rounded-panel border border-hairline bg-surface p-3 text-left text-ink shadow-dialog [position-try-fallbacks:flip-block,flip-inline]"
+        className="keep-color inset-auto top-[anchor(bottom)] left-[anchor(left)] m-0 mt-1.5 w-[min(340px,90vw)] border-2 border-ink bg-surface p-3 text-left text-ink [position-try-fallbacks:flip-block,flip-inline]"
         id={popoverId}
         popover="auto"
         style={{ positionAnchor: anchor }}
@@ -57,11 +57,7 @@ export function SymlinkPopover({
           className="mt-2.5"
           onClick={() => void action.run(id, "reveal-target")}
         >
-          <FolderOpen
-            aria-hidden="true"
-            className="size-3.5"
-            strokeWidth={1.8}
-          />
+          <PixelIcon name="folder-open" />
           {fileManager.openFolder}
         </Button>
         {error ? (

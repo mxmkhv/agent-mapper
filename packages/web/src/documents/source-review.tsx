@@ -16,7 +16,7 @@ export const loadingEditor = (
 export const splitLayout =
   "grid h-full min-h-0 grid-rows-[minmax(16rem,1fr)_minmax(0,auto)] lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1";
 export const notesPane =
-  "max-h-[45vh] overflow-auto border-t border-hairline p-5 lg:max-h-none lg:border-t-0 lg:border-l";
+  "max-h-[45vh] overflow-auto border-t-2 border-rule p-5 lg:max-h-none lg:border-t-0 lg:border-l-2";
 
 /** What a save or restore keeps, in the server platform's terms. */
 export function useMetadataNote(): string {
@@ -37,6 +37,20 @@ interface DiffResult {
   stats?: DiffStats;
 }
 
+/** A dense swatch for added lines and a light one for removed: the pair reads without green and red. */
+function Stat({ sign, count }: { sign: "+" | "−"; count: number }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span
+        aria-hidden="true"
+        className={`size-2 bg-ink ${sign === "+" ? "dots-dense" : "dots-light"}`}
+      />
+      {sign}
+      {count}
+    </span>
+  );
+}
+
 /** "1 line changed +1 −1", once the diff has been computed. */
 function ChangeSize({ result }: { result?: DiffResult }) {
   if (!result) {
@@ -51,12 +65,13 @@ function ChangeSize({ result }: { result?: DiffResult }) {
     );
   }
   return (
-    <p className="m-0 mb-4 text-label">
+    <p className="m-0 mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-label">
       <strong className="font-semibold">
         {stats.changed} {stats.changed === 1 ? "line" : "lines"} changed
-      </strong>{" "}
-      <span className="text-ink-muted tabular-nums">
-        +{stats.added} −{stats.removed}
+      </strong>
+      <span className="inline-flex items-center gap-3 font-mono text-mono">
+        <Stat count={stats.added} sign="+" />
+        <Stat count={stats.removed} sign="−" />
       </span>
     </p>
   );
@@ -151,11 +166,13 @@ export function SourceConflict({ draft }: { draft: Draft }) {
         {moved ? (
           <p className="m-0 text-label break-words text-ink-muted">
             It pointed to{" "}
-            <span className="font-mono">{draft.document.canonicalPath}</span>{" "}
+            <span className="font-mono text-mono">
+              {draft.document.canonicalPath}
+            </span>{" "}
             and now points to{" "}
-            <span className="font-mono">{disk.canonicalPath}</span>. Nothing was
-            written. Your draft stays attached to the original file; copy it or
-            open the new target separately.
+            <span className="font-mono text-mono">{disk.canonicalPath}</span>.
+            Nothing was written. Your draft stays attached to the original file;
+            copy it or open the new target separately.
           </p>
         ) : (
           <p className="m-0 text-label text-ink-muted">

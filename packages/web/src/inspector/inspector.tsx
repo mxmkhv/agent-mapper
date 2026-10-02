@@ -1,6 +1,5 @@
 import type { Finding, InstructionImport, ToolId } from "@agent-mapper/core";
-import { Layers } from "lucide-react";
-import { isLink, linkedFrom, linkTarget } from "../model/links";
+import { isLink } from "../model/links";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
 import type { CopyTarget } from "../model/copy-targets";
 import type { InventoryRecord, RecordKind } from "../model/record-types";
@@ -9,7 +8,7 @@ import type { DocumentMode } from "../documents/source-document-panel";
 import { useFileManagerWords } from "../state/use-host";
 import { useSourceAction } from "../state/use-source-action";
 import { Button } from "../ui/button";
-import { PathText } from "../ui/path-text";
+import { PixelIcon } from "../ui/pixel-icon";
 import { KindIcon, kindSingular } from "../ui/kind-icon";
 import { StateMarker, ToolGlyph } from "../ui/marks";
 import { SymlinkPopover } from "../ui/symlink-popover";
@@ -17,12 +16,11 @@ import {
   Contributions,
   Details,
   Imports,
-  LinkRow,
   Provenance,
   Section,
   sizeText
 } from "./inspector-sections";
-import { PrecedenceSection } from "./precedence-section";
+import { Links, PrecedenceSection } from "./precedence-section";
 import { ReachSection, type ReachScope } from "./reach-section";
 import { pluginGroupKey } from "../views/inventory-groups";
 import { ItemFile } from "./item-actions";
@@ -48,48 +46,6 @@ interface RecordInspectorProps {
   reach?: ReachScope;
 }
 
-function Links({
-  record,
-  scope,
-  onSelect
-}: Pick<RecordInspectorProps, "record" | "scope" | "onSelect">) {
-  const target = isLink(record) ? linkTarget(record, scope.records) : undefined;
-  const sources = linkedFrom(record, scope.records);
-  return (
-    <>
-      {isLink(record) ? (
-        <Section title="Symlink to">
-          {target ? (
-            <LinkRow
-              context={scope.context}
-              onSelect={onSelect}
-              record={target}
-            />
-          ) : (
-            <p className="m-0 font-mono text-mono break-words">
-              <PathText path={tildePath(record.realPath, scope.context)} />
-            </p>
-          )}
-        </Section>
-      ) : null}
-      {sources.length ? (
-        <Section
-          title={`Linked from ${sources.length} ${sources.length === 1 ? "place" : "places"}`}
-        >
-          {sources.map((source) => (
-            <LinkRow
-              context={scope.context}
-              key={source.id}
-              onSelect={onSelect}
-              record={source}
-            />
-          ))}
-        </Section>
-      ) : null}
-    </>
-  );
-}
-
 /**
  * State and size on one line. The resolver's reason explains only what is not normal; for an active item it
  * restates the label, so it moves to the label's tooltip.
@@ -103,18 +59,32 @@ function StateLine({
 }) {
   const reason = tildeText(record.reason, context);
   const normal = record.tier === "active";
-  const size = sizeText(record);
+  // "36 lines · ~591 tokens": each part leads with its figure, which takes the pixel face.
+  const sizes = sizeText(record)?.split(" · ") ?? [];
   return (
     <>
-      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-label">
-        <StateMarker linked={isLink(record)} tier={record.tier} />
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-[7px] gap-y-1 text-label text-ink-muted">
+        <span className="inline-flex text-ink">
+          <StateMarker tier={record.tier} />
+        </span>
         <strong
-          className={record.tier === "problem" ? "text-problem" : ""}
+          className={`font-semibold ${record.tier === "problem" ? "text-problem" : "text-ink"}`}
           title={normal ? reason : undefined}
         >
           {stateText(record)}
         </strong>
-        {size ? <span className="text-ink-muted">· {size}</span> : null}
+        {sizes.map((size) => {
+          const space = size.indexOf(" ");
+          return (
+            <span key={size}>
+              ·{" "}
+              <span className="font-mono text-mono">
+                {size.slice(0, space)}
+              </span>
+              {size.slice(space)}
+            </span>
+          );
+        })}
       </div>
       {normal ? null : <p className="mt-2 mb-0 text-ink-muted">{reason}</p>}
     </>
@@ -141,8 +111,8 @@ export function RecordInspector({
   const linked = isLink(record);
   return (
     <div className="px-5 pt-4.5 pb-7">
-      <div className="flex items-center gap-1.5 text-label text-ink-muted">
-        <KindIcon kind={record.kind} small />
+      <div className="flex items-center gap-2 text-label text-ink-muted">
+        <KindIcon kind={record.kind} />
         {kindSingular[record.kind]}
         <ToolGlyph tool={record.tool} />
         {linked ? (
@@ -153,8 +123,13 @@ export function RecordInspector({
           />
         ) : null}
       </div>
-      <h2 className="mt-1.5 mb-1 text-headline font-semibold tracking-tight break-words">
+      <h2 className="mt-2.5 mb-0 font-mono text-headline break-words">
         {record.name}
+        {/* Inline, so the cursor follows the last line of a wrapped name. */}
+        <span
+          aria-hidden="true"
+          className="ml-1.5 inline-block h-[30px] w-[21px] bg-accent"
+        />
       </h2>
       <StateLine context={scope.context} record={record} />
       {record.problems.map((problem) => (
@@ -226,17 +201,15 @@ export function InspectorEmpty({
   return (
     <div className="grid h-full place-items-center p-10 text-center text-ink-faint">
       <div>
-        <Layers
-          aria-hidden="true"
-          className="mx-auto size-4"
-          strokeWidth={1.6}
-        />
+        <PixelIcon className="mx-auto" large name="layers" />
         <p>
           Select anything to see where it comes from, why it applies, and what
           else links to it.
         </p>
         <p>
-          {active} active · {inactive} inactive for {tool}
+          <span className="font-mono text-mono">{active}</span> active ·{" "}
+          <span className="font-mono text-mono">{inactive}</span> inactive for{" "}
+          {tool}
         </p>
       </div>
     </div>

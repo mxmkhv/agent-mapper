@@ -20,16 +20,19 @@ export function RevisionList(props: {
     );
   }
   return (
-    <ul className="m-0 grid list-none gap-1 p-0">
+    <ul className="m-0 grid list-none p-0">
       {props.items.map((item) => (
-        <li key={item.revisionId}>
+        <li
+          className="border-b border-dotted border-hairline last:border-b-0"
+          key={item.revisionId}
+        >
           <button
             aria-current={props.selectedId === item.revisionId}
-            className={`w-full rounded-control px-2 py-1.5 text-left text-label ${props.selectedId === item.revisionId ? "bg-selected" : "hover:bg-hover"}`}
+            className={`w-full px-2 py-1.5 text-left text-label ${props.selectedId === item.revisionId ? "on-accent bg-accent" : "hover:bg-wash"}`}
             onClick={() => props.onSelect(item.revisionId)}
             type="button"
           >
-            <span className="block font-semibold">
+            <span className="block font-mono text-mono">
               {new Date(item.capturedAt).toLocaleString()}
             </span>
             <span className="text-ink-muted">

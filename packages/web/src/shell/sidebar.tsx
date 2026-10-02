@@ -1,9 +1,8 @@
 import { useState } from "react";
-import type { ToolId } from "@agent-mapper/core";
-import { Bot, Globe, Moon, Sun, SunMoon } from "lucide-react";
 import type { ProjectSuggestion } from "../api";
 import type { ThemeChoice } from "../state/use-theme";
 import { AddFolder } from "./add-folder";
+import { PixelIcon, type PixelIconName } from "../ui/pixel-icon";
 import { NavItem } from "./nav-item";
 import { containsSelection, folderName, ProjectList } from "./project-list";
 import { RemovedProjects } from "./removed-projects";
@@ -15,14 +14,10 @@ interface SidebarProps {
   loading: boolean;
   error?: string;
   theme: ThemeChoice;
-  /** Colors the brand mark, matching the favicon. */
-  tool: ToolId;
   onSelect(path: string): void;
   onTheme(choice: ThemeChoice): void;
   onSetHidden(path: string, hidden: boolean): Promise<void>;
 }
-
-const iconClass = "size-4 shrink-0 text-ink-muted";
 
 const nextTheme = {
   auto: "light",
@@ -30,10 +25,11 @@ const nextTheme = {
   dark: "auto"
 } satisfies Record<ThemeChoice, ThemeChoice>;
 
-const themeIcon = { auto: SunMoon, light: Sun, dark: Moon } satisfies Record<
-  ThemeChoice,
-  typeof Sun
->;
+const themeIcon = {
+  auto: "theme-auto",
+  light: "sun",
+  dark: "moon"
+} satisfies Record<ThemeChoice, PixelIconName>;
 
 const themeName = {
   auto: "Auto",
@@ -46,32 +42,26 @@ function ThemeButton({
   theme,
   onTheme
 }: Pick<SidebarProps, "theme" | "onTheme">) {
-  const Icon = themeIcon[theme];
   return (
     <button
       aria-label={`Appearance: ${themeName[theme]}. Switch to ${themeName[nextTheme[theme]]}`}
-      className="ml-auto grid size-6 place-items-center rounded-control text-ink-muted hover:bg-hover hover:text-ink"
+      className="ml-auto grid size-6 place-items-center text-ink-muted hover:bg-wash hover:text-ink"
       onClick={() => onTheme(nextTheme[theme])}
       title={`Appearance: ${themeName[theme]}`}
     >
-      <Icon aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+      <PixelIcon name={themeIcon[theme]} />
     </button>
   );
 }
 
-const brandColor = {
-  claude: "bg-claude",
-  codex: "bg-codex"
-} satisfies Record<ToolId, string>;
-
-/** The favicon in the page: the Agents icon on a disc in the selected tool's hue. */
-function BrandMark({ tool }: { tool: ToolId }) {
+/** The pixel bot on an ink square. The favicon is the same bot on the selected tool's hue. */
+function BrandMark() {
   return (
     <span
       aria-hidden="true"
-      className={`grid size-[22px] shrink-0 place-items-center rounded-full ${brandColor[tool]}`}
+      className="grid size-[26px] shrink-0 place-items-center bg-ink text-canvas"
     >
-      <Bot className="size-[13px] text-white" strokeWidth={2.5} />
+      <PixelIcon large name="bot" />
     </span>
   );
 }
@@ -102,17 +92,17 @@ export function Sidebar(props: SidebarProps) {
     }
   }
   return (
-    <aside className="flex min-h-0 flex-col overflow-auto border-r border-hairline bg-sidebar px-2.5 pt-3.5 pb-2.5">
-      <div className="flex items-center gap-2 px-2 pb-4 font-semibold tracking-tight">
-        <BrandMark tool={props.tool} />
+    <aside className="flex min-h-0 flex-col overflow-auto border-r-2 border-rule bg-sidebar px-2 pt-[19px] pb-2">
+      <div className="flex items-center gap-2.5 px-2 pb-5 font-mono text-mono">
+        <BrandMark />
         agent-mapper
         <ThemeButton onTheme={props.onTheme} theme={props.theme} />
       </div>
       <NavItem active={!selectedPath} onClick={() => onSelect("")}>
-        <Globe aria-hidden="true" className={iconClass} strokeWidth={1.6} />
+        <PixelIcon name="globe" />
         Global
       </NavItem>
-      <div className="px-2 pt-3.5 pb-1 text-caption font-semibold text-ink-faint">
+      <div className="px-2 pt-3.5 pb-1.5 text-label text-ink-muted">
         Projects
       </div>
       {loading ? (
@@ -139,7 +129,7 @@ export function Sidebar(props: SidebarProps) {
           {actionError}
         </p>
       ) : null}
-      <div className="mt-auto grid gap-0.5 pt-3">
+      <div className="mt-auto grid gap-0.5 border-t border-dotted border-hairline pt-2">
         <RemovedProjects
           paths={props.hiddenProjects}
           onRestore={(path) => void setHidden(path, false)}

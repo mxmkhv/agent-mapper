@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import { X } from "lucide-react";
 import { DocumentWorkspace } from "../documents/document-workspace";
 import { DraftsMenu } from "../documents/drafts-menu";
 import type { ImpactCoverage } from "../documents/impact-summary";
 import { Button } from "../ui/button";
+import { PixelIcon } from "../ui/pixel-icon";
 import { Header } from "../shell/header";
 import { ViewBar } from "../shell/view-bar";
 import { useProjectSnapshots } from "../state/use-project-snapshots";
@@ -98,7 +98,7 @@ export function Workspace(props: WorkspaceProps) {
       />
       {props.notice ? (
         <p
-          className="m-0 border-b border-hairline bg-problem-wash px-5 py-2 text-label text-problem"
+          className="m-0 border-b-2 border-problem px-5 py-2 text-label font-semibold text-problem"
           role="alert"
         >
           {props.notice}
@@ -120,7 +120,7 @@ export function Workspace(props: WorkspaceProps) {
             // Below 1024px the inspector floats over the content, and only while it has something to show.
             <aside
               aria-label="Inspector"
-              className={`min-h-0 overflow-auto border-l border-hairline bg-surface max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:z-20 max-lg:w-[min(380px,calc(100%-40px))] max-lg:shadow-dialog ${detailOpen ? "" : "max-lg:hidden"}`}
+              className={`min-h-0 overflow-auto border-l-2 border-rule bg-surface max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:z-20 max-lg:w-[min(380px,calc(100%-40px))] max-lg:border-ink ${detailOpen ? "" : "max-lg:hidden"}`}
             >
               {detailOpen ? (
                 <Button
@@ -129,11 +129,7 @@ export function Workspace(props: WorkspaceProps) {
                   onClick={state.closeInspector}
                   variant="icon"
                 >
-                  <X
-                    aria-hidden="true"
-                    className="size-3.5"
-                    strokeWidth={1.8}
-                  />
+                  <PixelIcon name="close" />
                 </Button>
               ) : null}
               <Inspector {...parts} />

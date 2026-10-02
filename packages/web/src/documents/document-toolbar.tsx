@@ -1,10 +1,10 @@
-import { ArrowLeft } from "lucide-react";
 import { tildePath, type PathContext } from "../model/paths";
 import { reviewDraft, saveReviewed } from "../state/document-actions";
 import { isDirty, type Draft } from "../state/draft-store";
 import { useDocuments } from "../state/use-document-drafts";
 import { Button } from "../ui/button";
 import { SymlinkBadge, ToolGlyph } from "../ui/marks";
+import { PixelIcon } from "../ui/pixel-icon";
 import { ConfirmButton } from "./confirm-button";
 import type { DocumentMode } from "./source-document-panel";
 import { hasBlockingErrors, useMetadataNote } from "./source-review";
@@ -155,12 +155,13 @@ export function DocumentToolbar(props: ToolbarProps) {
       <div className="min-w-[min(24rem,100%)] flex-1">
         <div className="flex items-center gap-2">
           <ToolGlyph tool={document.source.tool} />
-          <h2 className="m-0 truncate text-headline font-semibold tracking-tight">
+          <h2 className="m-0 truncate font-mono text-title">
             {document.source.name}
           </h2>
           {isDirty(draft) ? (
-            <span className="text-label whitespace-nowrap text-ink-muted">
-              <span aria-hidden="true">●</span> Unsaved changes
+            <span className="inline-flex items-center gap-1.5 text-label whitespace-nowrap text-ink-muted">
+              <span aria-hidden="true" className="size-[7px] bg-current" />
+              Unsaved changes
             </span>
           ) : null}
           <PathBadge context={context} draft={draft} />
@@ -172,11 +173,7 @@ export function DocumentToolbar(props: ToolbarProps) {
       <div className="flex flex-wrap items-center gap-2">
         <PhaseActions {...props} />
         <Button onClick={props.onBack}>
-          <ArrowLeft
-            aria-hidden="true"
-            className="size-3.5"
-            strokeWidth={1.8}
-          />
+          <PixelIcon name="arrow-left" />
           Back to {props.backTo}
         </Button>
       </div>

@@ -10,12 +10,12 @@ export function SegmentedToggle<Value extends string>(
   props: SegmentedToggleProps<Value>
 ) {
   return (
-    <fieldset className="m-0 inline-flex min-w-0 gap-0.5 rounded-panel border border-hairline bg-wash p-0.5">
+    <fieldset className="m-0 inline-flex min-w-0 border-2 border-ink p-0">
       <legend className="sr-only">{props.label}</legend>
       {props.options.map((option) => (
         <button
           aria-pressed={props.value === option.value}
-          className={`inline-flex h-6 items-center rounded-control px-2.5 text-label font-semibold ${props.value === option.value ? "bg-surface text-ink shadow-raised" : "text-ink-muted hover:text-ink"}`}
+          className={`inline-flex h-[22px] items-center px-3 text-label font-semibold ${props.value === option.value ? "bg-ink text-canvas" : "text-ink-muted hover:bg-wash hover:text-ink"}`}
           key={option.value}
           onClick={() => props.onChange(option.value)}
           type="button"

@@ -1,4 +1,9 @@
-# agent-mapper
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/logo/agent-mapper-logo-dark.svg">
+    <img src="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/logo/agent-mapper-logo-light.svg" alt="agent-mapper" width="396">
+  </picture>
+</h1>
 
 [![npm version](https://img.shields.io/npm/v/agent-mapper)](https://www.npmjs.com/package/agent-mapper)
 [![license](https://img.shields.io/npm/l/agent-mapper)](https://github.com/mxmkhv/agent-mapper/blob/main/LICENSE)
@@ -13,7 +18,7 @@ macOS, or Linux as a preview. Node 22 or newer. Runs locally: scans are read-onl
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/project-map-dark.png">
-  <img src="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/project-map-light.png" alt="Project inventory with a startup summary in load order above global and project instructions, skills, agents, hooks, and MCP configuration, with a selected instruction's source and preview">
+  <img src="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/project-map-light.png" alt="Project inventory with a startup summary in load order above global and project instructions, skills, agents, and MCP configuration, with a selected instruction's source and preview">
 </picture>
 
 Screenshots use a sample setup.
@@ -84,7 +89,7 @@ Press `⌘K` (`Ctrl+K` in browsers outside macOS) to search by name or source pa
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/findings-dark.png">
-  <img src="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/findings-light.png" alt="Findings for a project: a broken skill link, an instruction file importing a missing file, and two skills sharing a name, with the importing file's preview and import status beside them">
+  <img src="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/findings-light.png" alt="Findings for a project: a broken skill link, an instruction file importing a missing file, two skills sharing a name, and a shadowed instruction file, with the importing file's preview and import status beside them">
 </picture>
 
 In a project with linked Git checkouts, **Worktrees** compares their configuration. Opened from a linked checkout, the same view is called **Differences**.
@@ -150,3 +155,5 @@ See [CONTRIBUTING.md](https://github.com/mxmkhv/agent-mapper/blob/main/CONTRIBUT
 ## License
 
 [MIT](https://github.com/mxmkhv/agent-mapper/blob/main/LICENSE)
+
+The UI bundles two typefaces under the [SIL Open Font License 1.1](https://openfontlicense.org): Departure Mono and Schibsted Grotesk. Their licence texts ship with the package.

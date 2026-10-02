@@ -1,5 +1,4 @@
 import { isConventionalPath } from "../model/conventional-path";
-import { Trash2 } from "lucide-react";
 import { canCopy, canDelete, canEdit } from "../model/copyable";
 import { isLink } from "../model/links";
 import {
@@ -14,6 +13,7 @@ import { Button } from "../ui/button";
 import { KindIcon } from "../ui/kind-icon";
 import { StateLabel, StateMarker } from "../ui/marks";
 import { PathLine } from "../ui/path-line";
+import { PixelIcon } from "../ui/pixel-icon";
 import { SymlinkPopover } from "../ui/symlink-popover";
 
 export interface RowActionHandlers {
@@ -32,8 +32,6 @@ interface RowProps {
   relation?: string;
   /** Another row in the group has the same name, so the path is what tells them apart. */
   sharesName?: boolean;
-  /** Rank of the shared repo this skill was installed from; picks the dot color. */
-  tone?: number;
   /** The scanned folder, for records that carry no source ref of their own. */
   workingDirectory: string;
   actions: RowActionHandlers;
@@ -81,7 +79,11 @@ function Detail({
       )
       .map((detail) => detail.value)
       .join(" · ");
-    return <span className="truncate text-mono text-ink-faint">{text}</span>;
+    return (
+      <span className="truncate font-mono text-mono text-ink-faint">
+        {text}
+      </span>
+    );
   }
   if (record.kind === "plugin") {
     return (
@@ -124,7 +126,8 @@ function RowLabel({
 
 /**
  * Edit, Copy and Delete for a file the app can open, shown while the row is hovered, focused or selected. They
- * float over the right end of the row on the row's own fill, so the columns keep their widths.
+ * float over the right end of the row on the row's own fill, so the columns keep their widths. On the selected
+ * row they switch to the accent variants and leave room for the dither edge.
  */
 function RowActions({
   record,
@@ -133,19 +136,23 @@ function RowActions({
 }: Pick<RowProps, "record" | "actions" | "selected">) {
   return (
     <span
-      className={`absolute inset-y-0 right-0 hidden items-center gap-1.5 pr-3 pl-3 group-focus-within:flex group-hover:flex group-aria-current:flex ${selected ? "bg-selected" : "bg-surface group-hover:bg-hover"}`}
+      className={`keep-color absolute inset-y-0 right-0 hidden items-center gap-1.5 pl-3 group-focus-within:flex group-hover:flex group-aria-current:flex ${selected ? "bg-accent pr-9" : "bg-surface pr-3 group-hover:bg-wash"}`}
     >
       {canEdit(record) ? (
         <Button
           className="relative"
           onClick={() => actions.onEdit(record)}
-          variant="primary"
+          variant={selected ? "accentPrimary" : "primary"}
         >
           Edit
         </Button>
       ) : null}
       {canCopy(record) ? (
-        <Button className="relative" onClick={() => actions.onCopy(record)}>
+        <Button
+          className="relative"
+          onClick={() => actions.onCopy(record)}
+          variant={selected ? "accentSecondary" : "secondary"}
+        >
           Copy
         </Button>
       ) : null}
@@ -155,9 +162,9 @@ function RowActions({
           className="relative"
           onClick={() => actions.onDelete(record)}
           title="Delete…"
-          variant="icon"
+          variant={selected ? "accentIcon" : "icon"}
         >
-          <Trash2 aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+          <PixelIcon name="trash" />
         </Button>
       ) : null}
     </span>
@@ -176,7 +183,6 @@ export function InventoryRow({
   otherVersions,
   relation,
   sharesName,
-  tone,
   actions,
   onSelect
 }: RowProps) {
@@ -186,19 +192,25 @@ export function InventoryRow({
   return (
     <div
       aria-current={selected ? "true" : undefined}
-      className={`group relative grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_minmax(0,1fr)_132px] items-center gap-2.5 px-3 text-left [&+&]:border-t [&+&]:border-wash ${selected ? "bg-selected" : "hover:bg-hover"}`}
+      className={`group relative grid h-9 w-full grid-cols-[11px_7px_minmax(0,1fr)_minmax(0,1fr)_132px] items-center gap-3 px-3 text-left [&+&]:border-t [&+&]:border-dotted [&+&]:border-hairline ${selected ? "on-accent bg-accent" : "hover:bg-wash"}`}
       title={stateText(record)}
     >
       <KindIcon kind={record.kind} />
-      <StateMarker linked={linked} tier={record.tier} tone={tone} />
+      <StateMarker tier={record.tier} />
       <span className="flex min-w-0 items-center gap-2">
         <button
-          className={`truncate text-left font-semibold outline-none after:absolute after:inset-0 after:-outline-offset-2 after:outline-focus focus-visible:after:outline-2 ${inactive ? "text-ink-muted" : ""}`}
+          className={`truncate text-left font-semibold outline-none after:absolute after:inset-0 after:-outline-offset-2 after:outline-current focus-visible:after:outline-2 ${inactive ? "text-ink-muted" : ""}`}
           onClick={() => onSelect(record.id)}
           type="button"
         >
           {record.name}
         </button>
+        {selected ? (
+          <span
+            aria-hidden="true"
+            className="h-[13px] w-[7px] shrink-0 bg-current"
+          />
+        ) : null}
         {linked ? (
           <SymlinkPopover
             id={record.id}
@@ -227,6 +239,12 @@ export function InventoryRow({
       </span>
       {hasActions ? (
         <RowActions actions={actions} record={record} selected={selected} />
+      ) : null}
+      {selected ? (
+        <span
+          aria-hidden="true"
+          className="dots-fade pointer-events-none absolute inset-y-0 right-0 w-6 bg-canvas"
+        />
       ) : null}
     </div>
   );

@@ -2,6 +2,7 @@ import type { InventoryRecord } from "../model/record-types";
 import type { Landing } from "../shell/view-bar";
 import { stateText } from "../model/states";
 import { StateMarker } from "../ui/marks";
+import { sectionHeading } from "./inspector-sections";
 import { recordKey, type ScannedProject } from "../model/scanned-project";
 
 export interface ReachScope {
@@ -25,13 +26,13 @@ export function ReachSection({
   const applies = rows.filter((row) => row.match?.tier === "active").length;
   return (
     <section className="mt-5">
-      <h3 className="m-0 mb-2 text-caption font-semibold text-ink-faint">
+      <h3 className={sectionHeading}>
         Reaches {applies} of {rows.length} projects
       </h3>
       <div className="grid gap-0.5">
         {rows.map(({ project, match }) => (
           <button
-            className="flex h-7 w-full items-center gap-2 rounded-control px-2 text-left hover:bg-hover"
+            className="flex h-7 w-full items-center gap-2 px-2 text-left hover:bg-wash"
             key={project.path}
             onClick={() =>
               reach.onOpen(
@@ -43,7 +44,7 @@ export function ReachSection({
             {match ? (
               <StateMarker tier={match.tier} />
             ) : (
-              <span className="inline-block h-[1.5px] w-[7px] bg-hairline-strong" />
+              <span className="inline-block h-px w-[7px] bg-ink-muted" />
             )}
             <span className="flex-1 truncate">{project.name}</span>
             <span className="text-caption text-ink-muted">

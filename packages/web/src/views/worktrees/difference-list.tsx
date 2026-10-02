@@ -1,9 +1,9 @@
 import { useState } from "react";
 import type { WorktreeDifference } from "@agent-mapper/core";
-import { ChevronDown, ChevronRight, FileDiff } from "lucide-react";
 import type { Tier } from "../../model/record-types";
 import { StateMarker, ToolGlyph } from "../../ui/marks";
 import { PathLine } from "../../ui/path-line";
+import { PixelIcon } from "../../ui/pixel-icon";
 import type { DifferenceGroup } from "./difference-groups";
 
 export const differenceInfo = {
@@ -41,7 +41,7 @@ export const differenceInfo = {
 
 // No state column: the section heading names the state every row shares.
 const rowClass =
-  "grid h-9 w-full grid-cols-[16px_10px_minmax(0,1fr)_16px] items-center gap-2.5 px-3 text-left [&+&]:border-t [&+&]:border-wash";
+  "grid h-9 w-full grid-cols-[11px_7px_minmax(0,1fr)_15px] items-center gap-3 px-3 text-left [&+*]:border-t [&+*]:border-dotted [&+*]:border-hairline";
 
 interface ListProps {
   groups: DifferenceGroup[];
@@ -65,14 +65,10 @@ function FileRow({
   return (
     <button
       aria-current={selected ? "true" : undefined}
-      className={`${rowClass} ${folder ? "pl-9" : ""} ${selected ? "bg-selected" : "hover:bg-hover"}`}
+      className={`${rowClass} ${folder ? "pl-9" : ""} ${selected ? "on-accent bg-accent" : "hover:bg-wash"}`}
       onClick={() => onSelect(row.id)}
     >
-      <FileDiff
-        aria-hidden="true"
-        className="size-4 text-ink-muted"
-        strokeWidth={1.6}
-      />
+      <PixelIcon name="diff" />
       <StateMarker tier={info.tier} />
       {folder && row.relativePath === folder ? (
         // A symlinked skill folder is itself a difference; it has no file name of its own.
@@ -87,7 +83,11 @@ function FileRow({
           title={row.relativePath}
         />
       )}
-      {row.tool === "shared" ? <span /> : <ToolGlyph tool={row.tool} />}
+      {row.tool === "shared" ? (
+        <span />
+      ) : (
+        <ToolGlyph muted={selected} tool={row.tool} />
+      )}
     </button>
   );
 }
@@ -120,24 +120,22 @@ export function DifferenceList({ groups, selectedId, onSelect }: ListProps) {
       );
     }
     const expanded = open.has(group.key);
-    const Chevron = expanded ? ChevronDown : ChevronRight;
     const info = differenceInfo[group.state];
     return (
-      <div className="[&+*]:border-t [&+*]:border-wash" key={group.key}>
+      <div
+        className="[&+*]:border-t [&+*]:border-dotted [&+*]:border-hairline"
+        key={group.key}
+      >
         <button
           aria-expanded={expanded}
-          className={`${rowClass} hover:bg-hover`}
+          className={`${rowClass} hover:bg-wash`}
           onClick={() => toggle(group.key)}
         >
-          <Chevron
-            aria-hidden="true"
-            className="size-4 text-ink-faint"
-            strokeWidth={1.8}
-          />
+          <PixelIcon name={expanded ? "chevron-down" : "chevron-right"} />
           <StateMarker tier={info.tier} />
-          <span className="flex min-w-0 items-baseline gap-2">
+          <span className="flex min-w-0 items-center gap-3">
             <PathLine path={group.label} />
-            <span className="shrink-0 text-caption text-ink-faint tabular-nums">
+            <span className="shrink-0 font-mono text-mono text-ink-faint">
               {group.rows.length} {group.rows.length === 1 ? "file" : "files"}
             </span>
           </span>

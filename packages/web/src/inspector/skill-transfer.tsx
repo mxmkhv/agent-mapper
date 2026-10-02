@@ -6,7 +6,6 @@ import type {
   SourceRef,
   ToolId
 } from "@agent-mapper/core";
-import { Copy } from "lucide-react";
 import { SegmentedToggle } from "../documents/segmented-toggle";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
 import type { CopyTarget } from "../model/copy-targets";
@@ -19,6 +18,7 @@ import {
 } from "../state/use-skill-transfer";
 import { Button } from "../ui/button";
 import { Modal } from "../ui/modal";
+import { PixelIcon } from "../ui/pixel-icon";
 import {
   PlanPreview,
   ProjectPicker,
@@ -236,7 +236,7 @@ export function SkillTransfer(props: SkillTransferProps) {
   return (
     <>
       <Button onClick={() => setOpen(true)}>
-        <Copy aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+        <PixelIcon name="copy" />
         Copy
       </Button>
       {open ? (

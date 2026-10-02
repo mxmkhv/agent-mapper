@@ -6,7 +6,7 @@ import type { Difference, DifferenceGroup } from "./projects-model";
 
 /** A text button that sits inline in a table cell. */
 export const cellLinkClass =
-  "rounded-control px-1 -mx-1 text-left hover:bg-hover hover:underline";
+  "-mx-1 px-1 text-left hover:bg-wash hover:underline hover:decoration-dotted hover:underline-offset-4";
 
 /** How many sources a state names before the rest fold into a count. */
 const namedDifferences = 3;
@@ -65,7 +65,7 @@ export function Differences({
   onOpenProject(path: string, landing?: Landing): void;
 }) {
   if (!groups.length) {
-    return <span className="text-ink-faint">Same as global</span>;
+    return <span className="text-ink-muted">Same as global</span>;
   }
   // A source the project's scan lists opens there; one it never reached is explained by the global record.
   const open = ({ source, match }: Difference) =>
