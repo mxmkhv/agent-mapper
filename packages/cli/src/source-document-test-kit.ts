@@ -15,6 +15,7 @@ import type {
   SourceScope
 } from "@agent-mapper/core";
 import { vi } from "vitest";
+import type { Desktop, DesktopRequest } from "./desktop";
 import { createAppServer } from "./server";
 
 /**
@@ -115,13 +116,13 @@ function documentClient(base: string, headers: Record<string, string>) {
 
 export async function startDocumentServer(
   fixture: DocumentFixture,
-  options: { trash?: (path: string) => Promise<void> } = {}
+  options: { trash?: (path: string) => Promise<void>; desktop?: Desktop } = {}
 ) {
   vi.stubEnv("CLAUDE_CONFIG_DIR", "");
   vi.stubEnv("CODEX_HOME", "");
   mkdirSync(join(fixture.home, "web"), { recursive: true });
-  // Finder requests are recorded, never run.
-  const launched: string[][] = [];
+  // Desktop requests are recorded, never run.
+  const launched: DesktopRequest[] = [];
   const app = createAppServer({
     home: fixture.home,
     codexHome: join(fixture.home, ".codex"),
@@ -129,9 +130,11 @@ export async function startDocumentServer(
     historyRoot: fixture.history,
     webRoot: join(fixture.home, "web"),
     trash: options.trash,
-    launchSource: async (args) => {
-      launched.push(args);
-    }
+    desktop:
+      options.desktop ??
+      (async (request) => {
+        launched.push(request);
+      })
   });
   const address = await app.listen();
   const client = documentClient(`http://127.0.0.1:${address.port}`, {

@@ -5,6 +5,7 @@ import { isDirty, type Draft } from "../state/draft-store";
 import { reviewDraft } from "../state/document-actions";
 import { useDocuments, useDraft } from "../state/use-document-drafts";
 import { Button } from "../ui/button";
+import { shortcutLabel } from "../ui/shortcut";
 import { CopyTextButton } from "./copy-text";
 import { DocumentErrorBoundary } from "./document-error-boundary";
 import { editorLanguage, isToml } from "./document-format";
@@ -50,7 +51,7 @@ function EditorPane({ draft }: { draft: Draft }) {
           />
         )}
         <span className="hidden font-mono text-caption text-ink-faint md:inline">
-          ⌘S to review
+          {shortcutLabel("S")} to review
         </span>
         <span className="sr-only">
           Tab indents. Press Escape, then Tab, to move focus out of the editor.

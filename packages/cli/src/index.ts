@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-import { spawn } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
 import { supportedTools, type ToolId } from "@agent-mapper/core";
 import packageJson from "../package.json" with { type: "json" };
+import { createDesktop } from "./desktop";
 import { createAppServer } from "./service";
 
 const usage = `agent-mapper
@@ -32,19 +32,21 @@ function selectedTools(value: string | undefined): ToolId[] {
 
 async function launchUi(tools: ToolId[]): Promise<void> {
   const webRoot = resolve(dirname(fileURLToPath(import.meta.url)), "web");
-  const app = createAppServer({ webRoot });
+  const desktop = createDesktop({
+    platform: process.platform,
+    env: process.env
+  });
+  const app = createAppServer({ webRoot, desktop });
   const address = await app.listen();
   const filter = tools.length === 1 ? `?tools=${tools[0]}` : "";
   const url = `http://127.0.0.1:${address.port}/${filter}#${app.token}`;
   console.log(`Open agent-mapper: ${url}`);
-  if (process.platform === "darwin") {
-    const child = spawn("open", [url], { stdio: "ignore" });
-    child.on("error", (error) =>
-      console.error(
-        `Could not open the browser: ${error.message}. Open the URL above manually.`
-      )
-    );
-  }
+  // Without a desktop session (SSH, containers, WSL) this fails fast and the printed URL is the way in.
+  void desktop({ action: "browse", url }).catch((error: unknown) =>
+    console.error(
+      `Could not open the browser. ${error instanceof Error ? error.message : String(error)} Open the URL above in a browser.`
+    )
+  );
 }
 
 async function main(): Promise<void> {

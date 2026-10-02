@@ -5,6 +5,7 @@ import type { InventoryRecord } from "../model/record-types";
 import { applyDelete, planDelete } from "../source-delete-api";
 import { DocumentRequestError } from "../source-document-api";
 import { useDocuments } from "../state/use-document-drafts";
+import { useFileManagerWords } from "../state/use-host";
 import { Button } from "../ui/button";
 import { Modal } from "../ui/modal";
 import { PathText } from "../ui/path-text";
@@ -97,6 +98,7 @@ function Summary({
 }
 
 function Body({ state, context }: { state: PlanState; context: PathContext }) {
+  const fileManager = useFileManagerWords();
   if (state.status === "loading") {
     return <output className="text-label text-ink-muted">Checking…</output>;
   }
@@ -121,7 +123,7 @@ function Body({ state, context }: { state: PlanState; context: PathContext }) {
       ) : null}
       {plan.blocked ? null : (
         <p className="m-0 text-label text-ink-muted">
-          Changed your mind later? Use Put Back in the Trash.
+          Changed your mind later? {fileManager.restore}
         </p>
       )}
     </>

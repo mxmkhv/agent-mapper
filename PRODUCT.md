@@ -8,7 +8,7 @@ web
 
 ## Users
 
-Developers on macOS who run Claude Code, Codex, or both across several repositories and Git worktrees. Their setup has grown in layers: global instructions, skills, plugins, MCP servers, hooks, project agents, and symlinks that share one file between tools or folders.
+Developers on macOS or Linux who run Claude Code, Codex, or both across several repositories and Git worktrees. Their setup has grown in layers: global instructions, skills, plugins, MCP servers, hooks, project agents, and symlinks that share one file between tools or folders.
 
 Their job is a periodic audit, weekly or monthly rather than daily. They need to understand what configuration an agent receives in a given project, where each piece comes from, and what to clean up. A second job is ad hoc: an agent did something surprising, and they need to find the instruction or capability behind it.
 
@@ -34,7 +34,7 @@ agent-mapper resolves configuration per tool and per folder, with a reason for e
 - Launched with `npx agent-mapper`. A local server binds to `127.0.0.1` with a session token and opens the browser UI.
 - Reads configuration roots such as `~/.claude`, `~/.claude.json`, `~/.codex`, `~/.agents`, `CODEX_HOME`, project `.claude/`, `.codex/`, `.agents/`, `.mcp.json`, `CLAUDE.md`, `AGENTS.md`, and `*.local` files.
 - Discovers projects under home, enumerates Git worktrees, and watches selected sources. Rescan is always available.
-- Actions are Open in editor, Reveal in Finder, navigation, filtering, and rescanning, plus reviewed edits, history restores, copies, and moves to the Trash for instructions, skills, and agents.
+- Actions are Open in editor, Reveal in Finder (Show in file manager on Linux), navigation, filtering, and rescanning, plus reviewed edits, history restores, copies, and moves to the Trash for instructions, skills, and agents.
 
 ## Capabilities and Constraints
 
@@ -77,4 +77,4 @@ agent-mapper resolves configuration per tool and per folder, with a reason for e
 
 - Light and dark mode are both required. Every screen is checked in both, including empty, loading, error, and partial-coverage states.
 - Color is never the only signal. Tools have letter glyphs as well as colors, and states have marker shapes and text labels.
-- Search (`⌘K`) and list navigation work from the keyboard.
+- Search (`⌘K`, or `Ctrl+K` outside macOS) and list navigation work from the keyboard.

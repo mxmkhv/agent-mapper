@@ -6,7 +6,7 @@ interface ActionError {
   message: string;
 }
 
-/** Open in editor / Reveal in Finder for one record, keeping the error next to the record that failed. */
+/** Open in editor / Reveal in the file manager for one record, keeping the error next to the record that failed. */
 export function useSourceAction(workingDirectory: string) {
   const [error, setError] = useState<ActionError>();
   async function run(id: string, action: SourceAction) {

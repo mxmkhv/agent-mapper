@@ -3,6 +3,7 @@ import type { ToolId } from "@agent-mapper/core";
 import { Button } from "../ui/button";
 import { PixelIcon } from "../ui/pixel-icon";
 import { ToolGlyph, toolName } from "../ui/marks";
+import { shortcutLabel } from "../ui/shortcut";
 
 export interface HeaderTitle {
   name: string;
@@ -86,7 +87,9 @@ export function Header(props: HeaderProps) {
         <Button onClick={props.onSearch}>
           <PixelIcon name="search" />
           Search
-          <kbd className="font-mono text-mono text-ink-faint">⌘K</kbd>
+          <kbd className="font-mono text-mono text-ink-faint">
+            {shortcutLabel("K")}
+          </kbd>
         </Button>
         <Button
           aria-label="Rescan"

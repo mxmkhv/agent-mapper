@@ -6,6 +6,7 @@ import type {
   WorktreeDifference
 } from "@agent-mapper/core";
 import { tildePath, type PathContext } from "../../model/paths";
+import { useFileManagerWords } from "../../state/use-host";
 import { useSourceAction } from "../../state/use-source-action";
 import { Button } from "../../ui/button";
 import { StateMarker } from "../../ui/marks";
@@ -27,6 +28,7 @@ function Side({
   workingDirectory: string;
 }) {
   const action = useSourceAction(workingDirectory);
+  const fileManager = useFileManagerWords();
   if (!side) {
     return (
       <section className="mt-5">
@@ -54,7 +56,7 @@ function Side({
           Open in editor
         </Button>
         <Button onClick={() => void action.run(side.id, "reveal")}>
-          Reveal in Finder
+          {fileManager.reveal}
         </Button>
       </div>
       {error ? (

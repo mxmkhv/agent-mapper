@@ -232,7 +232,7 @@ function isReveal(value: unknown): value is HistoryReveal {
   return isRecord(value) && value.revealed === true;
 }
 
-/** Asks the local server to show this document's saved-versions folder in Finder. */
+/** Asks the local server to show this document's saved-versions folder in the file manager. */
 export function revealSourceHistory(
   documentId: string
 ): Promise<HistoryReveal> {
