@@ -27,7 +27,9 @@ type Exited = {
   code: number | null;
   signal: NodeJS.Signals | null;
 };
-type Outcome = Exited | { kind: "running" } | { kind: "missing" };
+/** The command never ran: `errno` is ENOENT when it is missing, EACCES when it is not executable. */
+type Unstartable = { kind: "unstartable"; errno: string };
+type Outcome = Exited | { kind: "running" } | Unstartable;
 
 interface Launcher {
   env: NodeJS.ProcessEnv;
@@ -41,6 +43,23 @@ const defaultRevealWindowMs = 5000;
 const xdgMissingFile = 2;
 const xdgNoTool = 3;
 const xdgActionFailed = 4;
+/** A helper command, and what to do when it is missing. */
+interface Helper {
+  name: string;
+  install: string;
+}
+const macOpenHelper = {
+  name: "macOS open",
+  install: "Check that /usr/bin is on your PATH."
+};
+const xdgOpenHelper = {
+  name: "xdg-open",
+  install: "Install xdg-utils, then try again."
+};
+const gdbusHelper = {
+  name: "gdbus",
+  install: "Install libglib2.0-bin or your distribution's glib2 package."
+};
 
 /** Starts `command` detached, so Ctrl+C on agent-mapper leaves the app it launched running. */
 function watch(
@@ -53,7 +72,8 @@ function watch(
     env: launcher.env
   });
   child.unref();
-  return new Promise((finish, reject) => {
+  // Every outcome resolves, so each caller decides what a launch failure means for its action.
+  return new Promise((finish) => {
     // Launchers such as xdg-open may stay alive as long as the app they started.
     const timer = setTimeout(() => {
       if (command.kill) {
@@ -63,15 +83,7 @@ function watch(
     }, command.windowMs);
     child.once("error", (error) => {
       clearTimeout(timer);
-      if (errnoCode(error) === "ENOENT") {
-        finish({ kind: "missing" });
-      } else {
-        reject(
-          new DesktopError(
-            `Could not start ${command.name} (${errnoCode(error) ?? error.message}). Check that it is installed and executable.`
-          )
-        );
-      }
+      finish({ kind: "unstartable", errno: errnoCode(error) ?? error.message });
     });
     child.once("exit", (code, signal) => {
       clearTimeout(timer);
@@ -81,8 +93,17 @@ function watch(
 }
 
 /** A launcher still running when the window ends counts as launched, like a clean exit. */
-function failedExit(outcome: Outcome): outcome is Exited {
-  return outcome.kind === "exited" && outcome.code !== 0;
+function failed(outcome: Outcome): outcome is Exited | Unstartable {
+  return (
+    outcome.kind === "unstartable" ||
+    (outcome.kind === "exited" && outcome.code !== 0)
+  );
+}
+
+function unstartableText(helper: Helper, outcome: Unstartable): string {
+  return outcome.errno === "ENOENT"
+    ? `${helper.name} was not found. ${helper.install}`
+    : `Could not start ${helper.name} (${outcome.errno}). Check that it is executable, or reinstall it.`;
 }
 
 function exitText(command: string, outcome: Exited): string {
@@ -97,12 +118,10 @@ async function macOpen(launcher: Launcher, args: string[]): Promise<void> {
     args,
     windowMs: launcher.launchWindowMs
   });
-  if (outcome.kind === "missing") {
-    throw new DesktopError(
-      "macOS `open` was not found. Check that /usr/bin is on your PATH."
-    );
+  if (outcome.kind === "unstartable") {
+    throw new DesktopError(unstartableText(macOpenHelper, outcome));
   }
-  if (failedExit(outcome)) {
+  if (failed(outcome)) {
     throw new DesktopError(
       `${exitText("macOS open", outcome)} Rescan to check that the file still exists, or open it from Finder.`
     );
@@ -118,12 +137,10 @@ async function xdgOpen(
     args: [target.path],
     windowMs: launcher.launchWindowMs
   });
-  if (outcome.kind === "missing") {
-    throw new DesktopError(
-      "xdg-open is not installed. Install xdg-utils, then try again."
-    );
+  if (outcome.kind === "unstartable") {
+    throw new DesktopError(unstartableText(xdgOpenHelper, outcome));
   }
-  if (!failedExit(outcome)) {
+  if (!failed(outcome)) {
     return;
   }
   if (outcome.code === xdgMissingFile) {
@@ -155,9 +172,16 @@ function fileManagerUri(path: string): string {
   return pathToFileURL(path).href.replaceAll("'", "%27");
 }
 
+function showItemsFailure(outcome: Exited | Unstartable): string {
+  return outcome.kind === "unstartable"
+    ? unstartableText(gdbusHelper, outcome)
+    : `The file manager refused ShowItems: ${exitText("gdbus", outcome)}`;
+}
+
 /**
  * Asks the file manager to select `path`. If the call fails for any reason we did not cause,
- * such as no session bus or a file manager without ShowItems, the parent folder opens instead.
+ * such as gdbus missing or not executable, no session bus, or a file manager without
+ * ShowItems, the parent folder opens instead.
  */
 async function showItem(launcher: Launcher, path: string): Promise<void> {
   const outcome = await watch(launcher, {
@@ -178,7 +202,7 @@ async function showItem(launcher: Launcher, path: string): Promise<void> {
     // A slow answer may still show the window, so killing the call is not a failure and opens nothing else.
     kill: true
   });
-  if (outcome.kind !== "missing" && !failedExit(outcome)) {
+  if (!failed(outcome)) {
     return;
   }
   try {
@@ -188,12 +212,8 @@ async function showItem(launcher: Launcher, path: string): Promise<void> {
       throw error;
     }
     // Both attempts failed; name the first too, since it may be the one to fix.
-    const showItems =
-      outcome.kind === "missing"
-        ? "gdbus is not installed (install libglib2.0-bin or your distribution's glib2 package)."
-        : `The file manager refused ShowItems: ${exitText("gdbus", outcome)}`;
     throw new DesktopError(
-      `${showItems} Opening the parent folder failed too: ${error.message}`
+      `${showItemsFailure(outcome)} Opening the parent folder failed too: ${error.message}`
     );
   }
 }

@@ -1,11 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { chmodSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, expect, it } from "vitest";
 import { createDesktop } from "./desktop";
 import { fakeCommands } from "./fake-command-test-kit";
 
+const notExecutable = 0o644;
 const bins: ReturnType<typeof fakeCommands>[] = [];
 afterEach(() => {
   for (const bin of bins.splice(0)) {
@@ -117,7 +118,32 @@ it("reports both failures when ShowItems and the parent folder fallback fail", a
   await expect(
     bare.desktop({ action: "reveal", path: "/home/max/AGENTS.md" })
   ).rejects.toThrow(
-    /gdbus is not installed .*Opening the parent folder failed too: xdg-open is not installed/
+    "gdbus was not found. Install libglib2.0-bin or your distribution's glib2 package. Opening the parent folder failed too: xdg-open was not found. Install xdg-utils"
+  );
+});
+
+it("opens the parent folder when gdbus is not executable", async () => {
+  const { desktop, calls, bin } = linuxDesktop({
+    gdbus: "exit 0",
+    "xdg-open": "exit 0"
+  });
+  chmodSync(join(bin, "gdbus"), notExecutable);
+  await desktop({ action: "reveal", path: "/home/max/skills/review" });
+  expect(calls("gdbus")).toEqual([]);
+  expect(calls("xdg-open")).toEqual([["/home/max/skills"]]);
+});
+
+it("names a helper that exists but cannot run", async () => {
+  const { desktop, bin } = linuxDesktop({
+    gdbus: "exit 0",
+    "xdg-open": "exit 0"
+  });
+  chmodSync(join(bin, "gdbus"), notExecutable);
+  chmodSync(join(bin, "xdg-open"), notExecutable);
+  await expect(
+    desktop({ action: "reveal", path: "/home/max/AGENTS.md" })
+  ).rejects.toThrow(
+    "Could not start gdbus (EACCES). Check that it is executable, or reinstall it. Opening the parent folder failed too: Could not start xdg-open (EACCES)."
   );
 });
 
