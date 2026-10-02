@@ -18,7 +18,7 @@ import { Button } from "../ui/button";
 type Placement = "inline" | "end" | "over";
 
 const strip =
-  "z-40 m-0 flex items-center gap-2 rounded-card border border-hairline bg-surface py-0.5 pr-0.5 pl-3 whitespace-nowrap shadow-raised";
+  "z-40 m-0 flex items-center gap-2 border-2 border-ink bg-surface py-0.5 pr-0.5 pl-3 whitespace-nowrap";
 
 const placements: Record<Placement, string> = {
   inline: "m-0 inline-flex min-w-0 items-center gap-2 border-0 p-0",

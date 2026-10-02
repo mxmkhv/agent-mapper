@@ -74,7 +74,7 @@ export function sharedSources(
     .sort((a, b) => b.count - a.count || a.repo.localeCompare(b.repo));
 }
 
-/** A repo shared by several skills in a group; `tone` is its rank among them, which picks its dot color. */
+/** A repo shared by several skills in a group; `tone` is its rank among them, largest first. */
 export interface ClusterSource extends SharedSource {
   tone: number;
 }

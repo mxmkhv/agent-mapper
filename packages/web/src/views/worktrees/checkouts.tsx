@@ -69,7 +69,7 @@ function DifferenceCount({
   const count = relevantDifferences(scan.value, tool).length;
   return (
     <span
-      className={`text-caption whitespace-nowrap text-ink-muted tabular-nums ${stale}`}
+      className={`text-caption whitespace-nowrap text-ink-muted ${stale}`}
       title={scan.refreshing ? "Rescanning" : undefined}
     >
       {count
@@ -87,7 +87,7 @@ function PullRequestHint({
 }) {
   if (state.status === "error") {
     return (
-      <p className="m-0 px-2.5 text-caption text-problem" role="alert">
+      <p className="m-0 text-caption text-problem" role="alert">
         Could not load pull requests: {state.message}
       </p>
     );
@@ -104,7 +104,7 @@ function PullRequestHint({
       "Showing the newest 200 pull requests; branches with older ones have no badge.";
   }
   return message ? (
-    <p className="m-0 px-2.5 text-caption text-ink-muted">{message}</p>
+    <p className="m-0 text-caption text-ink-muted">{message}</p>
   ) : null;
 }
 

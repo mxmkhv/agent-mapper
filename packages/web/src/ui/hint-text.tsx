@@ -13,7 +13,7 @@ export function HintText({
     <span className={stacked ? "grid gap-0.5" : "inline"}>
       {parts.map((part, index) => (
         <span
-          className={`text-caption font-normal break-words text-ink-faint ${isPathLike(part) ? "font-mono" : "font-sans"}`}
+          className={`font-normal break-words text-ink-muted ${isPathLike(part) ? "font-mono text-mono" : "font-sans text-label"}`}
           key={part}
         >
           {!stacked && index ? " · " : null}

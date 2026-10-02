@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import type { SourceDeletePlan, SourceRef } from "@agent-mapper/core";
-import { Trash2 } from "lucide-react";
 import { tildePath, tildeText, type PathContext } from "../model/paths";
 import type { InventoryRecord } from "../model/record-types";
 import { applyDelete, planDelete } from "../source-delete-api";
@@ -9,6 +8,7 @@ import { useDocuments } from "../state/use-document-drafts";
 import { Button } from "../ui/button";
 import { Modal } from "../ui/modal";
 import { PathText } from "../ui/path-text";
+import { PixelIcon } from "../ui/pixel-icon";
 import { bytesText, Warnings } from "./skill-transfer-preview";
 
 type PlanState =
@@ -202,7 +202,7 @@ export function DeleteButton(props: {
   return (
     <>
       <Button onClick={() => setOpen(true)}>
-        <Trash2 aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+        <PixelIcon name="trash" />
         Delete
       </Button>
       {open ? <DeleteDialog {...props} onClose={() => setOpen(false)} /> : null}

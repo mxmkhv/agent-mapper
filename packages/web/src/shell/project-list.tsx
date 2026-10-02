@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Folder, GitBranch, X } from "lucide-react";
 import type { ProjectSuggestion } from "../api";
 import { ConfirmButton } from "../documents/confirm-button";
+import { PixelIcon } from "../ui/pixel-icon";
 import { NavItem } from "./nav-item";
 
 const visibleWorktrees = 3;
@@ -24,7 +24,7 @@ function Worktrees({
       {shown.map((tree) => (
         <button
           key={tree.path}
-          className={`block h-[26px] w-full truncate rounded-control pr-2 pl-8 text-left text-label disabled:cursor-default disabled:text-ink-faint ${selectedPath === tree.path ? "bg-selected text-ink" : "text-ink-muted hover:bg-hover"}`}
+          className={`block h-[26px] w-full truncate pr-2 pl-[29px] text-left font-mono text-mono disabled:cursor-default disabled:text-ink-faint ${selectedPath === tree.path ? "bg-ink text-canvas" : "text-ink-muted hover:bg-wash"}`}
           disabled={tree.state !== "available"}
           onClick={() => onSelect(tree.path)}
           title={`${tree.path} · ${tree.state}`}
@@ -34,7 +34,7 @@ function Worktrees({
       ))}
       {linked.length > visibleWorktrees ? (
         <button
-          className="h-[26px] pl-8 text-label text-ink-faint hover:text-ink"
+          className="h-[26px] pl-[29px] text-label text-ink-faint hover:text-ink"
           onClick={() => setExpanded(!expanded)}
         >
           {expanded
@@ -81,19 +81,13 @@ export function ProjectList({
             onClick={() => onSelect(project.path)}
             title={project.path}
           >
-            <Folder
-              aria-hidden="true"
-              className="size-4 shrink-0 text-ink-muted"
-              strokeWidth={1.6}
-            />
-            <span className="min-w-0 flex-1 truncate pr-5">{name}</span>
+            <PixelIcon name="folder" />
+            <span className="min-w-0 flex-1 truncate pr-5 font-mono text-mono">
+              {name}
+            </span>
             {linked ? (
-              <span className="flex items-center gap-1 text-caption text-ink-faint tabular-nums group-has-focus-visible:opacity-0 group-hover:opacity-0">
-                <GitBranch
-                  aria-hidden="true"
-                  className="size-3.5"
-                  strokeWidth={1.6}
-                />
+              <span className="flex items-center gap-1 font-mono text-mono opacity-70 group-has-focus-visible:opacity-0 group-hover:opacity-0">
+                <PixelIcon name="branch" />
                 {linked}
               </span>
             ) : null}
@@ -107,11 +101,11 @@ export function ProjectList({
             trigger={(ask) => (
               <button
                 aria-label={`Remove ${name} from the list`}
-                className="absolute top-[3px] right-1 grid size-6 place-items-center rounded-control text-ink-muted opacity-0 group-has-focus-visible:opacity-100 group-hover:opacity-100 hover:bg-hover hover:text-ink"
+                className="absolute top-[3px] right-1 grid size-6 place-items-center bg-surface text-ink opacity-0 group-has-focus-visible:opacity-100 group-hover:opacity-100 hover:bg-wash"
                 onClick={ask}
                 title="Remove from list. The folder stays; restore it under Removed."
               >
-                <X aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+                <PixelIcon name="close" />
               </button>
             )}
           />

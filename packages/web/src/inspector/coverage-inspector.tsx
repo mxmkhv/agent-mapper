@@ -1,6 +1,6 @@
 import { coverageAreas, coverageProblems } from "@agent-mapper/core";
-import { Info } from "lucide-react";
 import { tildeText, type PathContext } from "../model/paths";
+import { PixelIcon } from "../ui/pixel-icon";
 import { Section } from "./inspector-sections";
 
 /** One row per area; the full notes stay in the CLI output and each row's tooltip. */
@@ -14,11 +14,11 @@ export function CoverageInspector({
   const problems = coverageProblems(notes);
   return (
     <div className="px-5 pt-4.5 pb-7">
-      <div className="flex items-center gap-1.5 text-label text-ink-muted">
-        <Info aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
+      <div className="flex items-center gap-2 text-label text-ink-muted">
+        <PixelIcon name="info" />
         Coverage
       </div>
-      <h2 className="mt-1.5 mb-4 text-headline font-semibold tracking-tight">
+      <h2 className="mt-2.5 mb-4 font-mono text-title">
         Not verified by this scan
       </h2>
       {problems.length ? (

@@ -1,12 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <!-- Codex blue hue behind lucide "bot" (ISC), the Agents icon. One fill for both color schemes: a solid disc reads on light and dark tab bars. -->
-  <circle cx="12" cy="12" r="12" fill="#4a74d6" />
-  <g transform="translate(12 12) scale(0.6) translate(-12 -12)" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M12 8V4H8" />
-    <rect width="16" height="12" x="4" y="8" rx="2" />
-    <path d="M2 14h2" />
-    <path d="M20 14h2" />
-    <path d="M15 13v2" />
-    <path d="M9 13v2" />
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" shape-rendering="crispEdges">
+  <!-- The pixel bot from the sidebar brand mark, in ink on a square of Codex blue. One fill for both color schemes: a solid square reads on light and dark tab bars. -->
+  <rect width="30" height="30" fill="#4a74d6" />
+  <path transform="translate(4 5) scale(2)" fill="#0d0d0d" d="M5 0h1v1h-1zM5 1h1v1h-1zM1 2h9v1h-9zM1 3h1v1h-1zM9 3h1v1h-1zM1 4h1v1h-1zM3 4h2v1h-2zM6 4h2v1h-2zM9 4h1v1h-1zM1 5h1v1h-1zM3 5h2v1h-2zM6 5h2v1h-2zM9 5h1v1h-1zM1 6h1v1h-1zM9 6h1v1h-1zM1 7h1v1h-1zM4 7h3v1h-3zM9 7h1v1h-1zM1 8h1v1h-1zM9 8h1v1h-1zM1 9h9v1h-9z" />
 </svg>

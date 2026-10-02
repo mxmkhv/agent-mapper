@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { X } from "lucide-react";
 import { Button } from "./button";
+import { PixelIcon } from "./pixel-icon";
 
 interface ModalProps {
   title: string;
@@ -26,7 +26,7 @@ export function Modal(props: ModalProps) {
   return (
     <dialog
       aria-label={props.title}
-      className="m-0 grid size-full max-h-none max-w-none place-items-start justify-center bg-transparent p-0 pt-[12vh] text-ink backdrop:bg-black/30"
+      className="m-0 grid size-full max-h-none max-w-none place-items-start justify-center bg-transparent p-0 pt-[12vh] text-ink backdrop:bg-black/40"
       onCancel={(event) => {
         event.preventDefault();
         if (!busy) {
@@ -35,9 +35,9 @@ export function Modal(props: ModalProps) {
       }}
       ref={dialog}
     >
-      <div className="relative z-10 flex max-h-[76vh] w-[min(520px,92vw)] flex-col overflow-hidden rounded-dialog border border-hairline bg-surface shadow-dialog">
+      <div className="relative z-10 flex max-h-[76vh] w-[min(520px,92vw)] flex-col overflow-hidden border-2 border-ink bg-surface">
         <header className="flex items-start gap-3 px-5 pt-4 pb-1">
-          <h2 className="m-0 min-w-0 flex-1 text-title font-semibold tracking-tight break-words">
+          <h2 className="m-0 min-w-0 flex-1 font-mono text-title break-words">
             {props.title}
           </h2>
           <Button
@@ -46,7 +46,7 @@ export function Modal(props: ModalProps) {
             onClick={onClose}
             variant="icon"
           >
-            <X aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+            <PixelIcon name="close" />
           </Button>
         </header>
         <div className="grid min-h-0 gap-4 overflow-auto px-5 py-4">

@@ -222,7 +222,7 @@ export function SourceDiff({
 
   return (
     <div
-      className="h-full min-h-64 [&_.cm-mergeView]:h-full [&_.cm-mergeView]:overflow-auto [&_.cm-mergeViewEditor+.cm-mergeViewEditor]:border-l [&_.cm-mergeViewEditor+.cm-mergeViewEditor]:border-hairline-strong [&_.cm-mergeViewEditors]:min-h-full [&_.cm-mergeViewEditor]:overflow-clip!"
+      className="h-full min-h-64 [&_.cm-mergeView]:h-full [&_.cm-mergeView]:overflow-auto [&_.cm-mergeViewEditor+.cm-mergeViewEditor]:border-l-2 [&_.cm-mergeViewEditor+.cm-mergeViewEditor]:border-rule [&_.cm-mergeViewEditors]:min-h-full [&_.cm-mergeViewEditor]:overflow-clip!"
       ref={host}
     />
   );

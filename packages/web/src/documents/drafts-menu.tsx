@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { FileText } from "lucide-react";
 import { tildePath, type PathContext } from "../model/paths";
 import { isDirty } from "../state/draft-store";
 import { useDrafts } from "../state/use-document-drafts";
 import { Button } from "../ui/button";
+import { PixelIcon } from "../ui/pixel-icon";
 
 /** Keeps every unsaved draft reachable, even when its source left the current view or inventory. */
 export function DraftsMenu({
@@ -33,18 +33,21 @@ export function DraftsMenu({
   return (
     <div className="relative">
       <Button aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        <FileText aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+        <PixelIcon name="doc" />
         Drafts ({drafts.length})
       </Button>
       {open ? (
         <ul
           aria-label="Unsaved drafts"
-          className="absolute top-8 right-0 z-40 m-0 grid w-80 max-w-[calc(100vw-2rem)] list-none gap-0.5 rounded-panel border border-hairline bg-surface p-1 shadow-dialog"
+          className="absolute top-8 right-0 z-40 m-0 grid w-96 max-w-[calc(100vw-2rem)] list-none border-2 border-ink bg-surface p-0"
         >
           {drafts.map((draft) => (
-            <li key={draft.sourceKey}>
+            <li
+              className="border-b border-dotted border-hairline last:border-b-0"
+              key={draft.sourceKey}
+            >
               <button
-                className="w-full rounded-control px-2 py-1.5 text-left hover:bg-hover"
+                className="w-full px-2 py-1.5 text-left hover:bg-wash"
                 onClick={() => {
                   setOpen(false);
                   onOpen(draft.sourceKey);

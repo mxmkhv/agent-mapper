@@ -11,8 +11,10 @@ export function EmptyState({
   return (
     <div className="col-span-full grid place-items-center p-16 text-center">
       <div>
-        <h3 className="m-0 font-semibold">{title}</h3>
-        {children ? <p className="mt-1 text-ink-muted">{children}</p> : null}
+        <h3 className="m-0 font-mono text-title">{title}</h3>
+        {children ? (
+          <p className="mt-2 mb-0 text-ink-muted">{children}</p>
+        ) : null}
       </div>
     </div>
   );

@@ -1,4 +1,9 @@
-# agent-mapper
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/logo/agent-mapper-logo-dark.svg">
+    <img src="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/logo/agent-mapper-logo-light.svg" alt="agent-mapper" width="396">
+  </picture>
+</h1>
 
 [![npm version](https://img.shields.io/npm/v/agent-mapper)](https://www.npmjs.com/package/agent-mapper)
 [![license](https://img.shields.io/npm/l/agent-mapper)](https://github.com/mxmkhv/agent-mapper/blob/main/LICENSE)
@@ -13,7 +18,7 @@ macOS, Node 22 or newer. Runs locally: scans are read-only, and it never execute
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/project-map-dark.png">
-  <img src="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/project-map-light.png" alt="Project inventory with a startup summary in load order above global and project instructions, skills, agents, hooks, and MCP configuration, with a selected instruction's source and preview">
+  <img src="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/project-map-light.png" alt="Project inventory with a startup summary in load order above global and project instructions, skills, agents, and MCP configuration, with a selected instruction's source and preview">
 </picture>
 
 Screenshots use a sample setup.

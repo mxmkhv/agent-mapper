@@ -29,7 +29,11 @@ function showFavicon(tool: ToolId): void {
 
 export function useTool(): [ToolId, (tool: ToolId) => void] {
   const [tool, setTool] = useState<ToolId>(initialTool);
-  useEffect(() => showFavicon(tool), [tool]);
+  useEffect(() => {
+    showFavicon(tool);
+    // The accent in theme.css follows this attribute.
+    document.documentElement.dataset.tool = tool;
+  }, [tool]);
   function choose(next: ToolId) {
     window.localStorage.setItem(storageKey, next);
     setTool(next);
