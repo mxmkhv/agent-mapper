@@ -261,7 +261,7 @@ A 1-bit palette: paper and ink carry the interface, and two colours carry meanin
 
 ### Secondary
 
-- **The accent** (`claude` or `codex`, exposed in code as `accent`): the hue of the selected tool. It is the fill of the selected row, the active view tab, the selected startup file, the selected history version and the active search result; the block cursor after the inspector name; the skill-index segment and bars; the focus ring; the text selection; the inset ring on a hovered primary button; and the tints that mark matches and added lines in the editor. Switching the tool switches every one of these.
+- **The accent** (`claude` or `codex`, exposed in code as `accent`): the hue of the selected tool. It is the fill of the selected row, the active view tab, the selected startup file, the selected history version and the active search result; the block cursor after the inspector name; the skill-index segment and bars; the text selection; the inset ring on a hovered primary button; and the tints that mark matches and added lines in the editor. Switching the tool switches every one of these.
 - **On-accent** (`on-accent`, `on-accent-codex`): the text colour inside an accent fill. Everything inside the fill takes it, whatever muted tone it has elsewhere. It is ink in every case but one: on light Codex blue, ink reaches 4.41:1, so the build uses pure black for 4.76:1.
 - **Tool glyphs** (`claude`, `codex`): both tool hues stay available at once for the 15px letter glyphs, which mark which tool an item belongs to wherever it appears.
 - **Favicon**: the pixel bot in ink on a square of the selected tool's hue (the light-theme value in both colour schemes). It swaps when the tool toggle changes.
@@ -356,7 +356,7 @@ There is no depth. Everything sits on one paper plane; there are no cast shadows
 
 ### Named Rules
 
-**The Border-Not-Shadow Rule.** A floating panel (dialog, search palette, popover, menu, find widget, inline confirmation strip, editor tooltip) is paper with a 2px ink border. Modal surfaces dim the page with black at 40%. The one use of `box-shadow` in the build is not a shadow: a hovered primary button gets a 2px accent ring drawn inside its edge, since ink cannot get darker.
+**The Border-Not-Shadow Rule.** A floating panel (dialog, search palette, popover, menu, find widget, inline confirmation strip, editor tooltip) is paper with a 2px ink border. Modal surfaces dim the page with black at 40%. The only `box-shadow` in the build is not a shadow: a hovered ink-filled button (the primary button and Add folder's Scan folder) gets a 2px accent ring drawn inside its edge, since ink cannot get darker.
 
 ## Shapes
 
@@ -398,7 +398,9 @@ A 7px square leads every item (9px in the inspector's state line). Its shape car
 - **Active:** a solid square, with no text label.
 - **Inactive** (not used here, disabled, cached version): a hollow square, a muted name, and a short text label.
 - **Unknown / needs approval:** a dotted hollow square and a label prefixed with "?".
-- **Problem:** a solid problem-red square and a red semibold label.
+- **Problem:** a solid problem-red diamond (the square turned 45°) and a red semibold label. On an accent fill the diamond takes the on-accent colour, since red does not read there; the shape still says problem.
+
+Keyboard focus is a 2px ink outline, 2px off the element. It is not the accent: terracotta on paper is 2.88:1. Inside an accent fill the outline takes the on-accent colour.
 
 ### View Tabs and Facets
 

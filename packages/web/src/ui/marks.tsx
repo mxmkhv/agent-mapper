@@ -14,9 +14,9 @@ const glyphLetter = { claude: "C", codex: "X", unknown: "?" } satisfies Record<
 >;
 
 const glyphColor = {
-  claude: "bg-claude",
-  codex: "bg-codex",
-  unknown: "bg-ink-faint"
+  claude: "bg-claude text-black",
+  codex: "bg-codex text-black",
+  unknown: "bg-ink text-canvas"
 } satisfies Record<ToolId | "unknown", string>;
 
 /** Letter plus color, so a tool is never identified by color alone. Muted is an outline: the tool that is not selected. */
@@ -29,7 +29,7 @@ export function ToolGlyph({
 }) {
   return (
     <span
-      className={`inline-grid size-[15px] shrink-0 place-items-center font-mono text-glyph ${muted ? "border border-current text-ink-muted" : `text-black ${glyphColor[tool]}`}`}
+      className={`inline-grid size-[15px] shrink-0 place-items-center font-mono text-glyph ${muted ? "border border-current text-ink-muted" : glyphColor[tool]}`}
       title={toolName[tool]}
     >
       {glyphLetter[tool]}
@@ -43,10 +43,10 @@ const markerStyle = {
   inactive: "border border-current",
   unknown: "border border-dotted border-current",
   approval: "border border-dotted border-current",
-  problem: "bg-problem"
+  problem: "rotate-45 bg-problem"
 } satisfies Record<Tier, string>;
 
-/** Shape carries the state: a solid square is normal, hollow is inactive, dotted is unknown, red is a problem. */
+/** Shape carries the state: a solid square is normal, hollow is inactive, dotted is unknown, and a problem is a red diamond, so it still reads on an accent fill where red does not. */
 export function StateMarker({ tier, large }: { tier: Tier; large?: boolean }) {
   return (
     <span

@@ -83,7 +83,7 @@ Press `⌘K` to search by name or source path. **Open in editor** and **Reveal i
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/findings-dark.png">
-  <img src="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/findings-light.png" alt="Findings for a project: a broken skill link, an instruction file importing a missing file, and two skills sharing a name, with the importing file's preview and import status beside them">
+  <img src="https://raw.githubusercontent.com/mxmkhv/agent-mapper/main/docs/screenshots/findings-light.png" alt="Findings for a project: a broken skill link, an instruction file importing a missing file, two skills sharing a name, and a shadowed instruction file, with the importing file's preview and import status beside them">
 </picture>
 
 In a project with linked Git checkouts, **Worktrees** compares their configuration. Opened from a linked checkout, the same view is called **Differences**.
@@ -149,3 +149,5 @@ See [CONTRIBUTING.md](https://github.com/mxmkhv/agent-mapper/blob/main/CONTRIBUT
 ## License
 
 [MIT](https://github.com/mxmkhv/agent-mapper/blob/main/LICENSE)
+
+The UI bundles two typefaces under the [SIL Open Font License 1.1](https://openfontlicense.org): Departure Mono and Schibsted Grotesk. Their licence texts ship with the package.

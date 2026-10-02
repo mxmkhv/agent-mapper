@@ -127,7 +127,7 @@ function RowLabel({
 /**
  * Edit, Copy and Delete for a file the app can open, shown while the row is hovered, focused or selected. They
  * float over the right end of the row on the row's own fill, so the columns keep their widths. On the selected
- * row they switch to the accent pair and leave room for the dither edge.
+ * row they switch to the accent variants and leave room for the dither edge.
  */
 function RowActions({
   record,
@@ -199,7 +199,7 @@ export function InventoryRow({
       <StateMarker tier={record.tier} />
       <span className="flex min-w-0 items-center gap-2">
         <button
-          className={`truncate text-left font-semibold outline-none after:absolute after:inset-0 after:-outline-offset-2 after:outline-ink focus-visible:after:outline-2 ${inactive ? "text-ink-muted" : ""}`}
+          className={`truncate text-left font-semibold outline-none after:absolute after:inset-0 after:-outline-offset-2 after:outline-current focus-visible:after:outline-2 ${inactive ? "text-ink-muted" : ""}`}
           onClick={() => onSelect(record.id)}
           type="button"
         >

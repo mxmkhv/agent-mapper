@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { PixelIcon, type PixelIconName } from "../ui/pixel-icon";
 
 export const field =
-  "relative flex h-[25px] w-[230px] min-w-0 items-center border border-ink bg-surface focus-within:outline-2 focus-within:outline-accent";
+  "relative flex h-[25px] w-[230px] min-w-0 items-center border border-ink bg-surface focus-within:outline-2 focus-within:outline-ink";
 export const input =
   "h-full min-w-0 flex-1 bg-transparent px-1 font-sans text-body text-ink outline-none placeholder:text-ink-faint";
 

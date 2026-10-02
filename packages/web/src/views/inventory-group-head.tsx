@@ -27,7 +27,7 @@ export function GroupHead({
 }: {
   group: InventoryGroup;
   hint?: string;
-  /** Set on the open project's own groups, which carry the tool glyph and a full-strength label. */
+  /** Set on the open project's own groups, which carry the tool glyph in place of the layer icon. */
   localTool?: ToolId;
 }) {
   return (
@@ -91,7 +91,7 @@ export function InheritedSection({
   );
 }
 
-/** Heads the skills installed from one repo inside a group's card, and folds them away. */
+/** Heads the skills installed from one repo inside a group's box, and folds them away. */
 export function SourceToggle({
   source,
   open,

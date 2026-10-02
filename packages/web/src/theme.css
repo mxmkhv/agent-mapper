@@ -3,7 +3,7 @@
 /* Tokens come from DESIGN.md. Muted ink meets WCAG AA (4.5:1) on canvas, wash and the selected tone; faint ink meets it on canvas and wash only. The theme hook resolves Auto to light or dark on <html data-theme>; the tool hook writes <html data-tool>, which picks the accent. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* Both faces ship with the app (SIL OFL, licences beside the files), so nothing loads from the network. */
+/* Both faces ship with the app (SIL OFL; the packaging script copies the licences beside these files into the package), so nothing loads from the network. */
 @font-face {
   font-family: "Departure Mono";
   src: url("./fonts/DepartureMono-Regular.woff2") format("woff2");
@@ -36,16 +36,13 @@
   --am-ink-faint: #66665f;
   --am-rule: #0d0d0d;
   --am-hairline: #9d9d97;
-  --am-hairline-strong: #0d0d0d;
   --am-wash: #e8e8e3;
-  --am-hover: #e8e8e3;
   --am-selected: #d9d9d4;
   --am-claude: #d97757;
   --am-codex: #4a74d6;
   --am-accent: var(--am-claude);
   --am-on-accent: #0d0d0d;
   --am-problem: #c23030;
-  --am-problem-wash: #f6dede;
 
   /* 1-bit dot patterns on a 4px grid. They are masks, so the dots take the element's background colour. */
   --am-dots-dense: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Crect width='3' height='3'/%3E%3C/svg%3E");
@@ -65,14 +62,11 @@
   --am-ink-faint: #96968f;
   --am-rule: #7c7c76;
   --am-hairline: #55554f;
-  --am-hairline-strong: #7c7c76;
   --am-wash: #1e1e1c;
-  --am-hover: #1e1e1c;
   --am-selected: #2c2c29;
   --am-claude: #e48b6c;
   --am-codex: #7d9df0;
   --am-problem: #f07474;
-  --am-problem-wash: #3a1f1f;
 }
 
 /* The accent is the selected tool's hue, and the only colour besides problem red. */
@@ -93,17 +87,13 @@
   --color-ink-faint: var(--am-ink-faint);
   --color-rule: var(--am-rule);
   --color-hairline: var(--am-hairline);
-  --color-hairline-strong: var(--am-hairline-strong);
   --color-wash: var(--am-wash);
-  --color-hover: var(--am-hover);
   --color-selected: var(--am-selected);
-  --color-focus: var(--am-accent);
   --color-accent: var(--am-accent);
   --color-on-accent: var(--am-on-accent);
   --color-claude: var(--am-claude);
   --color-codex: var(--am-codex);
   --color-problem: var(--am-problem);
-  --color-problem-wash: var(--am-problem-wash);
 }
 
 @theme {
@@ -160,8 +150,9 @@
   button {
     cursor: pointer;
   }
+  /* Ink, not the accent: terracotta on paper is under 3:1. */
   :focus-visible {
-    outline: 2px solid var(--am-accent);
+    outline: 2px solid var(--am-ink);
     outline-offset: 2px;
   }
   ::selection {
@@ -195,12 +186,24 @@
   color: var(--am-on-accent);
 }
 
+/* On an accent fill the focus ring and a problem marker take the on-accent colour: ink and red both vanish there. A popover opened from the row sits on paper again. */
+.on-accent :focus-visible {
+  outline-color: var(--am-on-accent);
+}
+.on-accent [popover] :focus-visible {
+  outline-color: var(--am-ink);
+}
+.on-accent .bg-problem:not(.keep-color, .keep-color *) {
+  background-color: var(--am-on-accent);
+}
+
 /* Dot fills: the element's background colour shows through a 4px dot mask. */
 .dots-dense,
 .dots-mid,
 .dots-light,
 .dots-check {
-  mask: var(--am-dots-mid) 0 0 / 4px 4px;
+  mask-image: var(--am-dots-mid);
+  mask-size: 4px 4px;
   image-rendering: pixelated;
 }
 .dots-dense {
@@ -214,6 +217,7 @@
 }
 /* The dither edge that closes a selected row. */
 .dots-fade {
-  mask: var(--am-dots-fade) 0 0 / 24px 4px;
+  mask-image: var(--am-dots-fade);
+  mask-size: 24px 4px;
   image-rendering: pixelated;
 }

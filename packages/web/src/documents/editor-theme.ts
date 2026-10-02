@@ -148,7 +148,7 @@ export const editorTheme = EditorView.theme({
     borderRadius: "0",
     color: "var(--am-ink)"
   },
-  // No green and red: what was removed sits on wash with its text struck out in gray, what was added on the accent.
+  // No green and red: what was removed sits on wash with its changed text on gray, what was added on the accent.
   "&.cm-merge-a .cm-changedLine, .cm-deletedChunk": {
     backgroundColor: "var(--am-wash)"
   },
@@ -157,6 +157,10 @@ export const editorTheme = EditorView.theme({
   },
   "&.cm-merge-a .cm-changedText, .cm-deletedChunk .cm-deletedText, &.cm-merge-b .cm-deletedText":
     { background: "var(--am-selected)" },
+  // Syntax hues drop under 4.5:1 on the strongest tint, so changed text is plain ink.
+  "&.cm-merge-b .cm-changedText, &.cm-merge-b .cm-changedText *": {
+    color: "var(--am-ink)"
+  },
   "&.cm-merge-b .cm-changedText": { background: accentRange },
   ".cm-deletedChunk": { paddingLeft: "0" },
   // Changed lines carry − and + beside the line numbers instead of a colored bar.

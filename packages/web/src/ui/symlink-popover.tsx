@@ -40,7 +40,7 @@ export function SymlinkPopover({
         symlink
       </button>
       <div
-        className="inset-auto top-[anchor(bottom)] left-[anchor(left)] m-0 mt-1.5 w-[min(340px,90vw)] border-2 border-ink bg-surface p-3 text-left text-ink [position-try-fallbacks:flip-block,flip-inline]"
+        className="keep-color inset-auto top-[anchor(bottom)] left-[anchor(left)] m-0 mt-1.5 w-[min(340px,90vw)] border-2 border-ink bg-surface p-3 text-left text-ink [position-try-fallbacks:flip-block,flip-inline]"
         id={popoverId}
         popover="auto"
         style={{ positionAnchor: anchor }}

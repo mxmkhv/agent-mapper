@@ -10,7 +10,7 @@ import {
 import { Button } from "../ui/button";
 
 /**
- * Where the question appears. Inline replaces the button in the flow. The other two float as a raised strip so
+ * Where the question appears. Inline replaces the button in the flow. The other two float as a bordered strip so
  * nothing around them moves; the parent must be `relative`. `end` anchors at the button's right edge and grows
  * left over a table row's cells. `over` starts at the parent's left edge and grows right, past the parent and
  * anything that clips it, for a sidebar row too narrow to hold the question.
