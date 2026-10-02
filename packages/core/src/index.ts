@@ -7,3 +7,4 @@ export * from "./source-document";
 export * from "./coverage";
 export * from "./skill-transfer";
 export * from "./source-delete";
+export * from "./host";

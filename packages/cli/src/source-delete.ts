@@ -16,7 +16,7 @@ import {
 } from "./skill-folder";
 import { inside, realOrSelf } from "./skill-transfer-paths";
 import { documentError, errnoCode, ioError } from "./source-document-errors";
-import { systemTrash, type MoveToTrash } from "./system-trash";
+import type { MoveToTrash } from "./system-trash";
 import type { SourceDocumentRegistry } from "./source-document-registry";
 
 const sha = (text: string) => createHash("sha256").update(text).digest("hex");
@@ -128,7 +128,7 @@ async function blockedReason(
     return "Only your own global and project files can be deleted here.";
   }
   if (input.target.target === "folder" && input.target.tooLarge) {
-    return `${input.target.path} holds ${input.target.tooLarge === "items" ? `${maxFolderItems} or more items` : "more than 50 MiB"}, too much to check before deleting. Delete it in Finder instead.`;
+    return `${input.target.path} holds ${input.target.tooLarge === "items" ? `${maxFolderItems} or more items` : "more than 50 MiB"}, too much to check before deleting. Delete it in your file manager instead.`;
   }
   // A link is removed from its folder; anything else is removed where it really lives.
   const touched =
@@ -167,7 +167,7 @@ export class SourceDeleteService {
   constructor(
     private readonly options: {
       registry: SourceDocumentRegistry;
-      trash?: MoveToTrash;
+      trash: MoveToTrash;
     }
   ) {}
 
@@ -219,7 +219,7 @@ export class SourceDeleteService {
         `${plan.path} changed since you opened this. Nothing was deleted; review it again.`
       );
     }
-    await (this.options.trash ?? systemTrash)(plan.path);
+    await this.options.trash(plan.path);
     return { trashed: plan.path };
   }
 }

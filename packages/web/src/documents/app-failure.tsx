@@ -7,9 +7,7 @@ export function AppFailure(props: { message: string; store: DraftStore }) {
   return (
     <div className="grid place-items-center p-10" role="alert">
       <div className="max-w-xl">
-        <h2 className="text-headline font-semibold">
-          agent-mapper stopped rendering
-        </h2>
+        <h2 className="font-mono text-title">agent-mapper stopped rendering</h2>
         <p className="text-ink-muted">
           {props.message}. Reload the page to continue.
           {drafts.length

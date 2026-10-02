@@ -8,6 +8,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
+import type { DesktopRequest } from "./desktop";
 import { createAppServer } from "./service";
 
 const roots: string[] = [];
@@ -27,12 +28,12 @@ it("keeps home project source actions after a global scan", async () => {
   mkdirSync(join(home, ".codex"));
   writeFileSync(join(home, "AGENTS.md"), "Home project instructions");
   writeFileSync(join(home, ".codex", "AGENTS.md"), "Global instructions");
-  const launched: string[][] = [];
+  const launched: DesktopRequest[] = [];
   const app = createAppServer({
     home,
     webRoot,
-    launchSource: async (args) => {
-      launched.push(args);
+    desktop: async (request) => {
+      launched.push(request);
     }
   });
   const address = await app.listen();
@@ -59,8 +60,35 @@ it("keeps home project source actions after a global scan", async () => {
       body: JSON.stringify({ path: home, id: source?.entry.id, action: "open" })
     });
     expect(action.status).toBe(200);
-    expect(launched).toEqual([[join(home, "AGENTS.md")]]);
+    expect(launched).toEqual([
+      { action: "open", path: join(home, "AGENTS.md") }
+    ]);
   } finally {
     await app.close();
   }
+});
+
+it("tells the UI which platform's file manager wording to use", async () => {
+  const home = realpathSync(mkdtempSync(join(tmpdir(), "agent-mapper-host-")));
+  roots.push(home);
+  const webRoot = join(home, "web");
+  mkdirSync(webRoot);
+  const host = async (platform: NodeJS.Platform) => {
+    const app = createAppServer({ home, webRoot, platform });
+    const address = await app.listen();
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${address.port}/api/host`,
+        {
+          headers: { authorization: `Bearer ${app.token}` }
+        }
+      );
+      return await response.json();
+    } finally {
+      await app.close();
+    }
+  };
+  expect(await host("darwin")).toEqual({ platform: "macos" });
+  expect(await host("linux")).toEqual({ platform: "linux" });
+  expect(await host("win32")).toEqual({ platform: "other" });
 });

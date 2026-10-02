@@ -31,17 +31,21 @@ export function write(path: string, content: string): void {
 }
 
 /** The Trash is a folder inside the fixture, so tests never touch the real one. */
-export async function setupDeletes() {
+export async function setupDeletes(
+  options: { trash?: (path: string) => Promise<void> } = {}
+) {
   const fixture = documentFixture();
   fixtures.push(fixture);
   const trash = join(fixture.home, "Trash");
   mkdirSync(trash);
   const trashed: string[] = [];
   const client = await startDocumentServer(fixture, {
-    trash: async (path) => {
-      trashed.push(path);
-      renameSync(path, join(trash, basename(path)));
-    }
+    trash:
+      options.trash ??
+      (async (path) => {
+        trashed.push(path);
+        renameSync(path, join(trash, basename(path)));
+      })
   });
   servers.push(client);
   addItems(fixture);

@@ -1,5 +1,4 @@
 import type { ContextSummary, Finding, ToolId } from "@agent-mapper/core";
-import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import {
   isInside,
@@ -11,14 +10,16 @@ import {
 import type { InventoryRecord, Layer } from "../model/record-types";
 import { approxTokens, startupFiles } from "../model/startup";
 import { FindingCounts } from "../ui/finding-counts";
-import { SkillIndexDialog, skillTone } from "./skill-index-dialog";
+import { PixelIcon } from "../ui/pixel-icon";
+import { SkillIndexDialog } from "./skill-index-dialog";
 
-const layerTone = {
-  managed: "bg-layer-project",
-  global: "bg-layer-global",
-  plugins: "bg-layer-plugins",
-  project: "bg-layer-project",
-  user: "bg-layer-project"
+/** Layers differ by dot density, not colour: the further down the stack, the lighter the fill. */
+const layerDots = {
+  managed: "dots-dense",
+  global: "dots-dense",
+  plugins: "dots-check",
+  project: "dots-mid",
+  user: "dots-light"
 } satisfies Record<Layer, string>;
 
 const percent = 100;
@@ -56,10 +57,7 @@ export function StartupSummary(props: StartupSummaryProps) {
   const share = (value: number) =>
     `${(value / Math.max(startup, 1)) * percent}%`;
   return (
-    <section
-      aria-labelledby="startup-summary-title"
-      className="mb-4 rounded-card border border-hairline bg-surface px-3.5 pt-3 pb-2.5"
-    >
+    <section aria-labelledby="startup-summary-title" className="mb-2 pt-1">
       <div className="flex items-center gap-x-4 text-label">
         <h2
           className="m-0 text-label font-normal text-ink-muted"
@@ -69,27 +67,23 @@ export function StartupSummary(props: StartupSummaryProps) {
         </h2>
         {props.findings?.list.length ? (
           <button
-            className="ml-auto inline-flex h-6 items-center gap-1.5 rounded-control px-1.5 text-label hover:bg-hover"
+            className="ml-auto inline-flex h-6 items-center gap-1.5 px-1.5 text-label underline decoration-dotted underline-offset-4 hover:bg-wash"
             onClick={props.findings.onOpen}
           >
             <FindingCounts findings={props.findings.list} />
-            <ArrowRight
-              aria-hidden="true"
-              className="size-3.5 text-ink-muted"
-              strokeWidth={1.6}
-            />
+            <PixelIcon name="arrow-right" />
           </button>
         ) : null}
       </div>
-      <p className="m-0 mt-1 flex flex-wrap items-baseline gap-x-5 gap-y-1 text-label text-ink-muted">
+      <p className="m-0 mt-0.5 flex flex-wrap items-baseline gap-x-7 gap-y-1 text-label text-ink-muted">
         <span>
-          <strong className="text-headline font-semibold text-ink tabular-nums">
+          <strong className="mr-1 font-mono text-figure text-ink">
             {approxTokens(startup)}
           </strong>{" "}
           startup
         </span>
-        <span className="text-ink-faint">
-          <strong className="text-large font-semibold text-ink-muted tabular-nums">
+        <span>
+          <strong className="mr-1 font-mono text-title text-ink">
             {approxTokens(estimate.onDemand)}
           </strong>{" "}
           on demand
@@ -98,39 +92,36 @@ export function StartupSummary(props: StartupSummaryProps) {
           <span>{estimate.unaccountedSources} unmeasured</span>
         ) : null}
       </p>
-      <div
-        aria-hidden="true"
-        className="mt-2 flex h-1.5 gap-0.5 overflow-hidden rounded-full bg-wash"
-      >
+      <div aria-hidden="true" className="mt-2 flex h-4 gap-1 overflow-hidden">
         {files.map((file) => (
           <span
-            className={layerTone[file.layer]}
+            className={`${layerDots[file.layer]} ${file.id === props.selectedId ? "bg-accent" : "bg-ink"}`}
             key={file.id}
             style={{ width: share(file.startupTokens) }}
           />
         ))}
         <span
-          className={`${skillTone[tool]} opacity-55`}
+          className="dots-check bg-accent"
           style={{ width: share(estimate.skillMetadata) }}
         />
       </div>
-      <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-caption">
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-label">
         <ol className="m-0 -ml-1.5 flex min-w-0 list-none flex-wrap gap-x-1.5 gap-y-0.5 p-0 text-ink-muted">
           {files.map((file) => (
             <li className="min-w-0" key={file.id}>
               <button
                 aria-current={file.id === props.selectedId ? "true" : undefined}
-                className={`inline-flex h-6 max-w-full items-center gap-1.5 rounded-control px-1.5 ${file.id === props.selectedId ? "bg-selected" : "hover:bg-hover"}`}
+                className={`inline-flex h-[22px] max-w-full items-center gap-[7px] px-1.5 ${file.id === props.selectedId ? "on-accent bg-accent" : "hover:bg-wash"}`}
                 onClick={() => props.onSelect(file.id)}
               >
                 <i
                   aria-hidden="true"
-                  className={`inline-block size-2 shrink-0 rounded-[2px] ${layerTone[file.layer]}`}
+                  className={`inline-block size-3 shrink-0 ${layerDots[file.layer]} ${file.id === props.selectedId ? "bg-on-accent" : "bg-ink"}`}
                 />
-                <strong className="font-semibold whitespace-nowrap text-ink tabular-nums">
+                <strong className="font-mono text-mono whitespace-nowrap text-ink">
                   {approxTokens(file.startupTokens)}
                 </strong>
-                <span className="truncate font-mono">
+                <span className="truncate font-mono text-mono">
                   {loadPath(file, props.context)}
                 </span>
               </button>
@@ -139,16 +130,16 @@ export function StartupSummary(props: StartupSummaryProps) {
           <li>
             <button
               aria-haspopup="dialog"
-              className="inline-flex h-6 items-center gap-1.5 rounded-control px-1.5 hover:bg-hover disabled:pointer-events-none"
+              className="inline-flex h-[22px] items-center gap-[7px] px-1.5 hover:bg-wash disabled:pointer-events-none"
               disabled={!estimate.skillMetadata}
               onClick={() => setShowSkillIndex(true)}
               title="See which skills and commands make up the skill index"
             >
               <i
                 aria-hidden="true"
-                className={`inline-block size-2 shrink-0 rounded-[2px] opacity-55 ${skillTone[tool]}`}
+                className="dots-check inline-block size-3 shrink-0 bg-accent"
               />
-              <strong className="font-semibold text-ink tabular-nums">
+              <strong className="font-mono text-mono text-ink">
                 {approxTokens(estimate.skillMetadata)}
               </strong>
               Skill index

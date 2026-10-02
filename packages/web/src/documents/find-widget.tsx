@@ -14,24 +14,12 @@ import {
   type EditorView,
   type Panel
 } from "@codemirror/view";
-import {
-  ArrowDown,
-  ArrowUp,
-  CaseSensitive,
-  ChevronDown,
-  ChevronRight,
-  Regex,
-  Replace,
-  ReplaceAll,
-  WholeWord,
-  X
-} from "lucide-react";
 import { useRef, useState, type KeyboardEvent } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
+import { PixelIcon } from "../ui/pixel-icon";
 import {
   field,
-  iconProps,
   input,
   OptionToggle,
   Row,
@@ -44,7 +32,7 @@ interface FindWidgetProps {
   state: EditorState;
 }
 
-/** Monaco's find widget: options inside the field, a match count, previous/next, and a replace row for editable text. */
+/** Laid out like Monaco's find widget: options inside the field, a match count, previous/next, and a replace row for editable text. */
 function FindWidget({ view, state }: FindWidgetProps) {
   const [replacing, setReplacing] = useState(false);
   const replaceInput = useRef<HTMLInputElement>(null);
@@ -81,14 +69,13 @@ function FindWidget({ view, state }: FindWidgetProps) {
 
   return (
     <div
-      className={`absolute top-1 right-7 w-[419px] max-w-[calc(100%-36px)] bg-surface pr-1 pl-[9px] font-sans text-(--monaco-widget-foreground) ${showReplace ? "h-[62px]" : "h-[33px]"}`}
+      className={`absolute top-1 right-7 w-[430px] max-w-[calc(100%-36px)] border-2 border-ink bg-surface pr-1 pl-[9px] font-sans text-ink ${showReplace ? "h-[66px]" : "h-[37px]"}`}
     >
-      <div className="absolute inset-y-0 left-0 w-0.5 bg-hairline-strong" />
       {editable ? (
         <button
           aria-expanded={showReplace}
           aria-label="Toggle replace"
-          className="absolute top-1 bottom-1 left-[5px] flex w-[18px] items-center justify-center rounded-[5px] hover:bg-(--monaco-toolbar-hover)"
+          className="absolute top-1 bottom-1 left-[5px] flex w-[18px] items-center justify-center hover:bg-wash"
           onClick={() => {
             // Opening the replace row puts the cursor in it, ready to type the replacement.
             flushSync(() => setReplacing(!replacing));
@@ -97,11 +84,7 @@ function FindWidget({ view, state }: FindWidgetProps) {
           title="Toggle replace"
           type="button"
         >
-          {showReplace ? (
-            <ChevronDown {...iconProps} />
-          ) : (
-            <ChevronRight {...iconProps} />
-          )}
+          <PixelIcon name={showReplace ? "chevron-down" : "chevron-right"} />
         </button>
       ) : null}
       <Row>
@@ -123,42 +106,42 @@ function FindWidget({ view, state }: FindWidgetProps) {
           />
           <OptionToggle
             active={query.caseSensitive}
-            icon={CaseSensitive}
+            icon="find-case"
             label="Match case"
             onToggle={() => setQuery({ caseSensitive: !query.caseSensitive })}
           />
           <OptionToggle
             active={query.wholeWord}
-            icon={WholeWord}
+            icon="find-word"
             label="Match whole word"
             onToggle={() => setQuery({ wholeWord: !query.wholeWord })}
           />
           <OptionToggle
             active={query.regexp}
-            icon={Regex}
+            icon="find-regex"
             label="Use regular expression"
             onToggle={() => setQuery({ regexp: !query.regexp })}
           />
           <span className="w-0.5 shrink-0" />
         </div>
-        <span className="ml-[3px] w-[69px] shrink-0 pt-0.5 text-center text-[12px] leading-[23px]">
+        <span className="ml-[3px] w-[76px] shrink-0 text-center font-mono text-mono">
           {matchCount(state, query)}
         </span>
         <ToolButton
           disabled={!query.valid}
-          icon={ArrowUp}
+          icon="arrow-up"
           label="Previous match"
           onClick={() => findPrevious(view)}
         />
         <ToolButton
           disabled={!query.valid}
-          icon={ArrowDown}
+          icon="arrow-down"
           label="Next match"
           onClick={() => findNext(view)}
         />
         <ToolButton
           className="absolute top-[5px] right-0.5"
-          icon={X}
+          icon="close"
           label="Close"
           onClick={() => {
             closeSearchPanel(view);
@@ -182,13 +165,13 @@ function FindWidget({ view, state }: FindWidgetProps) {
           </div>
           <ToolButton
             disabled={!query.valid}
-            icon={Replace}
+            icon="find-replace"
             label="Replace"
             onClick={() => replaceNext(view)}
           />
           <ToolButton
             disabled={!query.valid}
-            icon={ReplaceAll}
+            icon="find-replace-all"
             label="Replace all"
             onClick={() => replaceAll(view)}
           />
@@ -201,7 +184,7 @@ function FindWidget({ view, state }: FindWidgetProps) {
 /** Renders the find widget as CodeMirror's search panel, in a band above the text like Monaco's. */
 export function findPanel(view: EditorView): Panel {
   const dom = document.createElement("div");
-  dom.className = "relative h-[33px]";
+  dom.className = "relative h-[41px]";
   const root = createRoot(dom);
   // Synchronous first render, so the input exists when CodeMirror mounts the panel.
   flushSync(() => root.render(<FindWidget state={view.state} view={view} />));

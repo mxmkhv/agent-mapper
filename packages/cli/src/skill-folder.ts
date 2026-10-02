@@ -138,8 +138,8 @@ function sizeLimit(size: {
 
 function sizeProblem(root: string, limit: SizeLimit): string {
   return limit === "items"
-    ? `${root} holds more than ${maxFolderItems} files and folders. Skills this large are not copied here; use Finder or the shell.`
-    : `${root} holds more than 50 MiB. Skills this large are not copied here; use Finder or the shell.`;
+    ? `${root} holds more than ${maxFolderItems} files and folders. Skills this large are not copied here; use your file manager or the shell.`
+    : `${root} holds more than 50 MiB. Skills this large are not copied here; use your file manager or the shell.`;
 }
 
 /** Lists a skill folder without following links, parents before children, siblings sorted by name. */

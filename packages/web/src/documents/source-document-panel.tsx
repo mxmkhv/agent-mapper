@@ -1,10 +1,10 @@
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import type { SourceRef } from "@agent-mapper/core";
-import { History, PencilLine } from "lucide-react";
 import { openSourceDocument } from "../source-document-api";
 import { isDirty } from "../state/draft-store";
 import { useDocuments, useDraft } from "../state/use-document-drafts";
 import { Button } from "../ui/button";
+import { PixelIcon } from "../ui/pixel-icon";
 import { Diagnostics } from "./diagnostics";
 import { DocumentErrorBoundary } from "./document-error-boundary";
 import { isToml } from "./document-format";
@@ -75,7 +75,7 @@ export function DocumentText({
   }
   if (view === "source") {
     return (
-      <pre className="m-0 font-mono text-mono break-words whitespace-pre-wrap">
+      <pre className="m-0 font-code text-label break-words whitespace-pre-wrap">
         {content}
       </pre>
     );
@@ -87,7 +87,7 @@ export function DocumentText({
           <p className="mt-0 text-label text-problem" role="alert">
             The preview could not be rendered ({message}); showing the source.
           </p>
-          <pre className="m-0 font-mono text-mono break-words whitespace-pre-wrap">
+          <pre className="m-0 font-code text-label break-words whitespace-pre-wrap">
             {content}
           </pre>
         </>
@@ -143,11 +143,7 @@ export function SourceDocumentPanel({
           title={document.readOnlyReason}
           variant="primary"
         >
-          <PencilLine
-            aria-hidden="true"
-            className="size-3.5"
-            strokeWidth={1.8}
-          />
+          <PixelIcon name="edit" />
           {dirty ? "Continue editing" : "Edit"}
         </Button>
         {actions}
@@ -159,7 +155,7 @@ export function SourceDocumentPanel({
           title="History"
           variant="icon"
         >
-          <History aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+          <PixelIcon name="history" />
         </Button>
       </div>
       {/* The view toggle belongs to the text below it, so it gets its own row and never wraps into the actions. TOML has no rendered form. */}
@@ -190,7 +186,7 @@ export function SourceDocumentPanel({
         </p>
       ) : null}
       <Diagnostics diagnostics={document.diagnostics} />
-      <div className="mt-2 max-h-[60vh] overflow-auto rounded-card border border-hairline bg-canvas p-3">
+      <div className="mt-2 max-h-[60vh] overflow-auto border border-rule bg-surface p-3">
         <DocumentText
           content={document.content}
           view={toml ? "source" : view}

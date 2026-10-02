@@ -11,7 +11,8 @@ import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import type { InventorySnapshot } from "@agent-mapper/core";
 import { createAppServer } from "./server";
-import { openArguments } from "./source-actions";
+import type { DesktopRequest } from "./desktop";
+import { desktopRequest } from "./source-actions";
 
 const roots: string[] = [];
 afterEach(() => {
@@ -31,14 +32,20 @@ it("only opens regular text files and reveals executable or linked sources", asy
   writeFileSync(command, "echo unsafe");
   symlinkSync(command, linked);
   mkdirSync(app);
-  expect(await openArguments("open", text)).toEqual([text]);
-  expect(await openArguments("open", command)).toEqual(["-R", command]);
-  expect(await openArguments("open", linked)).toEqual(["-R", linked]);
-  expect(await openArguments("open", app)).toEqual(["-R", app]);
-  expect(await openArguments("reveal", text)).toEqual(["-R", text]);
-  expect(await openArguments("reveal-target", linked)).toEqual(["-R", command]);
+  const reveal = (path: string) => ({ action: "reveal", path });
+  expect(await desktopRequest("open", text)).toEqual({
+    action: "open",
+    path: text
+  });
+  expect(await desktopRequest("open", command)).toEqual(reveal(command));
+  expect(await desktopRequest("open", linked)).toEqual(reveal(linked));
+  expect(await desktopRequest("open", app)).toEqual(reveal(app));
+  expect(await desktopRequest("reveal", text)).toEqual(reveal(text));
+  expect(await desktopRequest("reveal-target", linked)).toEqual(
+    reveal(command)
+  );
   rmSync(command);
-  await expect(openArguments("reveal-target", linked)).rejects.toThrow(
+  await expect(desktopRequest("reveal-target", linked)).rejects.toThrow(
     "points to a file that no longer exists"
   );
 });
@@ -54,13 +61,13 @@ it("uses the last inventory's source index without rescanning on a source action
   mkdirSync(webRoot);
   writeFileSync(join(project, "AGENTS.md"), "Instructions");
   writeFileSync(join(webRoot, "index.html"), "<html>app</html>");
-  const calls: string[][] = [];
+  const calls: DesktopRequest[] = [];
   const app = createAppServer({
     home,
     codexHome: join(home, ".codex"),
     webRoot,
-    launchSource: async (args) => {
-      calls.push(args);
+    desktop: async (request) => {
+      calls.push(request);
     }
   });
   const address = await app.listen();
@@ -88,7 +95,7 @@ it("uses the last inventory's source index without rescanning on a source action
       })
     });
     expect(action.status).toBe(200);
-    expect(calls).toEqual([["-R", join(project, "AGENTS.md")]]);
+    expect(calls).toEqual([{ action: "reveal", path: source?.entry.path }]);
   } finally {
     await app.close();
   }

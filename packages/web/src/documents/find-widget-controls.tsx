@@ -1,55 +1,49 @@
-import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { PixelIcon, type PixelIconName } from "../ui/pixel-icon";
 
-export const iconProps = {
-  size: 16,
-  strokeWidth: 1.5,
-  "aria-hidden": true
-} as const;
 export const field =
-  "relative flex h-[25px] w-[230px] min-w-0 items-center rounded-[4px] border border-transparent bg-(--monaco-input-background) focus-within:outline focus-within:outline-1 focus-within:outline-focus";
+  "relative flex h-[25px] w-[230px] min-w-0 items-center border border-ink bg-surface focus-within:outline-2 focus-within:outline-ink";
 export const input =
-  "h-full min-w-0 flex-1 bg-transparent px-1 font-sans text-[13px] text-(--monaco-widget-foreground) outline-none placeholder:text-ink-faint";
+  "h-full min-w-0 flex-1 bg-transparent px-1 font-sans text-body text-ink outline-none placeholder:text-ink-faint";
 
 export function ToolButton(props: {
   label: string;
-  icon: LucideIcon;
+  icon: PixelIconName;
   onClick(): void;
   disabled?: boolean;
   className?: string;
 }) {
-  const Icon = props.icon;
   return (
     <button
       aria-label={props.label}
-      className={`ml-[3px] flex size-[22px] shrink-0 items-center justify-center rounded-[5px] hover:bg-(--monaco-toolbar-hover) disabled:pointer-events-none disabled:opacity-30 ${props.className ?? ""}`}
+      className={`ml-[3px] flex size-[22px] shrink-0 items-center justify-center hover:bg-wash disabled:pointer-events-none disabled:text-hairline ${props.className ?? ""}`}
       disabled={props.disabled}
       onClick={props.onClick}
       title={props.label}
       type="button"
     >
-      <Icon {...iconProps} />
+      <PixelIcon name={props.icon} />
     </button>
   );
 }
 
+/** A pressed option is an ink inversion, like every other "on" state. */
 export function OptionToggle(props: {
   label: string;
-  icon: LucideIcon;
+  icon: PixelIconName;
   active: boolean;
   onToggle(): void;
 }) {
-  const Icon = props.icon;
   return (
     <button
       aria-label={props.label}
       aria-pressed={props.active}
-      className={`ml-0.5 flex size-5 shrink-0 items-center justify-center rounded-[3px] border ${props.active ? "border-[#007acc] bg-focus/20 dark:bg-focus/40" : "border-transparent hover:bg-(--monaco-toolbar-hover)"}`}
+      className={`ml-0.5 flex size-5 shrink-0 items-center justify-center ${props.active ? "bg-ink text-canvas" : "hover:bg-wash"}`}
       onClick={props.onToggle}
       title={props.label}
       type="button"
     >
-      <Icon {...iconProps} />
+      <PixelIcon name={props.icon} />
     </button>
   );
 }

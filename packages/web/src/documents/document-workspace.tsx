@@ -5,6 +5,7 @@ import { isDirty, type Draft } from "../state/draft-store";
 import { reviewDraft } from "../state/document-actions";
 import { useDocuments, useDraft } from "../state/use-document-drafts";
 import { Button } from "../ui/button";
+import { shortcutLabel } from "../ui/shortcut";
 import { CopyTextButton } from "./copy-text";
 import { DocumentErrorBoundary } from "./document-error-boundary";
 import { editorLanguage, isToml } from "./document-format";
@@ -37,7 +38,7 @@ function EditorPane({ draft }: { draft: Draft }) {
   const toml = isToml(draft.document);
   return (
     <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)]">
-      <div className="flex items-center gap-2 border-b border-hairline px-5 py-2">
+      <div className="flex items-center gap-3 border-b border-dotted border-hairline px-5 py-2">
         {toml ? null : (
           <SegmentedToggle<"source" | "preview">
             label="Editor view"
@@ -49,8 +50,8 @@ function EditorPane({ draft }: { draft: Draft }) {
             value={view}
           />
         )}
-        <span className="hidden text-caption text-ink-faint md:inline">
-          ⌘S to review
+        <span className="hidden font-mono text-caption text-ink-faint md:inline">
+          {shortcutLabel("S")} to review
         </span>
         <span className="sr-only">
           Tab indents. Press Escape, then Tab, to move focus out of the editor.
@@ -206,7 +207,7 @@ export function DocumentWorkspace(props: DocumentWorkspaceProps) {
         onOpen={props.onOpen}
       />
       <StatusLine draft={draft} note={recheckProblem} />
-      <div className="min-h-0 border-t border-hairline">
+      <div className="min-h-0 border-t-2 border-rule">
         <DocumentErrorBoundary
           fallback={(message) => (
             <div className="p-5" role="alert">

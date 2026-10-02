@@ -1,5 +1,5 @@
 /**
- * Loaded only when an editor or diff (edit, review, conflict, history) is first shown. Keeps Monaco's look and behavior from
+ * Loaded only when an editor or diff (edit, review, conflict, history) is first shown. Keeps Monaco's behavior and syntax colors from
  * before the move to CodeMirror (see editor-theme.ts and the ported tokenizers). No workers, fonts or language services.
  */
 import {
@@ -43,7 +43,13 @@ import { findPanel } from "./find-widget";
 
 const svgNamespace = "http://www.w3.org/2000/svg";
 
-/** Monaco's fold chevrons: down while open, right while folded. */
+/** Drawn on the same 11px grid as the app's pixel icons, one 1px square per step. */
+const chevronDown =
+  "M1 3h1v1h-1zM9 3h1v1h-1zM2 4h1v1h-1zM8 4h1v1h-1zM3 5h1v1h-1zM7 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM5 7h1v1h-1z";
+const chevronRight =
+  "M3 1h1v1h-1zM4 2h1v1h-1zM5 3h1v1h-1zM6 4h1v1h-1zM7 5h1v1h-1zM6 6h1v1h-1zM5 7h1v1h-1zM4 8h1v1h-1zM3 9h1v1h-1z";
+
+/** Fold chevrons: down while open, right while folded. */
 function foldMarker(open: boolean): HTMLElement {
   const marker = document.createElement("span");
   marker.className = "cm-fold-marker";
@@ -52,20 +58,17 @@ function foldMarker(open: boolean): HTMLElement {
   }
   const svg = document.createElementNS(svgNamespace, "svg");
   const attributes = {
-    width: "16",
-    height: "16",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    "stroke-width": "1.5",
-    "stroke-linecap": "round",
-    "stroke-linejoin": "round"
+    width: "11",
+    height: "11",
+    viewBox: "0 0 11 11",
+    fill: "currentColor",
+    "shape-rendering": "crispEdges"
   };
   for (const [name, value] of Object.entries(attributes)) {
     svg.setAttribute(name, value);
   }
   const path = document.createElementNS(svgNamespace, "path");
-  path.setAttribute("d", open ? "m6 9 6 6 6-6" : "m9 18 6-6-6-6");
+  path.setAttribute("d", open ? chevronDown : chevronRight);
   svg.append(path);
   marker.append(svg);
   return marker;

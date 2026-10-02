@@ -42,7 +42,7 @@ function Findings({
     (finding) => finding.tool === tool
   );
   if (!findings.length) {
-    return <span className="text-ink-faint">None</span>;
+    return <span className="text-ink-muted">None</span>;
   }
   return (
     <button
@@ -60,7 +60,7 @@ function Scanned(props: RowProps) {
   const own = projectOwn(project, props.showInactive);
   return (
     <>
-      <td className="tabular-nums">
+      <td className="font-mono text-mono">
         {startup === undefined ? "–" : approxTokens(startup)}
       </td>
       <td>
@@ -68,20 +68,20 @@ function Scanned(props: RowProps) {
           <span className="flex flex-wrap gap-x-3 gap-y-0.5">
             {own.map(([kind, count]) => (
               <button
-                className={`inline-flex items-center gap-1 whitespace-nowrap ${cellLinkClass}`}
+                className={`inline-flex items-center gap-1.5 whitespace-nowrap ${cellLinkClass}`}
                 key={kind}
                 onClick={() =>
                   props.onOpenProject(project.path, { view: "inventory", kind })
                 }
               >
-                <KindIcon kind={kind} small />
-                <span className="tabular-nums">{count}</span>
+                <KindIcon kind={kind} />
+                <span className="font-mono text-mono">{count}</span>
                 {count === 1 ? kindSingular[kind] : kindLabel[kind]}
               </button>
             ))}
           </span>
         ) : (
-          <span className="text-ink-faint">Nothing of its own</span>
+          <span className="text-ink-muted">Nothing of its own</span>
         )}
       </td>
       <td>
@@ -119,18 +119,18 @@ function ProjectRow(props: RowProps & { context: PathContext }) {
           : "Scan failed. Rescan to try again."}
       </td>
     ) : (
-      <td className="text-ink-faint" colSpan={4}>
+      <td className="text-ink-muted" colSpan={4}>
         {project.refreshing ? "Rescanning…" : "Scanning…"}
       </td>
     );
   return (
     <tr
       aria-busy={project.refreshing || undefined}
-      className={project.refreshing && project.records ? "opacity-40" : ""}
+      className={`hover:bg-wash ${project.refreshing && project.records ? "opacity-40" : ""}`}
     >
       <th className="text-left font-normal" scope="row">
         <button
-          className={`block max-w-full truncate font-semibold ${cellLinkClass}`}
+          className={`block max-w-full truncate text-body font-semibold ${cellLinkClass}`}
           onClick={() => props.onOpenProject(project.path)}
         >
           {project.name}
@@ -158,16 +158,16 @@ export function ProjectsView(props: ProjectsViewProps) {
     <div className="px-5 pt-4 pb-10">
       {props.summary}
       {props.projects.length ? (
-        <div className="overflow-x-auto rounded-card border border-hairline bg-surface">
-          <table className="w-full min-w-[640px] table-fixed border-separate border-spacing-0 text-label [&_td]:border-t [&_td]:border-wash [&_td]:px-3 [&_td]:py-2.5 [&_td]:align-top [&_tbody_th]:border-t [&_tbody_th]:border-wash [&_tbody_th]:px-3 [&_tbody_th]:py-2.5 [&_tbody_th]:align-top">
+        <div className="overflow-x-auto border-2 border-rule">
+          <table className="w-full min-w-[640px] table-fixed border-separate border-spacing-0 text-label [&_tbody_tr+tr_td]:border-t [&_tbody_tr+tr_td]:border-dotted [&_tbody_tr+tr_td]:border-hairline [&_tbody_tr+tr_th]:border-t [&_tbody_tr+tr_th]:border-dotted [&_tbody_tr+tr_th]:border-hairline [&_td]:px-3 [&_td]:py-2.5 [&_td]:align-top [&_tbody_th]:px-3 [&_tbody_th]:py-2.5 [&_tbody_th]:align-top">
             <caption className="sr-only">
               Projects compared with the global configuration
             </caption>
             <thead>
-              <tr>
+              <tr className="bg-ink text-canvas">
                 {columns.map(([label, width]) => (
                   <th
-                    className={`h-9 px-3 text-left text-caption font-semibold text-ink-muted ${width}`}
+                    className={`h-[26px] px-3 text-left font-mono text-mono ${width}`}
                     key={label}
                     scope="col"
                   >

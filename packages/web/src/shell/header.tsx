@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import type { ToolId } from "@agent-mapper/core";
-import { GitBranch, RefreshCw, Search } from "lucide-react";
 import { Button } from "../ui/button";
+import { PixelIcon } from "../ui/pixel-icon";
 import { ToolGlyph, toolName } from "../ui/marks";
+import { shortcutLabel } from "../ui/shortcut";
 
 export interface HeaderTitle {
   name: string;
@@ -27,13 +28,13 @@ const tools: ToolId[] = ["claude", "codex"];
 
 function ToolToggle({ tool, onTool }: Pick<HeaderProps, "tool" | "onTool">) {
   return (
-    <fieldset className="m-0 inline-flex min-w-0 gap-0.5 rounded-panel border border-hairline bg-wash p-0.5">
+    <fieldset className="m-0 inline-flex min-w-0 border-2 border-ink p-0">
       <legend className="sr-only">Agent tool</legend>
       {tools.map((option) => (
         <button
           key={option}
           aria-pressed={tool === option}
-          className={`inline-flex h-6 items-center gap-1.5 rounded-control pr-2.5 pl-1.5 text-label font-semibold ${tool === option ? "bg-surface text-ink shadow-raised" : "text-ink-muted hover:text-ink"}`}
+          className={`inline-flex h-6 items-center gap-1.5 pr-2.5 pl-2 text-label font-semibold ${tool === option ? "bg-ink text-canvas" : "text-ink-muted hover:bg-wash hover:text-ink"}`}
           onClick={() => onTool(option)}
         >
           <ToolGlyph tool={option} muted={tool !== option} />
@@ -54,14 +55,14 @@ export function Header(props: HeaderProps) {
     <header className="flex min-h-14 min-w-0 items-center gap-4 px-5 py-3">
       <div className="flex min-w-0 flex-1 items-baseline gap-2.5">
         <h1
-          className="m-0 text-title font-semibold tracking-tight whitespace-nowrap"
+          className="m-0 font-mono text-title whitespace-nowrap"
           title={title.path}
         >
           {title.name}
         </h1>
         {title.path ? (
           <span
-            className="hidden min-w-12 truncate font-mono text-label text-ink-muted xl:inline"
+            className="hidden min-w-12 truncate font-mono text-mono text-ink-muted xl:inline"
             title={title.path}
           >
             {title.path}
@@ -75,11 +76,7 @@ export function Header(props: HeaderProps) {
             className="inline-flex min-w-0 items-center gap-1 text-label text-ink-muted"
             title={title.branch}
           >
-            <GitBranch
-              aria-hidden="true"
-              className="size-3.5 shrink-0"
-              strokeWidth={1.6}
-            />
+            <PixelIcon name="branch" />
             <span className="truncate">{title.branch}</span>
           </span>
         ) : null}
@@ -88,9 +85,11 @@ export function Header(props: HeaderProps) {
         <ToolToggle tool={props.tool} onTool={props.onTool} />
         {props.actions}
         <Button onClick={props.onSearch}>
-          <Search aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+          <PixelIcon name="search" />
           Search
-          <kbd className="font-mono text-caption text-ink-faint">⌘K</kbd>
+          <kbd className="font-mono text-mono text-ink-faint">
+            {shortcutLabel("K")}
+          </kbd>
         </Button>
         <Button
           aria-label="Rescan"
@@ -99,10 +98,9 @@ export function Header(props: HeaderProps) {
           title={props.refreshing ? "Rescanning…" : `Rescan · scanned ${time}`}
           variant="icon"
         >
-          <RefreshCw
-            aria-hidden="true"
-            className={`size-3.5 ${props.refreshing ? "animate-spin" : ""}`}
-            strokeWidth={1.8}
+          <PixelIcon
+            className={props.refreshing ? "animate-pulse" : ""}
+            name="rescan"
           />
         </Button>
       </div>

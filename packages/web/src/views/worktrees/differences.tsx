@@ -6,6 +6,7 @@ import type {
   WorktreeDifference
 } from "@agent-mapper/core";
 import { tildePath, type PathContext } from "../../model/paths";
+import { useFileManagerWords } from "../../state/use-host";
 import { useSourceAction } from "../../state/use-source-action";
 import { Button } from "../../ui/button";
 import { StateMarker } from "../../ui/marks";
@@ -27,10 +28,11 @@ function Side({
   workingDirectory: string;
 }) {
   const action = useSourceAction(workingDirectory);
+  const fileManager = useFileManagerWords();
   if (!side) {
     return (
       <section className="mt-5">
-        <h3 className="m-0 mb-2 text-caption font-semibold text-ink-faint">
+        <h3 className="m-0 mb-2 text-caption font-semibold text-ink-muted">
           {label}
         </h3>
         <p className="m-0 text-ink-muted">No file in this checkout.</p>
@@ -40,7 +42,7 @@ function Side({
   const error = action.errorFor(side.id);
   return (
     <section className="mt-5">
-      <h3 className="m-0 mb-2 text-caption font-semibold text-ink-faint">
+      <h3 className="m-0 mb-2 text-caption font-semibold text-ink-muted">
         {label}
       </h3>
       <p className="m-0 font-mono text-mono break-words">
@@ -54,7 +56,7 @@ function Side({
           Open in editor
         </Button>
         <Button onClick={() => void action.run(side.id, "reveal")}>
-          Reveal in Finder
+          {fileManager.reveal}
         </Button>
       </div>
       {error ? (
@@ -90,7 +92,7 @@ function DifferenceDetail({
       onClose={onClose}
       title={row.relativePath.split("/").at(-1) ?? row.relativePath}
     >
-      <div className="mt-2 flex items-center gap-2 text-label">
+      <div className="mt-3 flex items-center gap-2 text-label">
         <StateMarker tier={info.tier} />
         <strong>{info.label}</strong>
       </div>

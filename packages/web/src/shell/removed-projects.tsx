@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { PixelIcon } from "../ui/pixel-icon";
 import { folderName } from "./project-list";
 
 /** Projects removed from the sidebar. Collapsed by default so it stays out of the way. */
@@ -18,32 +18,30 @@ export function RemovedProjects({
     <div className="grid gap-0.5">
       <button
         aria-expanded={open}
-        className="flex h-[26px] items-center gap-1 rounded-control px-2 text-left text-label text-ink-muted hover:bg-hover hover:text-ink"
+        className="flex h-[26px] items-center gap-2.5 px-2 text-left text-label text-ink-muted hover:bg-wash hover:text-ink"
         onClick={() => setOpen(!open)}
       >
-        <ChevronRight
-          aria-hidden="true"
-          className={`size-3.5 transition-transform ${open ? "rotate-90" : ""}`}
-          strokeWidth={1.8}
-        />
+        <PixelIcon name={open ? "chevron-down" : "chevron-right"} />
         Removed
-        <span className="text-ink-faint tabular-nums">{paths.length}</span>
+        <span className="font-mono text-mono text-ink-faint">
+          {paths.length}
+        </span>
       </button>
       {open
         ? paths.map((path) => (
             <div
-              className="flex h-[26px] items-center gap-2 pr-1 pl-7 text-label"
+              className="flex h-[26px] items-center gap-2 pr-1 pl-[29px] hover:bg-wash"
               key={path}
             >
               <span
-                className="min-w-0 flex-1 truncate text-ink-muted"
+                className="min-w-0 flex-1 truncate font-mono text-mono text-ink-muted"
                 title={path}
               >
                 {folderName(path)}
               </span>
               <button
                 aria-label={`Restore ${folderName(path)}`}
-                className="rounded-control px-1.5 py-0.5 text-caption font-semibold text-ink-muted hover:bg-hover hover:text-ink"
+                className="px-1.5 py-0.5 text-caption font-semibold text-ink-muted hover:bg-ink hover:text-canvas"
                 onClick={() => onRestore(path)}
               >
                 Restore

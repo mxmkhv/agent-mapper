@@ -89,7 +89,7 @@ export function ImpactSummary({
       {gaps ? (
         <p className="m-0 mb-1.5 text-caption text-ink-muted">{gaps}</p>
       ) : null}
-      <ul className="m-0 grid list-none gap-2 p-0 text-label">
+      <ul className="m-0 grid list-none p-0 text-label">
         {groups.map((group) => {
           const first = group[0]!;
           const scanned = new Date(first.scannedAt).toLocaleTimeString([], {
@@ -97,7 +97,10 @@ export function ImpactSummary({
             minute: "2-digit"
           });
           return (
-            <li key={`${first.scope}:${first.workingDirectory}`}>
+            <li
+              className="border-b border-dotted border-hairline py-2 first:pt-0 last:border-b-0"
+              key={`${first.scope}:${first.workingDirectory}`}
+            >
               <strong
                 className="font-semibold"
                 title={`${tildePath(first.workingDirectory, context)} · scanned ${scanned}`}

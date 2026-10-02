@@ -1,9 +1,9 @@
 import type { ToolId } from "@agent-mapper/core";
 import type { ReactNode } from "react";
-import { ChevronRight, Layers, Plug } from "lucide-react";
 import { layerLabel } from "../model/layers";
 import { HintText } from "../ui/hint-text";
-import { StateMarker, ToolGlyph } from "../ui/marks";
+import { ToolGlyph } from "../ui/marks";
+import { PixelIcon } from "../ui/pixel-icon";
 import type { ClusterSource, InventoryGroup } from "./inventory-groups";
 
 const listFormat = new Intl.ListFormat("en", { type: "conjunction" });
@@ -16,14 +16,8 @@ function inheritedLabel(groups: readonly InventoryGroup[]): string {
   );
 }
 
-function FoldChevron({ open, size }: { open: boolean; size: string }) {
-  return (
-    <ChevronRight
-      aria-hidden="true"
-      className={`${size} text-ink-faint ${open ? "rotate-90" : ""}`}
-      strokeWidth={1.8}
-    />
-  );
+function FoldChevron({ open }: { open: boolean }) {
+  return <PixelIcon name={open ? "chevron-down" : "chevron-right"} />;
 }
 
 export function GroupHead({
@@ -33,38 +27,38 @@ export function GroupHead({
 }: {
   group: InventoryGroup;
   hint?: string;
-  /** Set on the open project's own groups, which carry the tool glyph and a full-strength label. */
+  /** Set on the open project's own groups, which carry the tool glyph in place of the layer icon. */
   localTool?: ToolId;
 }) {
-  const Icon = group.plugin ? Plug : Layers;
   return (
-    <div
-      className={`flex h-[30px] items-center gap-2 px-2.5 text-label font-semibold ${localTool ? "text-ink" : "text-ink-muted"}`}
-    >
-      {localTool ? (
-        <ToolGlyph tool={localTool} />
-      ) : (
-        <Icon
-          aria-hidden="true"
-          className="size-3.5 text-ink-faint"
-          strokeWidth={1.6}
-        />
-      )}
-      {group.label}
-      {group.plugin?.version ? (
-        <span className="font-mono text-caption font-normal text-ink-faint">
-          {group.plugin.version}
-        </span>
-      ) : null}
-      <span className="font-medium text-ink-faint tabular-nums">
+    <div className="flex h-[26px] items-stretch border-b-2 border-rule">
+      <span className="flex min-w-0 items-center gap-2 bg-ink pr-3 pl-2.5 font-mono text-mono text-canvas">
+        {localTool ? (
+          <ToolGlyph tool={localTool} />
+        ) : (
+          <PixelIcon name={group.plugin ? "plug" : "globe"} />
+        )}
+        <span className="truncate">{group.label}</span>
+        {group.plugin?.version ? (
+          <span className="opacity-70">{group.plugin.version}</span>
+        ) : null}
         {group.records.length}
       </span>
-      {hint ? <HintText hint={hint} /> : null}
+      {hint ? (
+        <span className="flex min-w-0 items-center truncate px-3">
+          <HintText hint={hint} />
+        </span>
+      ) : null}
+      {/* A light dot fill runs the tab out to the edge of the group. */}
+      <span
+        aria-hidden="true"
+        className="dots-light min-w-6 flex-1 bg-ink [mask-position:0_1px]"
+      />
     </div>
   );
 }
 
-/** Everything a project inherits, in one wash panel: its head folds the groups inside it away. */
+/** Everything a project inherits, in one dotted panel: its head folds the groups inside it away. */
 export function InheritedSection({
   groups,
   open,
@@ -78,26 +72,26 @@ export function InheritedSection({
 }) {
   const count = groups.reduce((sum, group) => sum + group.records.length, 0);
   return (
-    <section className="mb-3.5 rounded-card border border-hairline bg-wash">
+    <section className="mb-3.5 border border-dotted border-ink-muted">
       <button
         aria-expanded={open}
-        className="flex h-9 w-full items-center gap-2 rounded-card px-2.5 text-left text-label font-semibold text-ink-muted hover:text-ink"
+        className="flex h-8 w-full items-center gap-2.5 px-2.5 text-left text-label font-semibold hover:bg-wash"
         onClick={onToggle}
         type="button"
       >
-        <FoldChevron open={open} size="size-3.5" />
+        <FoldChevron open={open} />
         {inheritedLabel(groups)}
-        <span className="font-medium text-ink-faint tabular-nums">{count}</span>
+        <span className="font-mono text-mono text-ink-faint">{count}</span>
         <span className="truncate font-normal text-ink-faint">
           Comes from outside this project
         </span>
       </button>
-      {open ? <div className="px-2.5">{children}</div> : null}
+      {open ? <div className="px-2.5 pt-1">{children}</div> : null}
     </section>
   );
 }
 
-/** Heads the skills installed from one repo inside a group's card, and folds them away. */
+/** Heads the skills installed from one repo inside a group's box, and folds them away. */
 export function SourceToggle({
   source,
   open,
@@ -110,17 +104,12 @@ export function SourceToggle({
   return (
     <button
       aria-expanded={open}
-      className="flex h-8 w-full items-center gap-2.5 bg-wash px-3 text-left hover:bg-hover [&+&]:border-t [&+&]:border-wash"
+      className="flex h-8 w-full items-center gap-3 border-b border-dotted border-hairline bg-wash px-3 text-left hover:bg-selected"
       onClick={onToggle}
     >
-      <FoldChevron open={open} size="size-4 p-px" />
-      <StateMarker tier="active" tone={source.tone} />
-      <span className="truncate font-mono text-mono text-ink-muted">
-        {source.repo}
-      </span>
-      <span className="text-label font-medium text-ink-faint tabular-nums">
-        {source.count}
-      </span>
+      <FoldChevron open={open} />
+      <span className="truncate font-mono text-mono">{source.repo}</span>
+      <span className="font-mono text-mono text-ink-muted">{source.count}</span>
     </button>
   );
 }

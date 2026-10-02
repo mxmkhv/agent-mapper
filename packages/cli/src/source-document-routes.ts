@@ -11,6 +11,7 @@ import type {
   SourceRef,
   ValidationResult
 } from "@agent-mapper/core";
+import { DesktopError, type Desktop } from "./desktop";
 import { maxDocumentBytes } from "./source-document-bytes";
 import { DocumentApiError, documentError } from "./source-document-errors";
 import type { SourceDocumentService } from "./source-document-service";
@@ -110,12 +111,9 @@ function restoreRequest(body: Body): RestoreRequest {
   };
 }
 
-/** Opens a Finder window, as Reveal in Finder does for sources. */
-type Launch = (args: string[]) => Promise<void>;
-
 async function revealHistory(
   folder: string,
-  launch: Launch
+  desktop: Desktop
 ): Promise<HistoryReveal> {
   try {
     await stat(folder);
@@ -128,13 +126,20 @@ async function revealHistory(
     }
     throw error;
   }
-  await launch(["-R", folder]);
+  try {
+    await desktop({ action: "reveal", path: folder });
+  } catch (error) {
+    if (error instanceof DesktopError) {
+      throw documentError("io_error", error.message);
+    }
+    throw error;
+  }
   return { revealed: true };
 }
 
 function dispatch(
   service: SourceDocumentService,
-  input: { action: string; body: Body; launch: Launch }
+  input: { action: string; body: Body; desktop: Desktop }
 ): Promise<DocumentPayload> {
   const { action, body } = input;
   switch (action) {
@@ -156,7 +161,7 @@ function dispatch(
     case "reveal-history":
       return revealHistory(
         service.historyDirectory(text(body, "documentId")),
-        input.launch
+        input.desktop
       );
     default:
       throw documentError("not_found", "Unknown document route.");
@@ -219,14 +224,14 @@ export function handleDocumentRoute(
     request: IncomingMessage;
     response: ServerResponse;
     url: URL;
-    launch: Launch;
+    desktop: Desktop;
   }
 ): Promise<void> {
   return handleJsonRoute({ ...input, label: "document" }, (body) =>
     dispatch(service, {
       action: input.url.pathname.slice(routePrefix.length),
       body,
-      launch: input.launch
+      desktop: input.desktop
     })
   );
 }

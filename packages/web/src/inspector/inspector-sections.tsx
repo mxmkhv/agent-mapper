@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import type { InstructionImport } from "@agent-mapper/core";
-import { ArrowRight, Link2 } from "lucide-react";
 import { layerLabel } from "../model/layers";
 import {
   shortPath,
@@ -12,9 +11,13 @@ import type { InventoryRecord, RecordKind } from "../model/record-types";
 import { kindLabel } from "../ui/kind-icon";
 import { ToolGlyph } from "../ui/marks";
 import { PathText } from "../ui/path-text";
+import { PixelIcon } from "../ui/pixel-icon";
 
 /** Same approximation the core context estimate uses. */
 const charactersPerToken = 4;
+
+/** Small muted sans, sentence case: the item name is the only display type in the pane. */
+export const sectionHeading = "m-0 mb-2 text-label font-normal text-ink-muted";
 
 export function Section({
   title,
@@ -25,13 +28,14 @@ export function Section({
 }) {
   return (
     <section className="mt-5">
-      <h3 className="m-0 mb-2 text-caption font-semibold text-ink-faint">
-        {title}
-      </h3>
+      <h3 className={sectionHeading}>{title}</h3>
       {children}
     </section>
   );
 }
+
+const provenanceBox =
+  "mt-3.5 flex flex-wrap items-center gap-x-[7px] gap-y-1 border border-dotted border-ink-muted px-2.5 py-[9px] font-mono text-mono";
 
 /** Where a record sits in the stack: layer › plugin › file › declaration. */
 export function Provenance({
@@ -46,45 +50,41 @@ export function Provenance({
   if (record.kind === "plugin") {
     const { marketplace } = record;
     return (
-      <div className="mt-4 flex flex-wrap items-center gap-1 rounded-panel bg-wash px-3 py-2.5 text-label">
-        <span className="font-semibold">{layerLabel[record.layer]}</span>
+      <div className={provenanceBox}>
+        <span>{layerLabel[record.layer]}</span>
         {marketplace ? (
           <>
-            <span className="text-ink-faint">›</span>
+            <span className="text-ink-muted">›</span>
             <span>{marketplace}</span>
           </>
         ) : null}
-        <span className="text-ink-faint">›</span>
-        <span className="font-semibold">{record.name}</span>
-        <span className="font-mono text-mono text-ink-muted">
-          {record.summary}
-        </span>
+        <span className="text-ink-muted">›</span>
+        <span>{record.name}</span>
+        <span className="text-ink-muted">{record.summary}</span>
       </div>
     );
   }
   const file = record.pluginPath ?? shortPath(record.path, context);
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-1 rounded-panel bg-wash px-3 py-2.5 text-label">
-      <span className="font-semibold">{layerLabel[record.layer]}</span>
+    <div className={provenanceBox}>
+      <span>{layerLabel[record.layer]}</span>
       {record.plugin ? (
         <>
-          <span className="text-ink-faint">›</span>
+          <span className="text-ink-muted">›</span>
           <button
-            className="font-semibold underline decoration-hairline-strong underline-offset-2"
+            className="underline decoration-ink-muted decoration-dotted underline-offset-2 hover:decoration-solid"
             onClick={() => onSelect(record.plugin?.id ?? "")}
           >
             {record.plugin.name} {record.plugin.version}
           </button>
         </>
       ) : null}
-      <span className="text-ink-faint">›</span>
-      <span className="font-mono text-mono break-words">
+      <span className="text-ink-muted">›</span>
+      <span className="min-w-0 break-words">
         <PathText path={file} />
       </span>
       {record.locator ? (
-        <span className="font-mono text-mono text-ink-faint">
-          {record.locator}
-        </span>
+        <span className="text-ink-muted">{record.locator}</span>
       ) : null}
     </div>
   );
@@ -104,25 +104,17 @@ export function LinkRow({
 }) {
   return (
     <button
-      className="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left hover:bg-hover"
+      className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-wash"
       onClick={() => onSelect(record.id)}
     >
       {symlink ? (
-        <Link2
-          aria-hidden="true"
-          className="size-3.5 shrink-0 text-ink-muted"
-          strokeWidth={1.6}
-        />
+        <PixelIcon className="shrink-0 text-ink-muted" name="link" />
       ) : null}
       <ToolGlyph tool={record.tool} />
       <span className="min-w-0 flex-1 font-mono text-mono break-words">
         <PathText path={shortPath(record.path, context)} />
       </span>
-      <ArrowRight
-        aria-hidden="true"
-        className="size-3.5 shrink-0 text-ink-faint"
-        strokeWidth={1.6}
-      />
+      <PixelIcon className="shrink-0 text-ink-muted" name="arrow-right" />
     </button>
   );
 }
@@ -144,11 +136,11 @@ export function Contributions({
     <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-1.5">
       {entries.map(([kind, count]) => (
         <button
-          className="rounded-panel border border-hairline px-2.5 py-2 text-left hover:border-hairline-strong"
+          className="border border-ink px-2.5 py-2 text-left hover:bg-wash"
           key={kind}
           onClick={() => onKind(kind)}
         >
-          <strong className="block text-large tabular-nums">{count}</strong>
+          <strong className="block font-mono text-title">{count}</strong>
           <span className="text-caption text-ink-muted">{kindLabel[kind]}</span>
         </button>
       ))}

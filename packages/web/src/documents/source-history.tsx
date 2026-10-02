@@ -4,6 +4,7 @@ import { revealSourceHistory } from "../source-document-api";
 import { restoreRevision } from "../state/document-actions";
 import { isDirty, type Draft } from "../state/draft-store";
 import { useDocuments } from "../state/use-document-drafts";
+import { useFileManagerWords } from "../state/use-host";
 import { tildePath, type PathContext } from "../model/paths";
 import { Button } from "../ui/button";
 import { EmptyState } from "../ui/empty-state";
@@ -13,7 +14,7 @@ import { SourceDiff } from "./lazy";
 import { RevisionList } from "./revision-list";
 import {
   loadingEditor,
-  metadataNote,
+  useMetadataNote,
   notesPane,
   splitLayout
 } from "./source-review";
@@ -87,8 +88,9 @@ function useRestore(draft: Draft, onRestored: () => void) {
   };
 }
 
-/** The saved versions live under a long hashed folder; Finder shows it instead of printing the path. */
+/** The saved versions live under a long hashed folder; the file manager shows it instead of printing the path. */
 function RevealFolder({ documentId }: { documentId: string }) {
+  const fileManager = useFileManagerWords();
   const [error, setError] = useState<string>();
   async function reveal() {
     setError(undefined);
@@ -100,7 +102,7 @@ function RevealFolder({ documentId }: { documentId: string }) {
   }
   return (
     <>
-      <Button onClick={() => void reveal()}>Reveal in Finder</Button>
+      <Button onClick={() => void reveal()}>{fileManager.reveal}</Button>
       {error ? (
         <p className="mt-2 mb-0 text-label text-problem" role="alert">
           {error}
@@ -119,6 +121,7 @@ function RestorePanel({
   ready: RevisionContent;
   onRestore(revisionId: string): void;
 }) {
+  const metadataNote = useMetadataNote();
   const blockedReason = isDirty(draft)
     ? "Save or discard your unsaved changes before restoring."
     : draft.document.readOnlyReason;
