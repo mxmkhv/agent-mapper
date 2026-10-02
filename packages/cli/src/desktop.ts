@@ -11,10 +11,10 @@ export type DesktopRequest =
 /** Hands a URL or file to the desktop. Resolves once the app is launched, not when it closes. */
 export type Desktop = (request: DesktopRequest) => Promise<void>;
 
-/** A desktop action that cannot run here; the message says why and what to do instead. */
+/** A desktop action that failed or cannot run here; the message says why and what to do instead. */
 export class DesktopError extends Error {}
 
-/** `env` decides whether there is a desktop session, and gives helper commands their PATH. */
+/** `env` also gives helper commands their PATH. */
 interface DesktopHost extends SessionHost {
   /** How long a launcher may run before it counts as launched. */
   launchWindowMs?: number;
@@ -22,10 +22,12 @@ interface DesktopHost extends SessionHost {
   revealWindowMs?: number;
 }
 
-type Outcome =
-  | { kind: "exited"; code: number | null; signal: NodeJS.Signals | null }
-  | { kind: "running" }
-  | { kind: "missing" };
+type Exited = {
+  kind: "exited";
+  code: number | null;
+  signal: NodeJS.Signals | null;
+};
+type Outcome = Exited | { kind: "running" } | { kind: "missing" };
 
 interface Launcher {
   env: NodeJS.ProcessEnv;
@@ -36,6 +38,7 @@ interface Launcher {
 const defaultLaunchWindowMs = 2000;
 // A file manager cold-started over D-Bus can take more than a second to answer.
 const defaultRevealWindowMs = 5000;
+const xdgMissingFile = 2;
 const xdgNoTool = 3;
 const xdgActionFailed = 4;
 
@@ -63,7 +66,11 @@ function watch(
       if (errnoCode(error) === "ENOENT") {
         finish({ kind: "missing" });
       } else {
-        reject(error);
+        reject(
+          new DesktopError(
+            `Could not start ${command.name} (${errnoCode(error) ?? error.message}). Check that it is installed and executable.`
+          )
+        );
       }
     });
     child.once("exit", (code, signal) => {
@@ -73,17 +80,12 @@ function watch(
   });
 }
 
-function launched(outcome: Outcome): boolean {
-  return (
-    outcome.kind === "running" ||
-    (outcome.kind === "exited" && outcome.code === 0)
-  );
+/** A launcher still running when the window ends counts as launched, like a clean exit. */
+function failedExit(outcome: Outcome): outcome is Exited {
+  return outcome.kind === "exited" && outcome.code !== 0;
 }
 
-function exitText(
-  command: string,
-  outcome: Extract<Outcome, { kind: "exited" }>
-): string {
+function exitText(command: string, outcome: Exited): string {
   return outcome.signal
     ? `${command} was stopped by ${outcome.signal}.`
     : `${command} exited with status ${outcome.code}.`;
@@ -100,8 +102,10 @@ async function macOpen(launcher: Launcher, args: string[]): Promise<void> {
       "macOS `open` was not found. Check that /usr/bin is on your PATH."
     );
   }
-  if (!launched(outcome) && outcome.kind === "exited") {
-    throw new DesktopError(exitText("macOS open", outcome));
+  if (failedExit(outcome)) {
+    throw new DesktopError(
+      `${exitText("macOS open", outcome)} Rescan to check that the file still exists, or open it from Finder.`
+    );
   }
 }
 
@@ -119,8 +123,13 @@ async function xdgOpen(
       "xdg-open is not installed. Install xdg-utils, then try again."
     );
   }
-  if (launched(outcome) || outcome.kind !== "exited") {
+  if (!failedExit(outcome)) {
     return;
+  }
+  if (outcome.code === xdgMissingFile) {
+    throw new DesktopError(
+      `${target.path} no longer exists. Rescan and try again.`
+    );
   }
   if (outcome.code === xdgNoTool) {
     throw new DesktopError(
@@ -134,7 +143,7 @@ async function xdgOpen(
     );
   }
   throw new DesktopError(
-    `Could not open ${target.path}: ${exitText("xdg-open", outcome)}`
+    `Could not open ${target.path}: ${exitText("xdg-open", outcome)} Open it from a terminal instead.`
   );
 }
 
@@ -169,8 +178,23 @@ async function showItem(launcher: Launcher, path: string): Promise<void> {
     // A slow answer may still show the window, so killing the call is not a failure and opens nothing else.
     kill: true
   });
-  if (!launched(outcome)) {
+  if (outcome.kind !== "missing" && !failedExit(outcome)) {
+    return;
+  }
+  try {
     await xdgOpen(launcher, { path: dirname(path) });
+  } catch (error) {
+    if (!(error instanceof DesktopError)) {
+      throw error;
+    }
+    // Both attempts failed; name the first too, since it may be the one to fix.
+    const showItems =
+      outcome.kind === "missing"
+        ? "gdbus is not installed (install libglib2.0-bin or your distribution's glib2 package)."
+        : `The file manager refused ShowItems: ${exitText("gdbus", outcome)}`;
+    throw new DesktopError(
+      `${showItems} Opening the parent folder failed too: ${error.message}`
+    );
   }
 }
 
@@ -214,8 +238,11 @@ export function createDesktop(host: DesktopHost): Desktop {
           : `${session.reason} Files cannot be opened or shown from here; use the path in a terminal instead.`
       );
     }
-    await (host.platform === "darwin"
-      ? macOpen(launcher, macArguments(request))
-      : linuxAction(launcher, request));
+    switch (session.platform) {
+      case "darwin":
+        return macOpen(launcher, macArguments(request));
+      case "linux":
+        return linuxAction(launcher, request);
+    }
   };
 }

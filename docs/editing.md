@@ -5,7 +5,7 @@ agent-mapper can edit instructions, skills, and agents, and copy or delete skill
 ## Edit a file
 
 1. Select an instruction, skill, or agent and click **Edit**.
-2. Make your changes, then click **Review changes** or press `⌘S` (`Ctrl+S` on Linux). Review the diff, validation messages, and other scanned contexts that use the file.
+2. Make your changes, then click **Review changes** or press `⌘S` (`Ctrl+S` in browsers outside macOS). Review the diff, validation messages, and other scanned contexts that use the file.
 3. Click **Save changes** to write the reviewed text.
 
 **History** keeps the version replaced by each save or restore. You can restore it later. Copying a skill or agent never overwrites an existing file; copying agents between tools converts their format and lists settings that cannot transfer.

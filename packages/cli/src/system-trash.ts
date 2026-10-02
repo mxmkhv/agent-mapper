@@ -22,7 +22,7 @@ const macTrash: TrashCommand = {
 };
 
 const gioTrash: TrashCommand = {
-  // `gio trash` refuses unsupported mounts, and elsewhere needs `.Trash-$uid` at the mount root.
+  // `gio trash` refuses unsupported mounts. Off the home filesystem it needs `.Trash-$uid` at the mount root.
   name: "gio",
   args: (path) => ["trash", path],
   missing:
@@ -63,7 +63,7 @@ function runTrash(
         : reject(
             documentError(
               "io_error",
-              `The Trash refused ${path} (${stderr.trim() || (signal ? `trash stopped by ${signal}` : `trash exited with status ${code}`)}). ${command.fallback}`
+              `The Trash refused ${path} (${stderr.trim() || (signal ? `${command.name} stopped by ${signal}` : `${command.name} exited with status ${code}`)}). ${command.fallback}`
             )
           )
     );

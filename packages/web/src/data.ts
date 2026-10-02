@@ -35,7 +35,7 @@ export function useProjects(refresh: number): LoadState<ProjectList> {
 }
 
 /** The server's platform, fetched once: it cannot change while the server runs. */
-export function useHost(): LoadState<HostInfo> {
+export function useHostInfo(): LoadState<HostInfo> {
   const [state, setState] = useState<LoadState<HostInfo>>({ loading: true });
   useEffect(() => {
     const controller = new AbortController();

@@ -1,4 +1,6 @@
-import { setTimeout as delay } from "node:timers/promises";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, expect, it } from "vitest";
 import { createDesktop } from "./desktop";
@@ -11,19 +13,22 @@ afterEach(() => {
   }
 });
 
-/** A Linux desktop session whose helpers are the given scripts. */
-function linuxDesktop(scripts: Record<string, string>) {
+/**
+ * A Linux desktop session whose helpers are the given scripts. A fresh script can take most of a
+ * second to start on macOS, so windows are long unless a test waits one out on purpose;
+ * a script that exits resolves at once either way.
+ */
+function linuxDesktop(scripts: Record<string, string>, windowMs = 10_000) {
   const bin = fakeCommands(scripts);
   bins.push(bin);
   const desktop = createDesktop({
     platform: "linux",
     env: { ...bin.env, WAYLAND_DISPLAY: "wayland-0" },
     procVersion: () => "Linux version 6.8.0-generic",
-    // Starting even a trivial script can take a few hundred milliseconds on a busy machine.
-    launchWindowMs: 1500,
-    revealWindowMs: 1500
+    launchWindowMs: windowMs,
+    revealWindowMs: windowMs
   });
-  return { desktop, calls: bin.calls };
+  return { desktop, calls: bin.calls, bin: bin.env.PATH };
 }
 
 const showItemsArguments = (uri: string) => [
@@ -74,9 +79,7 @@ it("fails on a nonzero exit inside the launch window, and leaves a running launc
   await expect(
     failing.desktop({ action: "open", path: "/home/max/AGENTS.md" })
   ).rejects.toThrow("xdg-open exited with status 1");
-  const lingering = linuxDesktop({
-    "xdg-open": "/bin/sleep 3; exit 1"
-  });
+  const lingering = linuxDesktop({ "xdg-open": "exec /bin/sleep 10" }, 1500);
   await expect(
     lingering.desktop({ action: "open", path: "/home/max/AGENTS.md" })
   ).resolves.toBeUndefined();
@@ -103,15 +106,56 @@ it("opens the parent folder when ShowItems fails or gdbus is missing", async () 
   expect(missing.calls("xdg-open")).toEqual([["/home/max"]]);
 });
 
+it("reports both failures when ShowItems and the parent folder fallback fail", async () => {
+  const { desktop } = linuxDesktop({ gdbus: "exit 1", "xdg-open": "exit 3" });
+  await expect(
+    desktop({ action: "reveal", path: "/home/max/AGENTS.md" })
+  ).rejects.toThrow(
+    "The file manager refused ShowItems: gdbus exited with status 1. Opening the parent folder failed too: xdg-open found no program"
+  );
+  const bare = linuxDesktop({});
+  await expect(
+    bare.desktop({ action: "reveal", path: "/home/max/AGENTS.md" })
+  ).rejects.toThrow(
+    /gdbus is not installed .*Opening the parent folder failed too: xdg-open is not installed/
+  );
+});
+
+it("says a file xdg-open reports missing should be rescanned", async () => {
+  const { desktop } = linuxDesktop({ "xdg-open": "exit 2" });
+  await expect(
+    desktop({ action: "open", path: "/home/max/AGENTS.md" })
+  ).rejects.toThrow(
+    "/home/max/AGENTS.md no longer exists. Rescan and try again."
+  );
+});
+
 it("counts a slow ShowItems call it stopped as launched, with no second window", async () => {
-  const { desktop, calls } = linuxDesktop({
-    gdbus: "exec /bin/sleep 10",
-    "xdg-open": "exit 0"
-  });
+  const { desktop, calls } = linuxDesktop(
+    { gdbus: "exec /bin/sleep 10", "xdg-open": "exit 0" },
+    3000
+  );
   await desktop({ action: "reveal", path: "/home/max/AGENTS.md" });
-  await delay(500);
   expect(calls("gdbus")).toHaveLength(1);
   expect(calls("xdg-open")).toEqual([]);
+});
+
+it("starts helpers in their own process group, so Ctrl+C leaves the app running", async () => {
+  const { desktop, bin } = linuxDesktop({
+    "xdg-open": `/bin/ps -o pgid= -p $$ > "$0.pgid"`
+  });
+  await desktop({ action: "browse", url: "http://127.0.0.1:4000/" });
+  const ours = execFileSync("/bin/ps", [
+    "-o",
+    "pgid=",
+    "-p",
+    String(process.pid)
+  ])
+    .toString()
+    .trim();
+  const theirs = readFileSync(join(bin, "xdg-open.pgid"), "utf8").trim();
+  expect(theirs).not.toBe("");
+  expect(theirs).not.toBe(ours);
 });
 
 it("passes awkward filenames to gdbus as one intact file URI", async () => {

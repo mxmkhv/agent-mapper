@@ -13,7 +13,13 @@ import { fakeCommands } from "./fake-command-test-kit";
 import { cleanupDeletes, setupDeletes, write } from "./source-delete-test-kit";
 import { systemTrash } from "./system-trash";
 
-afterEach(cleanupDeletes);
+const bins: ReturnType<typeof fakeCommands>[] = [];
+afterEach(async () => {
+  for (const bin of bins.splice(0)) {
+    bin.remove();
+  }
+  await cleanupDeletes();
+});
 
 it("moves a skill folder to the Trash with everything in it", async () => {
   const { fixture, ref, remove } = await setupDeletes();
@@ -47,12 +53,12 @@ it("leaves the source in place when gio trash refuses", async () => {
   const bin = fakeCommands({
     gio: "echo 'gio: Unable to find or create trash directory' >&2; exit 2"
   });
+  bins.push(bin);
   const { fixture, ref, remove } = await setupDeletes({
     trash: systemTrash({ platform: "linux", env: bin.env })
   });
   const folder = join(fixture.project, ".claude/skills/deploy");
   const { apply } = await remove(await ref("deploy/SKILL.md", "project"));
-  bin.remove();
   expect(apply.status).toBe(500);
   expect(apply.body.error?.message).toContain(
     "Unable to find or create trash directory"

@@ -1,8 +1,9 @@
-import type {
-  HostInfo,
-  InventorySnapshot,
-  PullRequestLookup,
-  WorktreeRecord
+import {
+  hostPlatforms,
+  type HostInfo,
+  type InventorySnapshot,
+  type PullRequestLookup,
+  type WorktreeRecord
 } from "@agent-mapper/core";
 
 export interface ProjectSuggestion {
@@ -100,12 +101,13 @@ export async function getProjects(signal?: AbortSignal): Promise<ProjectList> {
 
 export async function getHost(signal?: AbortSignal): Promise<HostInfo> {
   const value = await request("/api/host", { signal });
-  if (!("platform" in value) || typeof value.platform !== "string") {
+  const platforms: readonly unknown[] = hostPlatforms;
+  if (!("platform" in value) || !platforms.includes(value.platform)) {
     throw new Error(
       "The local server did not say which platform it runs on. Restart agent-mapper."
     );
   }
-  // The local API owns this payload; validate its top-level shape before using the shared contract.
+  // Checked above: `platform` is one of the shared contract's values.
   return value as HostInfo;
 }
 

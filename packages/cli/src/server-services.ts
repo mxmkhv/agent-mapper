@@ -32,7 +32,7 @@ export interface ServiceOptions {
   managedClaudeDir?: string;
   /** Private revision snapshots; defaults to the platform data folder. */
   historyRoot?: string;
-  /** Defaults to the running platform. Decides file manager wording and the default Trash. */
+  /** Defaults to the running platform. Decides file manager wording, the default desktop, and the default Trash. */
   platform?: NodeJS.Platform;
   /** Opens sources and reveals them in the file manager; defaults to the platform's desktop. */
   desktop?: Desktop;

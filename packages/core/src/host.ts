@@ -1,6 +1,8 @@
+export const hostPlatforms = ["macos", "linux", "other"] as const;
+
 /** The machine running agent-mapper's server, which may differ from the machine running the browser. */
 export interface HostInfo {
-  platform: "macos" | "linux" | "other";
+  platform: (typeof hostPlatforms)[number];
 }
 
 /** File manager wording for the server's platform, since Reveal and the Trash act on that machine. */

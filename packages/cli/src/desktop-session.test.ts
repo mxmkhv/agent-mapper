@@ -64,7 +64,29 @@ it("treats WSL as unsupported even when WSLg sets the display variables", async 
       "not supported on WSL yet"
     );
   }
-  expect(bin.calls("xdg-open")).toEqual([]);
+  expect([...bin.calls("xdg-open"), ...bin.calls("gdbus")]).toEqual([]);
+});
+
+it("turns desktop actions off when the WSL check cannot read /proc/version", async () => {
+  const desktop = createDesktop({
+    platform: "linux",
+    env: { DISPLAY: ":0" },
+    procVersion: () => {
+      throw Object.assign(new Error("permission denied"), { code: "EACCES" });
+    }
+  });
+  await expect(desktop(requests[0])).rejects.toThrow(
+    "Could not read /proc/version (EACCES) to check for WSL"
+  );
+});
+
+it("explains a failed macOS open", async () => {
+  const bin = fakeCommands({ open: "exit 1" });
+  bins.push(bin);
+  const desktop = createDesktop({ platform: "darwin", env: bin.env });
+  await expect(desktop(requests[1])).rejects.toThrow(
+    "macOS open exited with status 1. Rescan to check that the file still exists"
+  );
 });
 
 it("uses macOS open, selecting the item for Reveal", async () => {

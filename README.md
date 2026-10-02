@@ -50,8 +50,8 @@ npx agent-mapper --tools codex
 ### Platforms
 
 - **macOS:** Delete requires macOS 15 or newer.
-- **Linux:** Opening the browser, Open in editor, and Show in file manager use `xdg-open` and `gdbus`. Delete uses `gio trash`. Install `xdg-utils` and `libglib2.0-bin` (on Fedora and Arch, `xdg-utils` and `glib2`). Show in file manager opens the parent folder when your file manager can't select the file. Files with no default app, such as `.toml`, can't be opened in an editor until you set one.
-- **SSH, containers, and WSL:** With no desktop session, the browser doesn't open on its own. Open the printed URL yourself, for example through a forwarded port. Open in editor and Show in file manager return an error. Delete still moves items to the Trash. On WSL, the browser, Open, and Reveal aren't supported yet.
+- **Linux:** Opening the browser, Open in editor, and Show in file manager use `xdg-open` and `gdbus`. Delete uses `gio trash`. Install `xdg-utils` and `libglib2.0-bin` on Debian and Ubuntu, `xdg-utils` and `glib2` on Fedora and Arch, or your distribution's equivalent. Show in file manager opens the parent folder when your file manager can't select the file. Files with no default app, such as `.toml`, can't be opened in an editor until you set one.
+- **SSH, containers, and WSL:** With no desktop session, the browser doesn't open on its own. Open the printed URL yourself, for example through a forwarded port. Open in editor and Show in file manager return an error. Delete still moves items to the Trash. On WSL, opening the browser, Open in editor, and Show in file manager aren't supported yet.
 
 Windows is not supported yet.
 
@@ -69,7 +69,7 @@ In **Global**, **Projects** compares every project: its startup size, what it ad
 
 Trace an instruction through parent folders, imports, and symlinks to the file that loads. Follow a plugin to its installed versions and the items it contributes. Select any item to see its source, the reason for its state, and what it overrides or what overrides it.
 
-Press `⌘K` (`Ctrl+K` on Linux) to search by name or source path. **Open in editor** and **Reveal in Finder** (**Show in file manager** on Linux) take you to any source file.
+Press `⌘K` (`Ctrl+K` in browsers outside macOS) to search by name or source path. **Open in editor** and **Reveal in Finder** (**Show in file manager** on Linux) take you to any source file.
 
 ### What needs review
 

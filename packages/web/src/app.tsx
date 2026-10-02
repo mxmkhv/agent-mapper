@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useHost, useInventory, useProjects } from "./data";
+import { useHostInfo, useInventory, useProjects } from "./data";
 import { AppFailure } from "./documents/app-failure";
 import { copyTargets } from "./model/copy-targets";
 import { DocumentErrorBoundary } from "./documents/document-error-boundary";
@@ -25,7 +25,7 @@ function WorkspacePending(props: {
 }) {
   const failure = props.hostError
     ? {
-        title: "Could not reach agent-mapper",
+        title: "Could not load server details",
         message: props.hostError,
         retry: <Button onClick={() => window.location.reload()}>Reload</Button>
       }
@@ -66,7 +66,7 @@ export function App() {
   );
   const inventory = useInventory(selectedPath, refresh);
   // File manager wording follows the server, so the workspace waits for it.
-  const host = useHost();
+  const host = useHostInfo();
   // Drafts sit above the per-folder Workspace so project switches and rescans keep them.
   const [drafts] = useState(() => new DraftStore());
   const [refreshAfterSave, setRefreshAfterSave] = useState(false);
@@ -94,28 +94,28 @@ export function App() {
     window.localStorage.setItem(folderKey, path);
   }
   return (
-    <HostContext value={host.value}>
-      <DocumentsContext value={documents}>
-        <div className="grid h-full grid-cols-[200px_minmax(0,1fr)] overflow-hidden lg:grid-cols-[232px_minmax(0,1fr)]">
-          <Sidebar
-            error={projects.error}
-            hiddenProjects={visibility.hidden}
-            loading={projects.loading && !projects.value}
-            onSelect={selectPath}
-            onSetHidden={visibility.setHidden}
-            onTheme={setTheme}
-            projects={visibility.projects}
-            selectedPath={selectedPath}
-            theme={theme}
-            tool={tool}
-          />
-          <main className="grid min-h-0 min-w-0">
-            <DocumentErrorBoundary
-              fallback={(message) => (
-                <AppFailure message={message} store={drafts} />
-              )}
-            >
-              {inventory.value && host.value ? (
+    <DocumentsContext value={documents}>
+      <div className="grid h-full grid-cols-[200px_minmax(0,1fr)] overflow-hidden lg:grid-cols-[232px_minmax(0,1fr)]">
+        <Sidebar
+          error={projects.error}
+          hiddenProjects={visibility.hidden}
+          loading={projects.loading && !projects.value}
+          onSelect={selectPath}
+          onSetHidden={visibility.setHidden}
+          onTheme={setTheme}
+          projects={visibility.projects}
+          selectedPath={selectedPath}
+          theme={theme}
+          tool={tool}
+        />
+        <main className="grid min-h-0 min-w-0">
+          <DocumentErrorBoundary
+            fallback={(message) => (
+              <AppFailure message={message} store={drafts} />
+            )}
+          >
+            {inventory.value && host.value ? (
+              <HostContext value={host.value}>
                 <Workspace
                   landing={landing}
                   isProject={Boolean(selectedPath)}
@@ -136,18 +136,18 @@ export function App() {
                   snapshot={inventory.value}
                   tool={tool}
                 />
-              ) : (
-                <WorkspacePending
-                  hostError={host.error}
-                  inventoryError={inventory.error}
-                  onRescan={rescan}
-                  selectedPath={selectedPath}
-                />
-              )}
-            </DocumentErrorBoundary>
-          </main>
-        </div>
-      </DocumentsContext>
-    </HostContext>
+              </HostContext>
+            ) : (
+              <WorkspacePending
+                hostError={host.error}
+                inventoryError={inventory.error}
+                onRescan={rescan}
+                selectedPath={selectedPath}
+              />
+            )}
+          </DocumentErrorBoundary>
+        </main>
+      </div>
+    </DocumentsContext>
   );
 }
