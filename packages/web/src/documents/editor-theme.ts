@@ -37,12 +37,18 @@ const variables = (scheme: 0 | 1) =>
     ])
   );
 
-/** The accent thinned over paper: strong enough to mark a range, weak enough that syntax colours stay readable on it. */
+/**
+ * A diff hue thinned to see-through, so a selection drawn behind the lines still shows. Over paper, 12% keeps every syntax
+ * colour at 4.5:1 on the line tint.
+ */
+const diffTint = (change: "added" | "removed", percent: string) =>
+  `color-mix(in srgb, var(--am-${change}) ${percent}, transparent)`;
+
+/** The accent thinned over paper: strong enough to mark a range, weak enough for ink to read on it. */
 const accentTint = (percent: string) =>
   `color-mix(in srgb, var(--am-accent) ${percent}, var(--am-surface))`;
 const accentRange = accentTint("40%");
 const accentMatch = accentTint("30%");
-const accentLine = accentTint("18%");
 
 export const highlightStyle = HighlightStyle.define([
   { tag: tags.keyword, color: syntaxColor("keyword") },
@@ -79,11 +85,19 @@ export const editorTheme = EditorView.theme({
   ".cm-content": { padding: "0", caretColor: "var(--am-ink)" },
   ".cm-line": { padding: "0" },
   ".cm-cursor, .cm-dropCursor": { borderLeft: "2px solid var(--am-ink)" },
+  // CodeMirror draws the selection behind the text and hides only the native background, so the page's ::selection
+  // would paint selected source in the on-accent colour, near-black on the dark tint. Syntax hues drop under 4.5:1 on
+  // the selection tint, so selected text is plain ink, like matched text.
+  ".cm-line ::selection, .cm-line::selection": { color: "var(--am-ink)" },
   ".cm-selectionBackground": { backgroundColor: "var(--am-selected)" },
   "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
     backgroundColor: accentRange
   },
-  ".cm-activeLine": { backgroundColor: "var(--am-wash)" },
+  // The selection layer sits behind the lines, so an opaque wash would hide a selection on the cursor line. Ink at 7%
+  // over paper is close to the wash tone in both themes and lets the selection show through.
+  ".cm-activeLine": {
+    backgroundColor: "color-mix(in srgb, var(--am-ink) 7%, transparent)"
+  },
   ".cm-selectionMatch": {
     backgroundColor: "transparent",
     outline: "1px dotted var(--am-ink-muted)"
@@ -150,29 +164,29 @@ export const editorTheme = EditorView.theme({
     borderRadius: "0",
     color: "var(--am-ink)"
   },
-  // No green and red: what was removed sits on wash with its changed text on gray, what was added on the accent.
+  // Removed lines on a red tint, added lines on a green one; the changed text inside them on a stronger tint.
   "&.cm-merge-a .cm-changedLine, .cm-deletedChunk": {
-    backgroundColor: "var(--am-wash)"
+    backgroundColor: diffTint("removed", "12%")
   },
   "&.cm-merge-b .cm-changedLine, .cm-inlineChangedLine": {
-    backgroundColor: accentLine
+    backgroundColor: diffTint("added", "12%")
   },
   "&.cm-merge-a .cm-changedText, .cm-deletedChunk .cm-deletedText, &.cm-merge-b .cm-deletedText":
-    { background: "var(--am-selected)" },
-  // Syntax hues drop under 4.5:1 on the strongest tint, so changed text is plain ink.
-  "&.cm-merge-b .cm-changedText, &.cm-merge-b .cm-changedText *": {
-    color: "var(--am-ink)"
-  },
-  "&.cm-merge-b .cm-changedText": { background: accentRange },
+    { background: diffTint("removed", "32%") },
+  "&.cm-merge-b .cm-changedText": { background: diffTint("added", "32%") },
+  // Syntax hues drop under 4.5:1 on the stronger tints, so changed text is plain ink.
+  "&.cm-merge-a .cm-changedText, &.cm-merge-a .cm-changedText *, .cm-deletedChunk .cm-deletedText, .cm-deletedChunk .cm-deletedText *, &.cm-merge-b .cm-changedText, &.cm-merge-b .cm-changedText *":
+    { color: "var(--am-ink)" },
   ".cm-deletedChunk": { paddingLeft: "0" },
-  // Changed lines carry − and + beside the line numbers instead of a colored bar.
+  // Changed lines carry − and + beside the line numbers in their diff colour.
   ".cm-changeGutter": { width: "14px", paddingLeft: "0" },
-  ".cm-changeGutter .cm-gutterElement": {
-    color: "var(--am-ink)",
-    textAlign: "center"
-  },
+  ".cm-changeGutter .cm-gutterElement": { textAlign: "center" },
   "&.cm-merge-a .cm-changedLineGutter, .cm-deletedLineGutter, &.cm-merge-b .cm-changedLineGutter":
     { background: "none" },
+  "&.cm-merge-a .cm-changedLineGutter, .cm-deletedLineGutter": {
+    color: "var(--am-removed)"
+  },
+  "&.cm-merge-b .cm-changedLineGutter": { color: "var(--am-added)" },
   // The unified diff marks removed lines with its own gutter class.
   "&.cm-merge-a .cm-changedLineGutter::before, .cm-deletedLineGutter::before": {
     content: '"−"'

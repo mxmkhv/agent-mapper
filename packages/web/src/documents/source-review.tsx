@@ -37,13 +37,13 @@ interface DiffResult {
   stats?: DiffStats;
 }
 
-/** A dense swatch for added lines and a light one for removed: the pair reads without green and red. */
+/** A green swatch for added lines and a red one for removed, matching the diff. */
 function Stat({ sign, count }: { sign: "+" | "−"; count: number }) {
   return (
     <span className="inline-flex items-center gap-1">
       <span
         aria-hidden="true"
-        className={`size-2 bg-ink ${sign === "+" ? "dots-dense" : "dots-light"}`}
+        className={`size-2 ${sign === "+" ? "bg-added" : "bg-removed"}`}
       />
       {sign}
       {count}

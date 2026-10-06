@@ -16,6 +16,8 @@ colors:
   on-accent: "#0d0d0d"
   on-accent-codex: "#000000"
   problem: "#c23030"
+  added: "#1a7f37"
+  removed: "#cf222e"
   canvas-dark: "#0d0d0d"
   surface-dark: "#0d0d0d"
   ink-dark: "#f1f1ec"
@@ -29,6 +31,8 @@ colors:
   codex-dark: "#7d9df0"
   on-accent-dark: "#0d0d0d"
   problem-dark: "#f07474"
+  added-dark: "#3fb950"
+  removed-dark: "#f85149"
 typography:
   figure:
     fontFamily: '"Departure Mono", ui-monospace, "SF Mono", Menlo, monospace'
@@ -234,7 +238,7 @@ components:
 
 **Creative North Star: "The Bitmap Specimen"**
 
-agent-mapper is a 1-bit inspection tool: ink on paper, in the manner of a bitmap type specimen and a terminal. The page is one paper tone, the marks are one ink, corners are square, and nothing casts a shadow. Structure is drawn with 2px rules, rows are separated by dotted lines, and quantity is shown with dot-matrix fills. The only colour besides problem red is the accent, which is the hue of the selected tool: terracotta for Claude Code, blue for Codex. It refuses the rounded-card, soft-gray look of a SaaS dashboard.
+agent-mapper is a 1-bit inspection tool: ink on paper, in the manner of a bitmap type specimen and a terminal. The page is one paper tone, the marks are one ink, corners are square, and nothing casts a shadow. Structure is drawn with 2px rules, rows are separated by dotted lines, and quantity is shown with dot-matrix fills. The only colour besides problem red is the accent, which is the hue of the selected tool: terracotta for Claude Code, blue for Codex. Diffs are the one place with green and red. It refuses the rounded-card, soft-gray look of a SaaS dashboard.
 
 Two faces divide the work. A pixel face (Departure Mono) sets what the machine knows: paths, versions, counts, token figures, key hints, page titles, and the name at the top of the inspector. A grotesk (Schibsted Grotesk) sets what people read: item names in rows, labels, buttons, and prose. Long-form source in the editor and in code blocks stays in the system monospace.
 
@@ -243,7 +247,7 @@ The UI is organized around layers rather than file types. A project reads top to
 **Key Characteristics:**
 
 - One paper tone, one ink, two grays for secondary text, and a wash for hover and quiet fills. Dark mode swaps paper and ink.
-- One accent, taken from the selected tool. Problem red is the only other colour.
+- One accent, taken from the selected tool. Problem red is the only other colour, apart from green and red in diffs.
 - Square corners everywhere and no cast shadows. Floating panels are marked by a 2px ink border.
 - 2px rules for structure, 1px ink for controls, dotted lines for dividers and for quiet or unknown outlines.
 - The pixel face only at 11, 22, 33 and 44px, one weight, never smoothed or tracked.
@@ -253,7 +257,7 @@ The UI is organized around layers rather than file types. A project reads top to
 
 ## Colors
 
-A 1-bit palette: paper and ink carry the interface, and two colours carry meaning.
+A 1-bit palette: paper and ink carry the interface, and two colours carry meaning. Diffs add green and red.
 
 ### Primary
 
@@ -261,7 +265,7 @@ A 1-bit palette: paper and ink carry the interface, and two colours carry meanin
 
 ### Secondary
 
-- **The accent** (`claude` or `codex`, exposed in code as `accent`): the hue of the selected tool. It is the fill of the selected row, the active view tab, the selected startup file, the selected history version and the active search result; the block cursor after the inspector name; the skill-index segment and bars; the text selection; the inset ring on a hovered primary button; and the tints that mark matches and added lines in the editor. Switching the tool switches every one of these.
+- **The accent** (`claude` or `codex`, exposed in code as `accent`): the hue of the selected tool. It is the fill of the selected row, the active view tab, the selected startup file, the selected history version and the active search result; the block cursor after the inspector name; the skill-index segment and bars; the text selection (outside the editor, a fill; in it, a tint); the inset ring on a hovered primary button; and the tints that mark selections and matches in the editor. Switching the tool switches every one of these.
 - **On-accent** (`on-accent`, `on-accent-codex`): the text colour inside an accent fill. Everything inside the fill takes it, whatever muted tone it has elsewhere. It is ink in every case but one: on light Codex blue, ink reaches 4.41:1, so the build uses pure black for 4.76:1.
 - **Tool glyphs** (`claude`, `codex`): both tool hues stay available at once for the 15px letter glyphs, which mark which tool an item belongs to wherever it appears.
 - **Favicon**: the pixel bot in ink on a square of the selected tool's hue (the light-theme value in both colour schemes). It swaps when the tool toggle changes.
@@ -277,8 +281,8 @@ A 1-bit palette: paper and ink carry the interface, and two colours carry meanin
 - **Faint Ink** (`ink-faint`): tertiary text: path directories, counts beside labels, notes in the right-hand column, placeholder text, line numbers. See the deviation below.
 - **Rule** (`rule`): the 2px structural lines: the sidebar edge, the line under the view tabs and facets, group boxes, the inspector edge, finding cards, the Projects table. Ink in light mode; a mid gray in dark mode, where full ink would be too loud. The code's `hairline-strong` is an alias.
 - **Hairline** (`hairline`): dotted 1px dividers between rows, and the border of a disabled button.
-- **Wash** (`wash`): hover on rows and buttons, inline code and code blocks, bar tracks, the active editor line, the head row of a source repo cluster, removed lines in a diff. The code's `hover` is an alias.
-- **Selected** (`selected`): one step darker than wash. Used only for an unfocused editor selection, the changed text inside a removed line, and hover on a source cluster head. It is not the selected-row colour; that is the accent.
+- **Wash** (`wash`): hover on rows and buttons, inline code and code blocks, bar tracks, the active editor line (as ink at 7%, close to wash), the head row of a source repo cluster. The code's `hover` is an alias.
+- **Selected** (`selected`): one step darker than wash. Used only for an unfocused editor selection and hover on a source cluster head. It is not the selected-row colour; that is the accent.
 
 Every token has a `-dark` twin in the frontmatter. Dark mode swaps the whole set; it is not an automatic inversion.
 
@@ -286,16 +290,17 @@ Every token has a `-dark` twin in the frontmatter. Dark mode swaps the whole set
 
 - **Two grays, not one.** `ink-muted` and `ink-faint` are both in use (5.46:1 and 4.71:1 on wash in light mode). They are close enough to read as one gray with two strengths. Faint ink passes 4.5:1 on paper and wash; on `selected` in light mode it is 4.08:1, so it does not belong on that fill.
 - **Editor syntax keeps its own hues.** Source in the editor and in diffs is coloured with Monaco's `vs` and `vs-dark` token colours (blue keywords, red strings, green comments, and so on), adjusted to reach 4.5:1 on paper and on wash. These hues exist only inside source text. The editor's surface, selection, match and diff colours are system tokens.
-- **Accent tints in the editor.** The editor mixes the accent into paper at 40% (focused selection, changed text), 30% (search matches) and 18% (added lines), so syntax colours stay readable on top. Tints appear nowhere else.
+- **Accent tints in the editor.** The editor mixes the accent into paper at 40% (focused selection) and 30% (search matches). Syntax hues fall under 4.5:1 on both, so selected and matched text is plain ink.
+- **Diff colours** (`added`, `removed`): green and red, used only for diffs. The editor mixes them into paper at 12% for changed lines, where every syntax colour keeps 4.5:1, and 32% for the changed text inside them, which is plain ink. The `−` and `+` signs beside the line numbers and the count swatches in the review notes use them solid. Accent and diff tints appear nowhere else.
 - **Backdrops and glyph letters use literals.** The dialog backdrop is black at 40%, and the letter in a tool glyph is pure black on the tool hue in both themes.
 
 ### Named Rules
 
-**The Two-Colour Rule.** Colour appears for two reasons: the selected tool (the accent) and a verified problem (red). Everything else is paper, ink, or gray. Syntax colouring inside source text is the one exception.
+**The Two-Colour Rule.** Colour appears for two reasons: the selected tool (the accent) and a verified problem (red). Everything else is paper, ink, or gray. Syntax colouring inside source text and the green and red of diffs are the exceptions.
 
 **The Accent-Is-The-Tool Rule.** The accent has no hue of its own. It is whatever tool is selected, so the interface tells Claude Code from Codex by its one colour.
 
-**The No-Green Rule.** Green never appears in the interface, and nothing uses colour to mean active, healthy or done. "Active" is the absence of a label. Diffs mark added and removed lines with the accent, wash, and `+` / `−` signs instead of green and red.
+**The No-Green Rule.** Green appears only in diffs, for added text. Nothing uses colour to mean active, healthy or done. "Active" is the absence of a label.
 
 **The On-Accent Rule.** Text and icons inside an accent fill all take the on-accent colour. Red text is never placed on an accent fill: the Findings count drops its red while its tab is active.
 
@@ -346,7 +351,7 @@ Every token has a `-dark` twin in the frontmatter. Dark mode swaps the whole set
 - **Inventory:** the landing view of a project. The startup summary sits on top and scrolls away; the facets stick to the top of the pane. Groups follow the layer order: Global, installed plugins, each plugin's contributions, Project, User. Each group is one box with a 2px rule and 36px rows. In a project, the groups it inherits (Managed, Global, plugins) sit inside one dotted panel whose head row folds them away, collapsed by default; it starts open when the project has no groups of its own, and selecting an item inside it (from search or the inspector) opens it. The Global view has no such panel.
 - **Projects (the Global landing view):** the global startup summary, then a fixed-layout table with one row per project and five columns: Project, Startup, Adds, Differs from global, Findings. Rows grow with their content; the table scrolls sideways below 640px. The inspector appears only while something is selected, so the table keeps the width.
 - **Editing:** the document view covers the content and inspector area under the view bar: a toolbar with the title and actions, then the editor, or a diff with a 340px notes pane.
-- **Browser surfaces:** text selection is an accent fill with on-accent text; scrollbars are thin, ink on a transparent track.
+- **Browser surfaces:** text selection outside the editor is an accent fill with on-accent text; scrollbars are thin, ink on a transparent track.
 - **Spacing rhythm:** 4 / 6 / 8 / 12 / 16 / 20px, with 10px for button and tab padding and 14px between groups. Content gutters are 20px; row gutters are 12px.
 - **Motion:** state changes are immediate. There are no transitions; the only animation is the Rescan icon pulsing while a scan runs.
 
@@ -370,7 +375,7 @@ Line weights carry the hierarchy:
 - **1px dotted hairline:** dividers between rows.
 - **1px dotted muted ink:** quiet, secondary, or unknown things. The inherited-groups panel, the provenance breadcrumb, the symlink chip, the unknown state marker, pull requests that are not open.
 
-**Dot fills.** Four 1-bit patterns on a 4px grid (`dense`, `mid`, `light`, `check`) are masks, so the dots take the element's background colour. They replace solid bars and tonal steps: the startup bar shows each layer by density (Global dense, Plugins checkerboard, Project mid, User light), the skill index is the accent in checkerboard, group heads run a light dot fill to the right edge, diff stats use a dense and a light swatch for added and removed, and an empty side of a diff is held by a light fill.
+**Dot fills.** Four 1-bit patterns on a 4px grid (`dense`, `mid`, `light`, `check`) are masks, so the dots take the element's background colour. They replace solid bars and tonal steps: the startup bar shows each layer by density (Global dense, Plugins checkerboard, Project mid, User light), the skill index is the accent in checkerboard, group heads run a light dot fill to the right edge, and an empty side of a diff is held by a light fill.
 
 **The dither edge.** A fifth pattern, 24px wide, fades from sparse to dense. It closes the right end of a selected row in paper-coloured dots over the accent.
 
@@ -473,9 +478,9 @@ Body text is 13px/20px grotesk. Headings are the pixel face in two sizes for six
 ### Editor and Review
 
 - **Document toolbar:** tool glyph, the file name at 22px, an "Unsaved changes" note with a 7px square, the path in pixel type, and the actions (Back to edit, primary Save changes, Back to inventory).
-- **Editor:** 13px/20px source font on paper. The caret is 2px ink; the active line is wash; a focused selection is the 40% accent tint; search matches are the 30% tint with a 1px ink outline and plain ink text, and the current match is a full accent fill with on-accent text. The find widget is a floating panel at the top right.
-- **Diff:** removed lines sit on wash and added lines on the 18% accent tint; `−` and `+` beside the line numbers mark them. Where one side has no lines, a light dot fill holds the gap.
-- **Review notes:** "3 lines changed" with dense and light swatches for added and removed counts, then the scanned contexts the file affects, each with its tool glyph, path and state. Scans still running or failed stay listed, so impact is never overstated.
+- **Editor:** 13px/20px source font on paper. The caret is 2px ink; the active line is ink at 7%, close to wash, so a selection shows through it; a focused selection is the 40% accent tint with plain ink text; search matches are the 30% tint with a 1px ink outline and plain ink text, and the current match is a full accent fill with on-accent text. The find widget is a floating panel at the top right.
+- **Diff:** removed lines sit on the 12% red tint and added lines on the 12% green tint, with changed text on the 32% tint in plain ink; a red `−` and a green `+` beside the line numbers mark them. Where one side has no lines, a light dot fill holds the gap.
+- **Review notes:** "3 lines changed" with green and red swatches for added and removed counts, then the scanned contexts the file affects, each with its tool glyph, path and state. Scans still running or failed stay listed, so impact is never overstated.
 - **History:** a list of versions with dotted dividers; the chosen one is an accent fill.
 
 ### Navigation (sidebar)
@@ -526,9 +531,9 @@ Checkout rows and difference rows reuse the Inventory group head and the 36px ro
 ### Don't:
 
 - **Don't** round a corner or cast a shadow.
-- **Don't** add a hue. The accent and problem red are the only colours outside source syntax.
-- **Don't** use green anywhere, or colour to mean active, healthy or done.
-- **Don't** use red for anything except verified problems, errors, and the text of a destructive answer. Shadowed, disabled, and unknown are neutral.
+- **Don't** add a hue. The accent and problem red are the only colours outside source syntax and diffs.
+- **Don't** use green outside diffs, or colour to mean active, healthy or done.
+- **Don't** use red for anything except verified problems, errors, the text of a destructive answer, and removed text in diffs. Shadowed, disabled, and unknown are neutral.
 - **Don't** put red text on an accent fill.
 - **Don't** use the accent as a text colour on paper: terracotta is 2.88:1 and Codex blue 4.07:1.
 - **Don't** set item names in rows, labels, or prose in the pixel face, and don't set multi-line source in it.
