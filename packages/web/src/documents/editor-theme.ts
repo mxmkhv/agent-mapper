@@ -37,11 +37,14 @@ const variables = (scheme: 0 | 1) =>
     ])
   );
 
-/** A diff hue thinned over paper, like the accent tints, so syntax colours stay readable on the line tint. */
+/**
+ * A diff hue thinned to see-through, so a selection drawn behind the lines still shows. Over paper, 12% keeps every syntax
+ * colour at 4.5:1 on the line tint.
+ */
 const diffTint = (change: "added" | "removed", percent: string) =>
-  `color-mix(in srgb, var(--am-${change}) ${percent}, var(--am-surface))`;
+  `color-mix(in srgb, var(--am-${change}) ${percent}, transparent)`;
 
-/** The accent thinned over paper: strong enough to mark a range, weak enough that syntax colours stay readable on it. */
+/** The accent thinned over paper: strong enough to mark a range, weak enough for ink to read on it. */
 const accentTint = (percent: string) =>
   `color-mix(in srgb, var(--am-accent) ${percent}, var(--am-surface))`;
 const accentRange = accentTint("40%");
@@ -82,16 +85,16 @@ export const editorTheme = EditorView.theme({
   ".cm-content": { padding: "0", caretColor: "var(--am-ink)" },
   ".cm-line": { padding: "0" },
   ".cm-cursor, .cm-dropCursor": { borderLeft: "2px solid var(--am-ink)" },
-  // CodeMirror draws the selection behind the text and hides the native one, but the page's ::selection still sets the
-  // on-accent colour, which is near-black on the dark tint. Selected source keeps its own colour; `inherit` would pick up
-  // the page's rule again through highlight inheritance.
-  ".cm-line ::selection, .cm-line::selection": { color: "currentcolor" },
+  // CodeMirror draws the selection behind the text and hides only the native background, so the page's ::selection
+  // would paint selected source in the on-accent colour, near-black on the dark tint. Syntax hues drop under 4.5:1 on
+  // the selection tint, so selected text is plain ink, like matched text.
+  ".cm-line ::selection, .cm-line::selection": { color: "var(--am-ink)" },
   ".cm-selectionBackground": { backgroundColor: "var(--am-selected)" },
   "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
     backgroundColor: accentRange
   },
   // The selection layer sits behind the lines, so an opaque wash would hide a selection on the cursor line. Ink at 7%
-  // over paper is the wash tone in both themes and lets the selection show through.
+  // over paper is close to the wash tone in both themes and lets the selection show through.
   ".cm-activeLine": {
     backgroundColor: "color-mix(in srgb, var(--am-ink) 7%, transparent)"
   },
@@ -163,10 +166,10 @@ export const editorTheme = EditorView.theme({
   },
   // Removed lines on a red tint, added lines on a green one; the changed text inside them on a stronger tint.
   "&.cm-merge-a .cm-changedLine, .cm-deletedChunk": {
-    backgroundColor: diffTint("removed", "14%")
+    backgroundColor: diffTint("removed", "12%")
   },
   "&.cm-merge-b .cm-changedLine, .cm-inlineChangedLine": {
-    backgroundColor: diffTint("added", "14%")
+    backgroundColor: diffTint("added", "12%")
   },
   "&.cm-merge-a .cm-changedText, .cm-deletedChunk .cm-deletedText, &.cm-merge-b .cm-deletedText":
     { background: diffTint("removed", "32%") },
