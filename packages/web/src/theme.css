@@ -43,6 +43,8 @@
   --am-accent: var(--am-claude);
   --am-on-accent: #0d0d0d;
   --am-problem: #c23030;
+  --am-added: #1a7f37;
+  --am-removed: #cf222e;
 
   /* 1-bit dot patterns on a 4px grid. They are masks, so the dots take the element's background colour. */
   --am-dots-dense: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Crect width='3' height='3'/%3E%3C/svg%3E");
@@ -67,9 +69,11 @@
   --am-claude: #e48b6c;
   --am-codex: #7d9df0;
   --am-problem: #f07474;
+  --am-added: #3fb950;
+  --am-removed: #f85149;
 }
 
-/* The accent is the selected tool's hue, and the only colour besides problem red. */
+/* The accent is the selected tool's hue, and the only colour besides problem red and the diff green and red. */
 :root[data-tool="codex"] {
   --am-accent: var(--am-codex);
 }
@@ -94,6 +98,8 @@
   --color-claude: var(--am-claude);
   --color-codex: var(--am-codex);
   --color-problem: var(--am-problem);
+  --color-added: var(--am-added);
+  --color-removed: var(--am-removed);
 }
 
 @theme {
